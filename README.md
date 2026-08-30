@@ -82,24 +82,24 @@ the picture into the solid region), `Brightness`, and painting a second texture 
 ## Open: installing on a machine that is not the author's
 
 First install on someone else's PC took a lot of fiddling (2026-08-30), and the loading paths are
-the prime suspect. Not yet diagnosed — recorded so it is not rediscovered from scratch.
+the prime suspect. Not diagnosed — written down so it is not rediscovered from scratch.
 
 What is known:
 
-- **The release zip has never been install-tested.** It was built by copying  and
-  assuming Dalamud extracts it flat. Nothing has confirmed that a repo-installed copy ends up with
-   in the right place relative to the assembly.
-- ** is pointed at  beside the assembly**, resolved from
-  . A dev plugin loaded from an explicit DLL path and a plugin extracted by the
-  installer do not necessarily have the same layout, and this is the one path that must be right or
-  nothing decodes.
+- **The release zip has never been install-tested.** It was built by copying `bin/Debug` wholesale
+  and assuming Dalamud extracts it flat. Nothing has confirmed that a repo-installed copy ends up
+  with `libvlc/win-x64/` in the right place relative to the assembly.
+- **`Core.Initialize` is pointed at `libvlc/win-x64` beside the assembly**, resolved from
+  `pluginInterface.AssemblyLocation`. A dev plugin loaded from an explicit DLL path and a plugin
+  extracted by the installer do not necessarily lay out the same way, and this is the one path that
+  has to be right or nothing decodes at all.
 - The custom repo did not appear at first. Two candidates, neither confirmed: the manifest was
-  missing  /  (since added), and
-   was failing for seven other repos on the same machine — hence the
-  mirror served from luna.
+  missing `TestingAssemblyVersion` and `TestingDalamudApiLevel` (since added), and
+  `raw.githubusercontent.com` was failing for seven other repos on the same machine — which is why
+  there is now a mirror served from luna.
 
-First thing to check: install from the repo on a clean machine and look at where the libvlc folder
-actually lands, rather than assuming it matches the dev-plugin layout.
+First thing to check: install from the repo onto a clean machine and look at where the libvlc
+folder actually lands, rather than assuming it matches the dev-plugin layout.
 
 - **Validate every game pointer before dereferencing** (`SafeMemory`, via `VirtualQuery`). Arrays
   like `ModelResourceHandle.MaterialResourceHandles` carry no count.
