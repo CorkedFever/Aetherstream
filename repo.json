@@ -1,0 +1,30 @@
+[
+  {
+    "Author": "Jasmine",
+    "Name": "Aetherstream",
+    "InternalName": "Aetherstream",
+    "AssemblyVersion": "0.1.0.0",
+    "Description": "Puts a live stream on a screen anchored in the world: place it on a wall, size it, and watch while you play. Plays Twitch, YouTube, Plex and direct streams, painted onto a real in-game surface so the game lights and occludes it properly. Party groups let a room watch the same thing together from a six-character code.",
+    "Punchline": "A screen in the world, showing whatever is live.",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "CanUnloadAsync": false,
+    "LoadPriority": 0,
+    "RepoUrl": "https://github.com/CorkedFever/Aetherstream",
+    "DownloadLinkInstall": "https://github.com/CorkedFever/Aetherstream/releases/download/v0.1.0/Aetherstream.zip",
+    "DownloadLinkUpdate": "https://github.com/CorkedFever/Aetherstream/releases/download/v0.1.0/Aetherstream.zip",
+    "DownloadLinkTesting": "https://github.com/CorkedFever/Aetherstream/releases/download/v0.1.0/Aetherstream.zip",
+    "IsHide": false,
+    "IsTestingExclusive": false,
+    "DownloadCount": 0,
+    "Tags": [
+      "stream",
+      "video",
+      "twitch",
+      "plex",
+      "watch-together"
+    ]
+  }
+]
