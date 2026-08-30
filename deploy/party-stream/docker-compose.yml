@@ -1,0 +1,39 @@
+# One media server that takes a single incoming stream and serves it to everyone.
+#
+# You push one stream in (SRT from ffmpeg on your PC); it hands out HLS, which the Aetherstream
+# plugin already plays as an ordinary URL — no client-side work at all.
+#
+#   ./setup.sh          # once, to generate the secrets
+#   docker compose up -d
+#
+# This is its own compose project rather than a service inside the moonlighting stack, so it can be
+# stopped, moved or thrown away without touching anything that serves the websites. It joins that
+# stack's network only so Caddy can reach it by name — the same arrangement the production app
+# container already uses.
+
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: party-stream
+    restart: unless-stopped
+
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+
+    ports:
+      # SRT ingest, and the only port this opens to the internet. UDP, encrypted with a passphrase,
+      # and it recovers from packet loss instead of stalling the way RTMP-over-TCP does — which
+      # matters when the source is a home connection.
+      #
+      # HLS is deliberately NOT published. Caddy reaches port 8888 across the compose network and
+      # terminates TLS, so the only way in from outside is through it.
+      - "8890:8890/udp"
+
+    networks:
+      - moonlighting_default
+
+networks:
+  # Created by the moonlighting stack; referenced, never managed, from here. `docker compose down`
+  # on this project therefore cannot remove the network the websites are using.
+  moonlighting_default:
+    external: true

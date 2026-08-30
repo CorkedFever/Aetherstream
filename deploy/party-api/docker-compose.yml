@@ -1,0 +1,27 @@
+# Resolves a short code to a stream. Nothing else.
+#
+# Publishes no port: Caddy reaches it across the moonlighting network, the same arrangement
+# party-stream uses.
+
+services:
+  party-api:
+    image: python:3.12-alpine
+    container_name: party-api
+    restart: unless-stopped
+    working_dir: /app
+    command: python -u app.py
+    volumes:
+      - ./app.py:/app/app.py:ro
+      - party-api-data:/data
+    env_file:
+      - api.env
+    networks:
+      - moonlighting_default
+
+volumes:
+  # Parties are permanent identities, so unlike the relay this has to survive a restart.
+  party-api-data:
+
+networks:
+  moonlighting_default:
+    external: true

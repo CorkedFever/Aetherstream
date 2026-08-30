@@ -1,0 +1,96 @@
+# MediaMTX — accept one published stream, serve it to the group as HLS.
+#
+# Everything not needed is switched off. A media server on a public box should expose exactly
+# the two protocols you use and nothing else.
+
+logLevel: info
+
+# --- Ingest -----------------------------------------------------------------------------------
+
+# Off. RTMP is unencrypted and would carry the publish password in the clear, and its port is not
+# published in docker-compose.yml anyway. Turn both back on together if you ever need it.
+rtmp: no
+
+# SRT is the better ingest over a home connection: encrypted, and it recovers from packet loss
+# instead of stalling the way RTMP-over-TCP does.
+srt: yes
+srtAddress: :8890
+
+# --- Delivery ---------------------------------------------------------------------------------
+
+hls: yes
+hlsAddress: :8888   # container-internal only; Caddy proxies to it over the compose network
+
+# mpegts, not lowLatency. Low-latency HLS uses fragmented MP4 and partial segments, which libvlc
+# handles poorly — and the plugin is libvlc. A few seconds of latency costs nothing when everyone
+# is watching the same film together.
+hlsVariant: mpegts
+
+# ~14 s of buffer. Raise the count if anyone's connection is rough; lower it for tighter latency,
+# at the cost of stalls on a weak line.
+hlsSegmentDuration: 2s
+hlsSegmentCount: 7
+
+# Only remux while somebody is actually watching, so an idle stream costs nothing.
+hlsAlwaysRemux: no
+
+# Nothing is written to disk. Segments live in memory as a rolling window of hlsSegmentCount and
+# are discarded as they age out, so the droplet never holds the film — only the ~14 seconds
+# currently in flight. When the push stops there is nothing left to delete.
+#
+# hlsDirectory is deliberately unset: setting it would spill segments onto the filesystem.
+#
+# This must be under pathDefaults. A bare top-level `record` is accepted for compatibility but
+# logs a deprecation warning, and a silently-ignored key is not something to rely on when the
+# whole promise is that the film never lands on the server.
+pathDefaults:
+  record: no
+
+# --- Off ---------------------------------------------------------------------------------------
+
+rtsp: no
+webrtc: no
+# Media over QUIC. New, on by default, and it opened three listeners of its own and generated a
+# certificate on first start — none of which this needs.
+moq: no
+api: no
+metrics: no
+pprof: no
+
+# --- Access -----------------------------------------------------------------------------------
+#
+# Publishing needs credentials. Reading does not — the path name is the secret, and it is long and
+# random. That keeps the plugin side to "play this URL" with no auth code at all.
+#
+# This is a template: setup.sh fills the __PLACEHOLDERS__ in and writes the real mediamtx.yml,
+# which is chmod 600 and must not be committed anywhere.
+
+authInternalUsers:
+  - user: publisher
+    pass: __PUBLISH_PASS__
+    ips: []
+    permissions:
+      - action: publish
+
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: read
+
+# A regex, not a fixed name, so the host can mint a fresh path for every party without anyone
+# touching this file. `~` marks it as a pattern.
+#
+# This is what makes invites revocable in the only sense that matters here: there is no per-person
+# revocation, but starting a new party moves the stream to a new path, and every previously shared
+# link is left pointing at somewhere nothing is publishing.
+#
+# It is not a hole. Publishing still needs the password below, and a reader who guesses a matching
+# path finds nothing unless someone is currently pushing to that exact one — 96 bits of it.
+paths:
+  "~^party-[0-9a-f]{24}$":
+    source: publisher
+
+    # SRT ingest is encrypted with this. Without it the publish password would cross the internet
+    # in the clear, and the only open port on the box would be worth guessing at.
+    srtPublishPassphrase: __SRT_PASSPHRASE__

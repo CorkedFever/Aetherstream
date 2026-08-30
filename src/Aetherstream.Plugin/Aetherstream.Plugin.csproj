@@ -1,0 +1,29 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+
+  <PropertyGroup>
+    <Version>0.1.0.0</Version>
+    <Authors>Jasmine</Authors>
+    <Description>Live streams on a screen anchored in the world.</Description>
+    <AssemblyName>Aetherstream</AssemblyName>
+    <RootNamespace>Aetherstream.Plugin</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="Aetherstream.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Aetherstream.Core\Aetherstream.Core.csproj" />
+    <ProjectReference Include="..\Aetherstream.Playback\Aetherstream.Playback.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The libvlc natives land in libvlc\win-x64 beside the assembly; Core.Initialize is pointed
+         at that folder explicitly, since a plugin's base directory is the game's, not ours. -->
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
+    <!-- Dalamud provides no audio API, so the plugin opens its own WASAPI render stream. -->
+    <PackageReference Include="NAudio.Wasapi" Version="2.3.0" />
+  </ItemGroup>
+
+</Project>
