@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+
+# Generated on the server by setup.sh / setup-api.sh. These hold real credentials.
+deploy/party-stream/party.env
+deploy/party-stream/mediamtx.yml
+deploy/party-api/api.env
+deploy/**/*.bak.*
+
+# libvlc natives are ~195 MB and come from NuGet on restore; they ship in the release zip instead.
+libvlc/
+
+.vs/
+*.user
