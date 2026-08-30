@@ -25,6 +25,10 @@
       "twitch",
       "plex",
       "watch-together"
-    ]
+    ],
+    "TestingAssemblyVersion": "0.1.0.0",
+    "TestingDalamudApiLevel": 15,
+    "LastUpdate": 0,
+    "IconUrl": ""
   }
 ]
