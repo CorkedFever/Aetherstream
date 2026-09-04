@@ -1,5 +1,6 @@
 using System.Numerics;
 
+using Aetherstream.Playback;
 using Aetherstream.Plugin.Surfaces;
 
 using Dalamud.Bindings.ImGui;
@@ -32,6 +33,7 @@ internal sealed class ScreenTab(UiContext ui)
     public void Draw()
     {
         this.DrawMode();
+        this.DrawKnownScreens();
 
         if (ui.Config.PaintOnSurface)
             this.DrawSurfaceWorkflow();
@@ -69,6 +71,44 @@ internal sealed class ScreenTab(UiContext ui)
             "Hands the picture to the game's own renderer as a texture on an object. It is lit, " +
             "occluded and depth-sorted like anything else in the room — your character stands in " +
             "front of it properly.");
+    }
+
+    /// <summary>
+    /// Furnishings with the setup already worked out. This is the way in for almost everyone: the
+    /// scan-and-pick workflow underneath exists for finding a new screen, not for using a known one.
+    /// </summary>
+    private void DrawKnownScreens()
+    {
+        Ui.Section("Known screens");
+
+        var current = KnownScreens.NameOf(
+            ui.Config.SurfaceModelPath,
+            ui.Config.SurfaceMaterialIndex,
+            ui.Config.SurfaceTextureIndex);
+
+        foreach (var (name, note, screen) in KnownScreens.All)
+        {
+            var active = ui.Config.PaintOnSurface && current == name;
+
+            using (ImRaii.PushColor(ImGuiCol.Button, Theme.GlassLit, active)
+                .Push(ImGuiCol.Border, Theme.Accent, active))
+            {
+                if (ImGui.Button(name, new Vector2(180, ImGui.GetFrameHeight() + 6)) && !active)
+                    ui.ApplyScreen(screen);
+            }
+
+            Ui.Tip($"{note}\n\nStand next to the furnishing, then pick it: the picture goes on the nearest one.");
+
+            if (active)
+            {
+                ImGui.SameLine();
+                Ui.Dot(Theme.Good, "painting on it now");
+                ImGui.SameLine();
+                ImGui.TextColored(Theme.TextDim, "painting on it now");
+            }
+        }
+
+        Ui.Hint("Stand next to it first — the picture lands on the nearest one.");
     }
 
     // -- Painted surface ---------------------------------------------------------------------------
