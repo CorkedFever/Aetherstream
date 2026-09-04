@@ -314,6 +314,20 @@ public sealed class BroadcastSession : IDisposable
         if (startAt is { } from && from > TimeSpan.Zero)
             arguments += $" -ss {from.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)}";
 
+        // Survive the source connection dropping. A remote Plex file is pulled over HTTPS for the
+        // length of a whole film, and that connection does not reliably last: observed ending at
+        // 998 MB of a 3.07 GB file, after which ffmpeg reads corrupt packets, gives up, and every
+        // viewer freezes because the relay has lost its publisher.
+        //
+        // Without these ffmpeg does not retry at all — a truncated stream simply looks like the end
+        // of the file to it. They have to precede -i to apply to the input.
+        if (input.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || input.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            arguments += " -reconnect 1 -reconnect_on_network_error 1"
+                + " -reconnect_streamed 1 -reconnect_delay_max 10";
+        }
+
         arguments += $" -i \"{input}\"";
 
         arguments += probe.CanCopy
