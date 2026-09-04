@@ -155,8 +155,11 @@ internal sealed class ShareTab(UiContext ui)
                 group.Live ? Ui.Accent : Ui.Faint,
                 group.Name.Length > 0 ? group.Name : "(unnamed)");
 
+            // The code in the display face: six characters of Crockford base32 read like a channel
+            // number, which is what a party code is to the person typing it in.
             ImGui.SameLine();
-            ImGui.TextColored(Ui.Faint, PartyDirectory.Pretty(group.Code));
+            ImGui.AlignTextToFramePadding();
+            Theme.Displayed(group.Live ? Theme.Accent : Theme.TextDim, PartyDirectory.Pretty(group.Code));
 
             if (group.Live && group.Title.Length > 0)
             {
@@ -253,20 +256,20 @@ internal sealed class ShareTab(UiContext ui)
 
         if (running)
         {
-            Ui.Dot(Ui.Good, "broadcasting");
+            Ui.Dot(Theme.Bad, "broadcasting");
             ImGui.SameLine();
-            ImGui.TextColored(
-                Ui.Accent,
-                session?.IsCopying == true ? "on air — copying" : "on air — re-encoding");
+            Theme.Displayed(Theme.Bad, "● ON AIR");
+            ImGui.SameLine();
+            ImGui.TextColored(Theme.TextDim, session?.IsCopying == true ? "copying" : "re-encoding");
 
             ImGui.SameLine();
-            Ui.RightAlignedText(Ui.Clock((long)(session?.Elapsed.TotalMilliseconds ?? 0)), Ui.Faint);
+            Ui.RightAlignedText(Ui.Clock((long)(session?.Elapsed.TotalMilliseconds ?? 0)), Theme.TextDim);
         }
         else
         {
-            Ui.Dot(Ui.Faint, "not broadcasting");
+            Ui.Dot(Theme.TextFaint, "not broadcasting");
             ImGui.SameLine();
-            ImGui.TextColored(Ui.Faint, "off air");
+            Theme.Displayed(Theme.TextFaint, "OFF AIR");
         }
 
         var input = ui.Config.PartyInput;

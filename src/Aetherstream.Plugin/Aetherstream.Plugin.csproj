@@ -11,6 +11,9 @@
 
   <ItemGroup>
     <None Include="Aetherstream.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- VT323, SIL Open Font License. The licence ships beside it, as the OFL requires. -->
+    <None Include="Fonts\VT323-Regular.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Fonts\OFL.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
