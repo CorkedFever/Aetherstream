@@ -34,6 +34,7 @@ internal sealed class ControlWindow : Window
         this.screen = new ScreenTab(context);
         this.sound = new SoundTab(context);
         this.Share = new ShareTab(context);
+        this.LiveTv = new LiveTvTab(context);
         this.setup = new SetupTab(context);
 
         // Wide enough for four poster columns, which is what makes the library read as a library.
@@ -52,6 +53,8 @@ internal sealed class ControlWindow : Window
 
     internal ShareTab Share { get; }
 
+    internal LiveTvTab LiveTv { get; }
+
     public override void Draw()
     {
         // Art.Update is deliberately NOT called here. It is driven from the plugin's own draw
@@ -65,6 +68,7 @@ internal sealed class ControlWindow : Window
 
         Tab("Watch", this.watch.Draw);
         Tab("Library", this.Library.Draw);
+        Tab("Live TV", this.LiveTv.Draw);
         Tab("Screen", this.screen.Draw);
         Tab("Sound", this.sound.Draw);
         Tab("Share", this.Share.Draw);

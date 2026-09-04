@@ -128,15 +128,47 @@ internal sealed class PlexArt(ITextureProvider textures, HttpClient http, IPlugi
             return existing.Wrap;
         }
 
-        var entry = new Entry { LastUsed = this.tick };
-        if (!this.cache.TryAdd(thumb, entry))
+        // The transcode endpoint takes the thumbnail's own path and hands back a JPEG at whatever
+        // size is asked for, so Plex resizes rather than us downloading full-resolution posters.
+        var url = $"{server.TrimEnd('/')}/photo/:/transcode"
+            + $"?width={PosterWidth}&height={PosterHeight}&minSize=1&upscale=1"
+            + $"&url={Uri.EscapeDataString(thumb)}"
+            + $"&X-Plex-Token={Uri.EscapeDataString(token)}";
+
+        return this.Fetch(thumb, url);
+    }
+
+    /// <summary>
+    /// The texture for any image URL, cached the same way posters are. Channel logos arrive as
+    /// ordinary absolute URLs with nothing to sign or resize, so they skip the Plex plumbing and
+    /// use the URL itself as the cache key.
+    /// </summary>
+    public IDalamudTextureWrap? GetUrl(string url)
+    {
+        if (this.disposed || url.Length == 0 || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        _ = Task.Run(() => this.FetchAsync(server, token, thumb, entry));
+        if (this.cache.TryGetValue(url, out var existing))
+        {
+            existing.LastUsed = this.tick;
+            return existing.Wrap;
+        }
+
+        return this.Fetch(url, url);
+    }
+
+    /// <summary>Starts a fetch for a key that is not cached yet, and returns nothing this frame.</summary>
+    private IDalamudTextureWrap? Fetch(string key, string url)
+    {
+        var entry = new Entry { LastUsed = this.tick };
+        if (!this.cache.TryAdd(key, entry))
+            return null;
+
+        _ = Task.Run(() => this.FetchAsync(url, entry));
         return null;
     }
 
-    private async Task FetchAsync(string server, string token, string thumb, Entry entry)
+    private async Task FetchAsync(string url, Entry entry)
     {
         await this.fetching.WaitAsync();
 
@@ -146,18 +178,11 @@ internal sealed class PlexArt(ITextureProvider textures, HttpClient http, IPlugi
             if (this.disposed)
                 return;
 
-            // The transcode endpoint takes the thumbnail's own path as a parameter and hands back a
-            // JPEG at whatever size is asked for.
-            var url = $"{server.TrimEnd('/')}/photo/:/transcode" +
-                $"?width={PosterWidth}&height={PosterHeight}&minSize=1&upscale=1" +
-                $"&url={Uri.EscapeDataString(thumb)}" +
-                $"&X-Plex-Token={Uri.EscapeDataString(token)}";
-
             var bytes = await http.GetByteArrayAsync(url);
             if (this.disposed)
                 return;
 
-            var wrap = await textures.CreateFromImageAsync(bytes, $"aetherstream-poster:{thumb}");
+            var wrap = await textures.CreateFromImageAsync(bytes, "aetherstream-art");
 
             entry.Wrap = wrap;
 
@@ -171,7 +196,7 @@ internal sealed class PlexArt(ITextureProvider textures, HttpClient http, IPlugi
         {
             // A missing poster is not worth a visible error — the card falls back to its title.
             entry.FailedAt = this.tick;
-            log.Debug($"[art] {thumb}: {ex.Message}");
+            log.Debug($"[art] {url}: {ex.Message}");
         }
         finally
         {

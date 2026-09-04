@@ -150,6 +150,25 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Most recent first.</summary>
     public List<Recent> Recents { get; set; } = [];
 
+    // -- Live TV -----------------------------------------------------------------------------------
+
+    /// <summary>
+    /// An M3U playlist of live channels. Defaults to the iptv-org directory, which indexes publicly
+    /// available streams; any other extended-M3U list works the same way.
+    /// </summary>
+    public string LiveTvPlaylistUrl { get; set; } = "https://iptv-org.github.io/iptv/index.m3u";
+
+    /// <summary>Last group and country filters, so the tab opens where you left it.</summary>
+    public string LiveTvGroup { get; set; } = string.Empty;
+
+    public string LiveTvCountry { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Channel URLs you have pinned. Keyed by URL rather than name because names are not unique in
+    /// these lists — there are a dozen "News" in any given one.
+    /// </summary>
+    public List<string> LiveTvFavourites { get; set; } = [];
+
     // -- Parties -----------------------------------------------------------------------------------
     //
     // Everything below the key is told to us by the service on sign-in. None of it is typed, and
