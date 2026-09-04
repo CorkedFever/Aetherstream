@@ -40,7 +40,7 @@ public static class M3uPlaylist
             if (this.Referrer.Length > 0)
                 (headers ??= [])["Referer"] = this.Referrer;
 
-            return new ResolvedStream(this.Url, this.Name, headers);
+            return new ResolvedStream(this.Url, this.Name, headers, Relayable: HlsRelay.CanRelay(this.Url));
         }
     }
 

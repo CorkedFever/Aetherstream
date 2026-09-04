@@ -109,11 +109,13 @@ internal sealed class LibraryTab(UiContext ui)
 
             // The code is the whole point of this screen, so it is given room rather than being set
             // in the same text as the sentence above it.
-            using (ImRaii.PushStyle(ImGuiStyleVar.FramePadding, new Vector2(18, 10)))
-            using (ImRaii.PushColor(ImGuiCol.Button, Ui.AccentDim with { W = 0.22f })
-                .Push(ImGuiCol.ButtonHovered, Ui.AccentDim with { W = 0.22f })
-                .Push(ImGuiCol.ButtonActive, Ui.AccentDim with { W = 0.22f })
-                .Push(ImGuiCol.Text, Ui.Accent))
+            using (ImRaii.PushStyle(ImGuiStyleVar.FramePadding, new Vector2(18, 8)))
+            using (ImRaii.PushColor(ImGuiCol.Button, Theme.GlassLit)
+                .Push(ImGuiCol.ButtonHovered, Theme.GlassLit)
+                .Push(ImGuiCol.ButtonActive, Theme.GlassLit)
+                .Push(ImGuiCol.Border, Theme.Accent)
+                .Push(ImGuiCol.Text, Theme.Accent))
+            using (Theme.PushDisplayLarge())
             {
                 if (ImGui.Button(waiting.Code))
                     ImGui.SetClipboardText(waiting.Code);

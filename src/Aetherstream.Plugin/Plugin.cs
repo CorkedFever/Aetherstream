@@ -46,6 +46,7 @@ public sealed partial class Plugin : IDalamudPlugin
     /// <summary>Stream path of the group currently selected to broadcast to.</summary>
     private string currentStreamPath = string.Empty;
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(20) };
+    private readonly HlsRelay relay;
 
     /// <summary>Set off the render thread to ask <see cref="OnDraw"/> to persist the config.</summary>
     private volatile bool configDirty;
@@ -84,6 +85,12 @@ public sealed partial class Plugin : IDalamudPlugin
         LibVLCSharp.Shared.Core.Initialize(natives);
         this.vlc = new LibVLC();
 
+        // libvlc says exactly why a stream failed, and until now the plugin discarded it — leaving
+        // "it froze after ten seconds" with nothing behind it, diagnosable only by reproducing the
+        // same stream in a desktop harness. Warnings and above only: at full verbosity libvlc emits
+        // thousands of lines a minute.
+        this.vlc.Log += this.OnVlcLog;
+
         this.session = new StreamSession(this.vlc, textures, log, this.config);
         this.screen = new WorldScreen(gameGui);
         this.gameGuiRef = gameGui;
@@ -97,6 +104,11 @@ public sealed partial class Plugin : IDalamudPlugin
         this.session.UploaderReleasing += () => this.binding.Unbind(this.SurfaceAnchorPosition());
 
         this.art = new PlexArt(textures, this.http, log);
+
+        // Its own client: the shared one has a twenty-second timeout, and a relayed segment is
+        // read to completion through this process rather than handed off.
+        this.relay = new HlsRelay(new HttpClient { Timeout = TimeSpan.FromSeconds(30) }, message => log.Information(message));
+
         this.uiContext = new UiContext
         {
             Config = this.config,
@@ -114,11 +126,13 @@ public sealed partial class Plugin : IDalamudPlugin
             UnbindSurface = this.UnbindSurfaces,
         };
 
-        this.window = new ControlWindow(this.uiContext);
+        // The display face is loaded before the window so the first frame is drawn in it.
+        Theme.Display = new DisplayFont(pluginInterface, log);
+        this.window = new ControlWindow(this.uiContext, this.SaveConfig);
 
         // The account calls are network work and must not run inside Draw.
         this.plex = new PlexAccount(this.http);
-        this.window.NowPlaying.ResumeStalled = this.ResumeStalled;
+        this.window.Screen.ResumeStalled = this.ResumeStalled;
         this.window.Library.BeginSignIn = this.BeginPlexSignIn;
         this.window.Library.CompleteSignIn = this.CompletePlexSignIn;
         this.window.Library.Browse = this.BrowsePlex;
@@ -148,6 +162,11 @@ public sealed partial class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        // First, and before anything else is torn down: the LibVLC instance outlives the plugin
+        // deliberately (see the note at the end of this method), so a subscription left behind here
+        // would call into a log this unload is about to invalidate.
+        this.vlc.Log -= this.OnVlcLog;
+
         this.pluginInterface.UiBuilder.Draw -= this.OnDraw;
         this.pluginInterface.UiBuilder.OpenMainUi -= this.OpenMainUi;
         this.pluginInterface.UiBuilder.OpenConfigUi -= this.OpenMainUi;
@@ -178,10 +197,14 @@ public sealed partial class Plugin : IDalamudPlugin
         // unlike the video texture they can be released outright once drawing has stopped.
         this.art.Dispose();
 
+        Theme.Display?.Dispose();
+        Theme.Display = null;
+
         // The LibVLC instance is deliberately left alive. Disposing it unloads libvlc's native
         // modules — including its own Direct3D plugins — from inside the game's process, and doing
         // that while the display driver still has work queued faults on a driver thread. It is
         // released when the process exits, which is soon enough.
+        this.relay.Dispose();
         this.http.Dispose();
 
         this.pluginInterface.SavePluginConfig(this.config);
@@ -192,6 +215,9 @@ public sealed partial class Plugin : IDalamudPlugin
         // Queued starts, stops and texture work are applied before anything draws, so no draw list
         // can be holding a texture that is about to be released.
         this.session.Update();
+
+        // Checked here so a stall is noticed whether or not the control window is open.
+        this.RetryStalledThroughRelay();
 
         // Driven from here rather than from the window, because a closed or collapsed window does
         // not draw — and retired poster textures would then sit un-released until it was reopened.

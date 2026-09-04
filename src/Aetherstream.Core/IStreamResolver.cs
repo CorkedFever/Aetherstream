@@ -34,4 +34,24 @@ public sealed record ResolvedStream(
     /// choose, which is right for almost everything — it is set when the track libvlc would pick is
     /// one it cannot actually decode.
     /// </summary>
-    int? AudioTrackIndex = null);
+    int? AudioTrackIndex = null,
+
+    /// <summary>
+    /// Whether this may be retried through the local HLS relay if it stalls.
+    /// <para>
+    /// Set for channels out of a public playlist, where a stall usually means an expiring upstream
+    /// token the relay can work around. It stays false for everything else, because a video that
+    /// stops is far more likely to have simply ended — restarting a finished film through a relay
+    /// would replace a normal ending with a confusing loop.
+    /// </para>
+    /// </summary>
+    bool Relayable = false,
+
+    /// <summary>Whether this already points at the relay, so a stall is not retried a second time.</summary>
+    bool Relayed = false,
+
+    /// <summary>
+    /// The address this was before the relay took it over, so a relayed stream can still be
+    /// matched to the channel it came from. Null when it has not been relayed.
+    /// </summary>
+    string? Origin = null);

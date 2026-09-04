@@ -185,8 +185,13 @@ internal sealed class StreamSession(
     /// and playback position. When both stop moving, playback has stopped, whatever the frame
     /// counter says.
     /// </para>
+    /// <para>
+    /// Long enough that ordinary rebuffering on a poor connection is not mistaken for death, short
+    /// enough that a channel which has genuinely stopped is not left frozen on screen for most of a
+    /// minute before anything is done about it.
+    /// </para>
     /// </summary>
-    private const long StallAfterMs = 12000;
+    private const long StallAfterMs = 8000;
 
     private long lastProgressAtMs;
     private long lastDeliveredMs = -1;
@@ -318,7 +323,16 @@ internal sealed class StreamSession(
         var delivered = playing.AudioDeliveredMs;
         var position = playing.PositionMs;
 
-        if (delivered != this.lastDeliveredMs || position != this.lastPositionMs)
+        // Delivered audio is the authority whenever there is an audio track, because it is the only
+        // one of these that moves solely when the decoder is fed. Position keeps advancing on a
+        // starved live stream — libvlc's clock runs on regardless — so accepting *either* signal, as
+        // this did, meant a stream that had plainly stopped never registered as stalled at all: a
+        // real one ran thirty-three seconds past its last sample without a word.
+        var moved = playing.SampleRate > 0
+            ? delivered != this.lastDeliveredMs
+            : position != this.lastPositionMs;
+
+        if (moved)
         {
             this.lastDeliveredMs = delivered;
             this.lastPositionMs = position;
@@ -337,7 +351,39 @@ internal sealed class StreamSession(
 
         log.Warning($"[stall] no progress for {elapsed - this.lastProgressAtMs}ms at position {position}ms");
         this.lastProgressAtMs = elapsed;
+        this.stallPending = true;
     }
+
+    private bool stallPending;
+
+    /// <summary>
+    /// Reports a newly detected stall, once.
+    /// <para>
+    /// One-shot because the detector re-arms and will say so again every twelve seconds for as long
+    /// as nothing arrives, and whoever acts on this — by restarting through the relay — must do it
+    /// once rather than once per report.
+    /// </para>
+    /// </summary>
+    public bool ConsumeStall()
+    {
+        if (!this.stallPending)
+            return false;
+
+        this.stallPending = false;
+        return true;
+    }
+
+    /// <summary>
+    /// Silenced for now, without touching the saved volume. Applied every frame by
+    /// <see cref="ApplyVolume"/>, so it is a runtime state rather than a setting.
+    /// </summary>
+    public bool Muted { get; set; }
+
+    /// <summary>
+    /// How much the distance falloff is currently taking off, 1 for none. Exposed so the screen
+    /// can say "far from screen" instead of leaving a quiet stream looking like a broken one.
+    /// </summary>
+    public float DistanceGain { get; private set; } = 1f;
 
     /// <summary>Applies the configured volume, optionally attenuated by distance to the screen.</summary>
     public void ApplyVolume(float distanceYalms)
@@ -345,15 +391,16 @@ internal sealed class StreamSession(
         if (this.audio is null)
             return;
 
-        var gain = config.Volume;
+        var falloff = 1f;
         if (config.AudioFalloffYalms > 0.01f)
         {
             var t = Math.Clamp(distanceYalms / config.AudioFalloffYalms, 0f, 1f);
             // Squared falloff reads as more natural than linear over a room-sized distance.
-            gain *= (1f - t) * (1f - t);
+            falloff = (1f - t) * (1f - t);
         }
 
-        this.audio.Volume = gain;
+        this.DistanceGain = falloff;
+        this.audio.Volume = this.Muted ? 0f : config.Volume * falloff;
     }
 
     public void Dispose()
@@ -428,6 +475,7 @@ internal sealed class StreamSession(
                 this.lastProgressAtMs = 0;
                 this.lastDeliveredMs = -1;
                 this.lastPositionMs = -1;
+                this.stallPending = false;
 
                 // Seek only once libvlc has the media open; before that a seek is discarded.
                 this.resumeTargetMs = resumeAtMs;

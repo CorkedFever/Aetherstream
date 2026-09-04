@@ -13,27 +13,22 @@ namespace Aetherstream.Plugin.UI;
 /// </summary>
 internal static class Ui
 {
-    /// <summary>Aether blue. Used for anything the eye should land on first.</summary>
-    public static readonly Vector4 Accent = new(0.42f, 0.78f, 1f, 1f);
+    // The palette lives in Theme; these names stay so every panel written against them keeps working.
 
-    public static readonly Vector4 AccentDim = new(0.42f, 0.78f, 1f, 0.35f);
+    public static readonly Vector4 Accent = Theme.Accent;
 
-    public static readonly Vector4 Good = new(0.45f, 0.85f, 0.55f, 1f);
+    public static readonly Vector4 AccentDim = Theme.AccentDim;
 
-    public static readonly Vector4 Warn = new(1f, 0.80f, 0.35f, 1f);
+    public static readonly Vector4 Good = Theme.Good;
 
-    public static readonly Vector4 Bad = new(1f, 0.45f, 0.45f, 1f);
+    public static readonly Vector4 Warn = Theme.Warn;
 
-    public static readonly Vector4 Faint = new(1f, 1f, 1f, 0.38f);
+    public static readonly Vector4 Bad = Theme.Bad;
 
-    /// <summary>A heading with a rule under it. Cheaper on vertical space than a collapsing header.</summary>
-    public static void Section(string title)
-    {
-        ImGui.Spacing();
-        ImGui.TextColored(Accent, title);
-        ImGui.Separator();
-        ImGui.Spacing();
-    }
+    public static readonly Vector4 Faint = Theme.TextDim;
+
+    /// <summary>A heading in the display face with a rule under it.</summary>
+    public static void Section(string title) => Theme.Heading(title);
 
     /// <summary>Grey explanatory text, wrapped to the panel.</summary>
     public static void Hint(string text)

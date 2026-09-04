@@ -108,6 +108,15 @@ public sealed class Followed
     public string Name { get; set; } = string.Empty;
 }
 
+/// <summary>A channel list you have added. Named, because a URL is not something to pick from a menu.</summary>
+[Serializable]
+public sealed class Playlist
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string Url { get; set; } = string.Empty;
+}
+
 /// <summary>Something played before, so it can be started again without being typed again.</summary>
 [Serializable]
 public sealed class Recent
@@ -126,7 +135,7 @@ public sealed class Recent
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
 
     public int Version { get; set; } = CurrentVersion;
 
@@ -150,13 +159,24 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Most recent first.</summary>
     public List<Recent> Recents { get; set; } = [];
 
+    /// <summary>Folded down to the title bar. The picture carries on wherever it is showing.</summary>
+    public bool WindowMinimised { get; set; }
+
     // -- Live TV -----------------------------------------------------------------------------------
 
     /// <summary>
-    /// An M3U playlist of live channels. Defaults to the iptv-org directory, which indexes publicly
-    /// available streams; any other extended-M3U list works the same way.
+    /// The M3U playlist of live channels currently in use. Defaults to the iptv-org directory, which
+    /// indexes publicly available streams; any other extended-M3U list works the same way.
     /// </summary>
-    public string LiveTvPlaylistUrl { get; set; } = "https://iptv-org.github.io/iptv/index.m3u";
+    public string LiveTvPlaylistUrl { get; set; } = DefaultPlaylistUrl;
+
+    public const string DefaultPlaylistUrl = "https://iptv-org.github.io/iptv/index.m3u";
+
+    /// <summary>
+    /// Every playlist you have added, so a private list (an ErsatzTV server, say) can sit beside
+    /// the public one and be switched to without retyping either.
+    /// </summary>
+    public List<Playlist> LiveTvPlaylists { get; set; } = [];
 
     /// <summary>Last group and country filters, so the tab opens where you left it.</summary>
     public string LiveTvGroup { get; set; } = string.Empty;
@@ -403,6 +423,20 @@ public sealed class Configuration : IPluginConfiguration
             // already in the saved config wins over it — which is the whole reason this exists.
             if (this.NetworkCachingMs <= 4000)
                 this.NetworkCachingMs = 8000;
+        }
+
+        if (this.Version < 5)
+        {
+            // The single playlist address becomes the first entry of a list, keeping whatever was
+            // typed there rather than resetting anyone who had swapped in their own.
+            if (this.LiveTvPlaylists.Count == 0 && this.LiveTvPlaylistUrl.Length > 0)
+            {
+                this.LiveTvPlaylists.Add(new Playlist
+                {
+                    Name = this.LiveTvPlaylistUrl == DefaultPlaylistUrl ? "iptv-org" : "My list",
+                    Url = this.LiveTvPlaylistUrl,
+                });
+            }
         }
 
         this.Version = CurrentVersion;
