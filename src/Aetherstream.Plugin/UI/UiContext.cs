@@ -81,15 +81,23 @@ internal sealed class UiContext
         && this.Config.SurfaceMaterialIndex == screen.MaterialIndex
         && this.Config.SurfaceTextureIndex == screen.TextureIndex;
 
-    /// <summary>
-    /// Takes the host's screen. Placement is untouched on purpose — where the furnishing stands is
-    /// the viewer's business, and the host's coordinates would be meaningless in their house.
-    /// </summary>
+    /// <summary>Takes the host's screen.</summary>
     public void AcceptOfferedScreen()
     {
         if (this.OfferedScreen is not { } screen)
             return;
 
+        this.ApplyScreen(screen);
+        this.OfferedScreen = null;
+    }
+
+    /// <summary>
+    /// Puts the picture on a described surface. Placement is untouched on purpose — where the
+    /// furnishing stands is this install's business, and a preset or a host's coordinates would be
+    /// meaningless in a different house.
+    /// </summary>
+    public void ApplyScreen(ScreenPreset screen)
+    {
         this.UnbindSurface();
 
         this.Config.SurfaceModelPath = screen.SurfacePath;
@@ -110,7 +118,6 @@ internal sealed class UiContext
         this.Config.SurfacePosition = this.Objects.LocalPlayer?.Position ?? this.Config.SurfacePosition;
 
         this.SaveConfig();
-        this.OfferedScreen = null;
     }
 
     public void DeclineOfferedScreen() => this.OfferedScreen = null;
