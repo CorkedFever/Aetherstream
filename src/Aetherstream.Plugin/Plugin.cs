@@ -109,6 +109,7 @@ public sealed partial class Plugin : IDalamudPlugin
             Inspector = new SurfaceInspector(log),
             SaveConfig = this.SaveConfig,
             Play = this.PlayAsync,
+            PlayResolved = this.PlayResolved,
             FindAnchor = () => this.FindAnchor(this.config.Placement),
             UnbindSurface = this.UnbindSurfaces,
         };
@@ -130,6 +131,7 @@ public sealed partial class Plugin : IDalamudPlugin
         this.window.Share.StopBroadcast = this.StopBroadcast;
         this.directory = new PartyDirectory(this.http);
         this.WireParty();
+        this.WireLiveTv();
 
         this.windows.AddWindow(this.window);
 

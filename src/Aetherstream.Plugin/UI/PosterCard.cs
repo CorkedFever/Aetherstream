@@ -1,6 +1,7 @@
 using System.Numerics;
 
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherstream.Plugin.UI;
 
@@ -31,10 +32,30 @@ internal static class PosterCard
     public static float HeightOf(bool wide) =>
         (WidthOf(wide) * (wide ? StillAspect : PosterAspect)) + (ImGui.GetTextLineHeight() * 2f) + 10f;
 
+    /// <summary>A tile whose art is a Plex thumbnail path.</summary>
     public static bool Draw(
         UiContext ui,
         string id,
         string thumb,
+        string title,
+        string subtitle,
+        bool container,
+        bool wide = false) =>
+        Draw(ui, id, () => ui.Art.Get(ui.Config.PlexServer, ui.Config.PlexToken, thumb),
+             title, subtitle, container, wide);
+
+    /// <summary>
+    /// A tile whose art comes from anywhere.
+    /// <para>
+    /// The source is a delegate rather than a texture because it is only invoked once the tile is
+    /// known to be on screen. Handing in an already-fetched texture would mean every tile in the
+    /// list requesting one, which is exactly what the visibility check below exists to prevent.
+    /// </para>
+    /// </summary>
+    public static bool Draw(
+        UiContext ui,
+        string id,
+        Func<IDalamudTextureWrap?> art,
         string title,
         string subtitle,
         bool container,
@@ -65,7 +86,7 @@ internal static class PosterCard
             ImGui.ColorConvertFloat4ToU32(hovered ? new Vector4(1f, 1f, 1f, 0.10f) : new Vector4(1f, 1f, 1f, 0.04f)),
             4f);
 
-        var texture = ui.Art.Get(ui.Config.PlexServer, ui.Config.PlexToken, thumb);
+        var texture = art();
         if (texture is not null)
         {
             // Fit inside, never crop. Episode stills are 16:9 and posters are 2:3, so anything that

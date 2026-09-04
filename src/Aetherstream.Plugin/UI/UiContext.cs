@@ -34,6 +34,16 @@ internal sealed class UiContext
     /// <summary>Starts a source. Resolution happens off the render thread; this only queues it.</summary>
     public required Action<string> Play { get; init; }
 
+    /// <summary>
+    /// Starts something already resolved, skipping the resolver chain.
+    /// <para>
+    /// A live-TV channel carries its own user agent and referrer, and those would be lost if the URL
+    /// went back through resolution as a bare string — 665 channels in the default playlist do not
+    /// serve without them.
+    /// </para>
+    /// </summary>
+    public required Action<Aetherstream.Core.ResolvedStream> PlayResolved { get; init; }
+
     public required Func<IGameObject?> FindAnchor { get; init; }
 
     public required Action UnbindSurface { get; init; }
