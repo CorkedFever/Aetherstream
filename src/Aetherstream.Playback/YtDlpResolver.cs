@@ -72,6 +72,16 @@ public sealed class YtDlpResolver(string executable) : IStreamResolver
         // Fall back to a video+audio pair, which is all YouTube offers now. Plain "best" is wrong
         // here: it means "best muxed" and simply fails on sites that no longer publish one.
         start.ArgumentList.Add("b/bv*+ba");
+
+        // Within whatever the selector allows, prefer what the decoder can actually use. The
+        // framebuffer is 1280x720, so anything above that is decode work thrown away — and left to
+        // its own ranking yt-dlp reaches for 2160p AV1 the moment its preferred formats are
+        // missing, which they are on any machine without a JavaScript runtime for YouTube's
+        // challenges. Software-decoding 4K AV1 inside the game is not a stream that plays; it is a
+        // slideshow that looks like a broken plugin. H.264 first because every libvlc build decodes
+        // it in hardware or cheaply in software; AAC over Opus for the same reason.
+        start.ArgumentList.Add("-S");
+        start.ArgumentList.Add("res:720,vcodec:h264,acodec:aac");
         start.ArgumentList.Add("--dump-single-json");
         start.ArgumentList.Add(input);
 
