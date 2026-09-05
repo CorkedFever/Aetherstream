@@ -47,22 +47,55 @@ internal sealed class SetupTab(UiContext ui)
             ImGui.TextColored(Theme.Warn, "yt-dlp not found — YouTube, Kick and most sites will not play.");
         }
 
-        var path = ui.Config.YtDlpPath;
-        ImGui.SetNextItemWidth(-1);
-        if (ImGui.InputTextWithHint("##ytdlppath", @"where you put yt-dlp.exe, e.g. C:\Users\you\Desktop\yt-dlp", ref path, 512))
+        // A picker, not a text box. Nobody should be typing a path into a game.
+        if (ImGui.Button(found is null ? "Find yt-dlp.exe…" : "Use a different yt-dlp.exe…"))
         {
-            ui.Config.YtDlpPath = path.Trim();
-            ui.SaveConfig();
+            ui.FileDialogs.OpenFileDialog(
+                "Where is yt-dlp.exe?",
+                "yt-dlp{yt-dlp.exe},Programs{.exe},All files{.*}",
+                (accepted, paths) =>
+                {
+                    if (accepted && paths.Count > 0)
+                    {
+                        ui.Config.YtDlpPath = paths[0];
+                        ui.SaveConfig();
+                    }
+                },
+                selectionCountMax: 1,
+                startPath: StartFolder(),
+                isModal: false);
         }
 
-        Ui.Tip(
-            "Paste the folder yt-dlp.exe is in, or the file itself. Leave it empty if you " +
-            "installed with winget — that is found automatically.");
+        Ui.Tip("Opens a file picker. Point it at the yt-dlp.exe you downloaded, wherever you put it.");
+
+        if (ui.Config.YtDlpPath.Length > 0)
+        {
+            ImGui.SameLine();
+            if (ImGui.Button("Forget it"))
+            {
+                ui.Config.YtDlpPath = string.Empty;
+                ui.SaveConfig();
+            }
+
+            Ui.Tip("Go back to looking in the usual places (a winget install, or the plugin's folder).");
+        }
 
         Ui.Hint(
             "Easiest: in PowerShell run \"winget install yt-dlp\" and \"winget install DenoLand.Deno\", " +
             "then restart the game. Deno is what yt-dlp uses to handle YouTube; without it YouTube " +
             "half-works at best.");
+    }
+
+    /// <summary>
+    /// Where the picker opens: beside the file already chosen, otherwise the Desktop — which is
+    /// where a hand-downloaded exe usually is.
+    /// </summary>
+    private string StartFolder()
+    {
+        var chosen = Path.GetDirectoryName(ui.Config.YtDlpPath);
+        return chosen is { Length: > 0 } && Directory.Exists(chosen)
+            ? chosen
+            : Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
     }
 
     private void DrawPlex()

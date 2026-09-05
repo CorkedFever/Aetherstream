@@ -3,6 +3,7 @@ using Aetherstream.Plugin.Playback;
 using Aetherstream.Plugin.Surfaces;
 
 using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Plugin.Services;
 
 namespace Aetherstream.Plugin.UI;
@@ -50,6 +51,9 @@ internal sealed class UiContext
 
     /// <summary>Where yt-dlp would be found right now, or null. For the Setup tab's readout.</summary>
     public required Func<string?> LocateYtDlp { get; init; }
+
+    /// <summary>The plugin's file picker. Shared, because only one dialog can sensibly be open at a time.</summary>
+    public required FileDialogManager FileDialogs { get; init; }
 
 
     /// <summary>

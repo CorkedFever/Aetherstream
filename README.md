@@ -61,8 +61,8 @@ the "no Opus decoder" theory that turned out to be wrong — at the cost of the 
 | [ffmpeg](https://ffmpeg.org/) | Broadcasting to a party (not watching one) | `winget install ffmpeg` | LGPL 2.1+ / GPL 2+ depending on build |
 
 Both are looked up on `PATH` at the moment they are needed. yt-dlp is also found in the plugin's
-config folder, or wherever the **Setup tab** is pointed — so a copy downloaded by hand to the
-Desktop works, once, for good. (Not beside the plugin DLL: Dalamud installs each version into its
+config folder, or wherever the **Setup tab**'s file picker is pointed — so a copy downloaded by
+hand to the Desktop works, once, for good. (Not beside the plugin DLL: Dalamud installs each version into its
 own numbered folder, so anything left there vanishes on the next update.) Neither is downloaded by the plugin, deliberately —
 a plugin that fetches executables is not something to ask people to trust.
 
