@@ -48,6 +48,9 @@ internal sealed class UiContext
 
     public required Action UnbindSurface { get; init; }
 
+    /// <summary>Where yt-dlp would be found right now, or null. For the Setup tab's readout.</summary>
+    public required Func<string?> LocateYtDlp { get; init; }
+
 
     /// <summary>
     /// A screen setup offered by the party code just played, when it differs from what is already

@@ -41,7 +41,7 @@ public static class StreamResolvers
         out string description,
         PlexSettings plex = default,
         PartySettings party = default,
-        string? toolsDirectory = null)
+        Tools tools = default)
     {
         // A party code, checked before anything else: it is the one thing a guest is ever asked to
         // paste, and it has to work wherever a URL would, including "/aether play ABC123".
@@ -67,7 +67,7 @@ public static class StreamResolvers
             return new DirectUrlResolver();
         }
 
-        if (YtDlpResolver.Locate(toolsDirectory) is { } ytDlp)
+        if (YtDlpResolver.Locate(tools.YtDlpPath, tools.Directories ?? []) is { } ytDlp)
         {
             description = "yt-dlp";
             return new YtDlpResolver(ytDlp);
@@ -83,10 +83,17 @@ public static class StreamResolvers
         // not optional: PATH is read when the game starts, so yt-dlp installed while it is
         // running stays invisible until it is relaunched.
         throw new InvalidOperationException(
-            "yt-dlp is not installed — run \"winget install yt-dlp\", then restart the game.\n\n" +
+            "yt-dlp not found — \"winget install yt-dlp\" and restart, or point Setup at your copy.\n\n" +
             $"Nothing here can resolve '{input}' without it. yt-dlp plays YouTube, Kick and most " +
-            "other sites; without it, only Twitch, Plex, live TV and direct stream URLs work.");
+            "other sites; without it, only Twitch, Plex, live TV and direct stream URLs work. If " +
+            "you already downloaded yt-dlp.exe somewhere, paste that location on the Setup tab.");
     }
+
+    /// <summary>
+    /// Where to look for external tools: a path the user typed, and the plugin's own folders in
+    /// the order they should be searched.
+    /// </summary>
+    public readonly record struct Tools(string? YtDlpPath, IReadOnlyList<string>? Directories);
 
     private static bool IsDirectMedia(string input)
     {

@@ -124,6 +124,7 @@ public sealed partial class Plugin : IDalamudPlugin
             PlayResolved = this.PlayResolved,
             FindAnchor = () => this.FindAnchor(this.config.Placement),
             UnbindSurface = this.UnbindSurfaces,
+            LocateYtDlp = () => YtDlpResolver.Locate(this.config.YtDlpPath, this.ToolDirectories()),
         };
 
         // The display face is loaded before the window so the first frame is drawn in it.
@@ -503,6 +504,19 @@ public sealed partial class Plugin : IDalamudPlugin
             this.session.ApplyVolume(Vector3.Distance(player.Position, quad.Centre));
     }
 
+    /// <summary>
+    /// The config folder first: it is the same for the life of the install, whereas Dalamud puts
+    /// each plugin version in its own numbered folder, so a file left beside the DLL is gone on
+    /// the next update.
+    /// </summary>
+    private string[] ToolDirectories() =>
+    [
+        this.pluginInterface.GetPluginConfigDirectory(),
+        this.pluginInterface.AssemblyLocation.Directory?.FullName ?? AppContext.BaseDirectory,
+    ];
+
+    private StreamResolvers.Tools Tools() => new(this.config.YtDlpPath, this.ToolDirectories());
+
     private void OnCommand(string command, string arguments)
     {
         var trimmed = arguments.Trim();
@@ -604,7 +618,7 @@ public sealed partial class Plugin : IDalamudPlugin
                             this.config.PlexToken,
                             this.config.PlexMaxKilobits),
                         new StreamResolvers.PartySettings(this.config.PartyApiHost, this.config.PartyKey),
-                        this.pluginInterface.AssemblyLocation.Directory?.FullName);
+                        this.Tools());
                     var stream = await resolver.ResolveAsync(source, token);
                     if (token.IsCancellationRequested)
                         return;

@@ -15,9 +15,54 @@ internal sealed class SetupTab(UiContext ui)
 
     public void Draw()
     {
+        this.DrawTools();
         this.DrawPlex();
         this.DrawDecoding();
         this.DrawDiagnostics();
+    }
+
+    /// <summary>
+    /// yt-dlp: where it is, and where to say it is. First on the tab because it is the one thing a
+    /// new install is most likely to be missing, and "I downloaded it, where do I put it" should
+    /// have an answer that is not a numbered folder.
+    /// </summary>
+    private void DrawTools()
+    {
+        Ui.Section("YouTube and other sites");
+
+        var found = ui.LocateYtDlp();
+
+        Ui.Dot(found is not null ? Theme.Good : Theme.Warn, found is not null ? "found" : "not found");
+        ImGui.SameLine();
+
+        if (found is not null)
+        {
+            ImGui.TextColored(Theme.TextDim, "yt-dlp found:");
+            ImGui.SameLine();
+            ImGui.TextColored(Theme.Text, Ui.Ellipsis(found, 60));
+            Ui.Tip(found);
+        }
+        else
+        {
+            ImGui.TextColored(Theme.Warn, "yt-dlp not found — YouTube, Kick and most sites will not play.");
+        }
+
+        var path = ui.Config.YtDlpPath;
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputTextWithHint("##ytdlppath", @"where you put yt-dlp.exe, e.g. C:\Users\you\Desktop\yt-dlp", ref path, 512))
+        {
+            ui.Config.YtDlpPath = path.Trim();
+            ui.SaveConfig();
+        }
+
+        Ui.Tip(
+            "Paste the folder yt-dlp.exe is in, or the file itself. Leave it empty if you " +
+            "installed with winget — that is found automatically.");
+
+        Ui.Hint(
+            "Easiest: in PowerShell run \"winget install yt-dlp\" and \"winget install DenoLand.Deno\", " +
+            "then restart the game. Deno is what yt-dlp uses to handle YouTube; without it YouTube " +
+            "half-works at best.");
     }
 
     private void DrawPlex()

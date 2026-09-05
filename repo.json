@@ -3,7 +3,7 @@
     "Author": "Jasmine",
     "Name": "Aetherstream",
     "InternalName": "Aetherstream",
-    "AssemblyVersion": "0.2.1.0",
+    "AssemblyVersion": "0.2.2.0",
     "Description": "Puts a live stream on a screen anchored in the world: place it on a wall, size it, and watch while you play. Plays Twitch, YouTube, Plex, direct streams and thousands of live TV channels, painted onto a real in-game surface so the game lights and occludes it properly. Party groups let a room watch the same thing together from a six-character code.",
     "Punchline": "A screen in the world, showing whatever is live.",
     "ApplicableVersion": "any",
@@ -13,9 +13,9 @@
     "CanUnloadAsync": false,
     "LoadPriority": 0,
     "RepoUrl": "https://github.com/CorkedFever/Aetherstream",
-    "DownloadLinkInstall": "https://github.com/CorkedFever/Aetherstream/releases/download/v0.2.1/Aetherstream.zip",
-    "DownloadLinkUpdate": "https://github.com/CorkedFever/Aetherstream/releases/download/v0.2.1/Aetherstream.zip",
-    "DownloadLinkTesting": "https://github.com/CorkedFever/Aetherstream/releases/download/v0.2.1/Aetherstream.zip",
+    "DownloadLinkInstall": "https://github.com/CorkedFever/Aetherstream/releases/download/v0.2.2/Aetherstream.zip",
+    "DownloadLinkUpdate": "https://github.com/CorkedFever/Aetherstream/releases/download/v0.2.2/Aetherstream.zip",
+    "DownloadLinkTesting": "https://github.com/CorkedFever/Aetherstream/releases/download/v0.2.2/Aetherstream.zip",
     "IsHide": false,
     "IsTestingExclusive": false,
     "DownloadCount": 0,
@@ -28,9 +28,9 @@
       "live-tv",
       "iptv"
     ],
-    "TestingAssemblyVersion": "0.2.1.0",
+    "TestingAssemblyVersion": "0.2.2.0",
     "TestingDalamudApiLevel": 15,
-    "LastUpdate": 1788577593,
+    "LastUpdate": 1788579049,
     "IconUrl": ""
   }
 ]
