@@ -522,7 +522,7 @@ public sealed partial class Plugin : IDalamudPlugin
     ];
 
     private StreamResolvers.Tools Tools() =>
-        new(this.config.YtDlpPath, this.ToolDirectories(), this.config.YtDlpCookiesBrowser);
+        new(this.config.YtDlpPath, this.ToolDirectories(), this.config.YtDlpCookiesBrowser, this.config.YtDlpCookiesFile);
 
     private void OnCommand(string command, string arguments)
     {

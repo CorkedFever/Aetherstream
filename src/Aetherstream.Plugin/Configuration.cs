@@ -174,6 +174,13 @@ public sealed class Configuration : IPluginConfiguration
     /// </summary>
     public string YtDlpCookiesBrowser { get; set; } = string.Empty;
 
+    /// <summary>
+    /// A cookies file exported from a browser (Netscape format, as the usual extensions write).
+    /// Takes precedence over <see cref="YtDlpCookiesBrowser"/>: it works for browsers whose own
+    /// cookie stores yt-dlp cannot read.
+    /// </summary>
+    public string YtDlpCookiesFile { get; set; } = string.Empty;
+
     // -- Live TV -----------------------------------------------------------------------------------
 
     /// <summary>

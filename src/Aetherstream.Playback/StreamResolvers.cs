@@ -70,7 +70,7 @@ public static class StreamResolvers
         if (YtDlpResolver.Locate(tools.YtDlpPath, tools.Directories ?? []) is { } ytDlp)
         {
             description = "yt-dlp";
-            return new YtDlpResolver(ytDlp, tools.CookiesBrowser);
+            return new YtDlpResolver(ytDlp, tools.CookiesBrowser, tools.CookiesFile);
         }
 
         if (TwitchResolver.Matches(input))
@@ -96,7 +96,8 @@ public static class StreamResolvers
     public readonly record struct Tools(
         string? YtDlpPath,
         IReadOnlyList<string>? Directories,
-        string? CookiesBrowser = null);
+        string? CookiesBrowser = null,
+        string? CookiesFile = null);
 
     private static bool IsDirectMedia(string input)
     {

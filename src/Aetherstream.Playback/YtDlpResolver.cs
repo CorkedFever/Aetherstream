@@ -13,7 +13,7 @@ namespace Aetherstream.Playback;
 /// exists so Twitch still works with nothing installed.
 /// </para>
 /// </summary>
-public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null) : IStreamResolver
+public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null, string? cookiesFile = null) : IStreamResolver
 {
     /// <summary>Browsers yt-dlp can read a signed-in YouTube session from, as it names them.</summary>
     public static readonly string[] Browsers = ["brave", "chrome", "edge", "firefox", "vivaldi", "opera"];
@@ -165,7 +165,16 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
         // remedy yt-dlp itself names in that error: read the cookies of a browser the person is
         // already signed into. Opt-in, and everything stays on this machine — the cookies go from
         // the browser's store to yt-dlp to YouTube, nowhere else.
-        if (!string.IsNullOrWhiteSpace(cookiesBrowser))
+        // An exported cookies file beats reading a browser directly: Chromium-family browsers
+        // (Brave, Chrome, Edge) encrypt their cookie stores in a way yt-dlp cannot open while they
+        // run — "failed to decrypt with DPAPI", yt-dlp issue #10927 — whereas a Netscape-format
+        // export from an extension is just a text file and works for everyone.
+        if (!string.IsNullOrWhiteSpace(cookiesFile) && File.Exists(cookiesFile))
+        {
+            start.ArgumentList.Add("--cookies");
+            start.ArgumentList.Add(cookiesFile);
+        }
+        else if (!string.IsNullOrWhiteSpace(cookiesBrowser))
         {
             start.ArgumentList.Add("--cookies-from-browser");
             start.ArgumentList.Add(cookiesBrowser.Trim().ToLowerInvariant());
