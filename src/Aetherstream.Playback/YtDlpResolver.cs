@@ -26,7 +26,7 @@ public sealed class YtDlpResolver(string executable) : IStreamResolver
     /// directory is the game's, which nobody would guess, so it is only a last resort.
     /// </para>
     /// </summary>
-    public static string? Locate(string? explicitPath = null, params string[] directories)
+    public static string? Locate(string? explicitPath = null, IReadOnlyList<string>? directories = null)
     {
         // A path someone typed wins outright — a file or the folder it is in. This is the answer for
         // "I downloaded it to my Desktop": nobody should have to learn where a plugin lives.
@@ -41,7 +41,7 @@ public sealed class YtDlpResolver(string executable) : IStreamResolver
                 return inFolder;
         }
 
-        foreach (var directory in directories)
+        foreach (var directory in directories ?? [])
         {
             var candidate = Path.Combine(directory, "yt-dlp.exe");
             if (File.Exists(candidate))
