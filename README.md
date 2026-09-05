@@ -1,32 +1,115 @@
 # Aetherstream
 
-Live stream playback decoded into a raw RGBA framebuffer, so the picture can be drawn anywhere — a
-desktop window, an overlay panel in FFXIV, or **onto a real in-game surface**, where the game
-renders it with correct depth, lighting and occlusion.
+A television in Final Fantasy XIV. Live streams, your Plex library and thousands of live TV channels,
+painted **onto a real in-game furnishing** so the game lights and occludes the picture like anything
+else in the room — and party groups so a few friends can watch the same thing together.
+
+## Installing
+
+1. In Dalamud settings → *Experimental* → *Custom Plugin Repositories*, add
+   `https://raw.githubusercontent.com/CorkedFever/Aetherstream/main/repo.json` and save.
+2. Open the plugin installer, search for **Aetherstream**, install it.
+3. `/aether` opens the window.
+
+### What it needs
+
+| To do this | You need | Notes |
+| --- | --- | --- |
+| Twitch, Plex, live TV, direct stream URLs | nothing | works out of the box |
+| **YouTube**, Kick and most other sites | **yt-dlp** | `winget install yt-dlp` in a terminal, then **restart the game** — it reads `PATH` when it starts, so an install made while it is running is invisible until you relaunch. If YouTube stops working later, `yt-dlp -U` is the first thing to try. |
+| Broadcasting to a party | **ffmpeg** on `PATH` | `winget install ffmpeg`. Watching a party needs nothing. |
+
+If a YouTube link does nothing, the screen says why: `NO PICTURE — yt-dlp is not installed…`.
+
+### First five minutes
+
+- **Screen tab → Known screens → Everkeep Monitor.** Stand next to your monitor and click it; the
+  picture lands on the nearest one. Recolour the wall behind it black in-game — the panel is an
+  additive effect, and a black wall is the single biggest quality win.
+- **Live TV.** Right-click a channel to give it a number; channel ▲/▼ and last-channel on the remote
+  step through those. Plenty of channels in a public list are dead at any given moment — if one does
+  nothing, try another. Add your own list (an ErsatzTV or Tunarr server, say) from the playlist
+  picker.
+- **Share.** Make a party, send the six-character code. Whoever pastes it into the Watch tab sees
+  what you broadcast.
+
+## Dependencies
+
+Everything third-party, what it is for, and where it comes from. **Bundled** ships in the release
+zip; **external** has to be on the user's machine; **server** runs on the party host only.
+
+### Bundled with the plugin
+
+| Dependency | Version | Licence | Used for |
+| --- | --- | --- | --- |
+| [libvlc](https://www.videolan.org/vlc/libvlc.html) (`VideoLAN.LibVLC.Windows`) | 3.0.21 | LGPL 2.1+ (some plugins GPL) | All decoding: HLS, DASH, RTMP, files, every codec. This is ~90 MB of the zip and the reason it is that size. |
+| [LibVLCSharp](https://github.com/videolan/libvlcsharp) | 3.9.4 | LGPL 2.1 | .NET bindings to libvlc — the video and audio callbacks the framebuffer comes through. |
+| [NAudio](https://github.com/naudio/NAudio) / `NAudio.Wasapi` | 2.2.1 / 2.3.0 | MIT | Audio output. Dalamud has no audio API, so the plugin opens its own shared-mode WASAPI render stream. |
+| [VT323](https://fonts.google.com/specimen/VT323) | Google Fonts, 2011 | SIL OFL 1.1 | The display face — headings, the on-screen display, the input strip. `Fonts\OFL.txt` ships beside it, as the licence requires. |
+| [Dalamud](https://github.com/goatcorp/Dalamud) (`Dalamud.NET.Sdk`) | 15.0.0 / API level 15 | AGPL 3.0 | The plugin host: ImGui, textures, the game object table, logging. Not in the zip — every user already has it. |
+
+libvlc's own plugin set is shipped unpruned. It is the safest choice — pruning it is what produced
+the "no Opus decoder" theory that turned out to be wrong — at the cost of the download.
+
+### External — on the user's machine
+
+| Dependency | Needed for | Install | Licence |
+| --- | --- | --- | --- |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | YouTube, Kick and most other sites | `winget install yt-dlp`, then restart the game | Unlicense |
+| [ffmpeg](https://ffmpeg.org/) | Broadcasting to a party (not watching one) | `winget install ffmpeg` | LGPL 2.1+ / GPL 2+ depending on build |
+
+Both are looked up on `PATH` at the moment they are needed; yt-dlp is also found beside the
+plugin's own DLL, for anyone without winget. Neither is downloaded by the plugin, deliberately —
+a plugin that fetches executables is not something to ask people to trust.
+
+### Data sources
+
+| Source | What | Notes |
+| --- | --- | --- |
+| [iptv-org](https://github.com/iptv-org/iptv) | The default live TV playlist (`index.m3u`) | Volunteer-maintained index of publicly available streams. Cached locally for 12 hours; any other extended M3U can be used instead or alongside it. |
+| [Plex](https://www.plex.tv/) | Your own library, via `plex.tv/link` sign-in | The token is stored locally and only ever sent to your own server. |
+
+### Server — the party host only
+
+Lives in `deploy\`; nothing here runs on a viewer's machine.
+
+| Dependency | Version | Licence | Role |
+| --- | --- | --- | --- |
+| [MediaMTX](https://github.com/bluenviron/mediamtx) | `bluenviron/mediamtx` (Docker) | MIT | Takes the host's SRT push and serves it as HLS. Publish authorisation is delegated to the party service. |
+| [Caddy](https://caddyserver.com/) | on the host | Apache 2.0 | TLS and routing. Serves HLS on an **HTTP/1.1-only** listener — libvlc 3 cannot fetch HLS over HTTP/2. |
+| Party service | `python:3.12-alpine` (Docker), standard library only | — | Groups, codes, membership, and the MediaMTX auth callback. No third-party Python packages. |
 
 ## Layout
 
 | Project | Depends on | Purpose |
 | --- | --- | --- |
 | `Aetherstream.Core` | nothing | The contracts: `IFrameSource`, `FramePipeline`, `StereoRingBuffer`, `IStreamResolver`. Copied from Memoria where noted — keep them byte-compatible. |
-| `Aetherstream.Playback` | Core, LibVLCSharp | Decode and resolution. **No UI dependencies.** |
+| `Aetherstream.Playback` | Core, LibVLCSharp | Decode, resolution, the M3U parser, the HLS relay, known screens. **No UI dependencies.** |
 | `Aetherstream.PoC` | Core, Playback, NAudio | Throwaway WinForms harness. Its GDI blit exists only to prove pixels flow through our buffer. |
 | `Aetherstream.Plugin` | Core, Playback, NAudio | The Dalamud plugin: overlay panel, surface painting, audio. |
 
 ## The window
 
-A transport bar that is always visible, and everything else behind a tab. The bar sits outside the
-tab bar deliberately: pausing should never mean navigating away from what you were doing, and the
-state of the picture is the one thing worth seeing from every panel.
+The window is a television: the live picture in a bezel at the top, a remote under it, a strip of
+inputs, and whichever input is selected filling the rest. The screen and remote sit outside the
+inputs deliberately — pausing should never mean navigating away from what you were doing, and the
+picture is the one thing worth seeing from every panel. It is built to sit beside Memoria and read
+as its sibling: the same near-black shell, the same rule that the display face (VT323, SIL OFL,
+shipped in `Fonts\`) is for short labels only, never for a path or an error.
 
 | File | Holds |
 | --- | --- |
-| `UI\Ui.cs` | The palette and the shared widgets. Every colour decision lives here, not at the call sites. |
+| `UI\Theme.cs` | The palette, the shell styling, the glass panel, the display font. Every colour decision lives here. |
+| `UI\Ui.cs` | Shared widgets; its colour names forward to `Theme` so older panels keep working. |
+| `UI\DisplayFont.cs` | VT323 at 20 px and 40 px. The face is drawn on a 20-pixel grid and only looks right at multiples of it. |
+| `UI\ControlWindow.cs` | The shell: hand-drawn title bar, folding, the input strip. Pushes the theme in `PreDraw`, pops it in `PostDraw`, and catches everything in `Draw` so a throw cannot leave the style stack unbalanced for every other plugin's window. |
+| `UI\Screen.cs` | The picture, the on-screen display, the scrub strip, the signal states, the LED. |
+| `UI\Remote.cs` | Transport, channel up/down, last channel, mute. |
+| `UI\ChannelDial.cs` | Channel numbers (pin order), stepping, last-channel memory, which channels are known dead. |
 | `UI\UiContext.cs` | What every panel needs, so a panel's constructor stays one argument long. |
-| `UI\NowPlayingBar.cs` | Title, scrub, transport. Fixed height, so the tabs below never jump as playback state changes. |
 | `UI\PosterCard.cs` | One clickable tile, drawn by hand so the whole tile is the hit target. |
-| `UI\PlexArt.cs` | Poster textures, fetched once and kept. |
-| `UI\Tabs\*.cs` | Watch, Library, Screen, Sound, Setup. |
+| `UI\PlexArt.cs` | Poster and logo textures, fetched once and kept. |
+| `UI\Tabs\*.cs` | Watch, Library, Live TV, Screen, Sound, Share, Setup. |
 
 Two things worth knowing before editing it:
 
@@ -79,28 +162,6 @@ the picture into the solid region), `Brightness`, and painting a second texture 
 - **`ImGui.EndChild()` must be called unconditionally**, even when `BeginChild` returns false.
   Skipping it unbalances ImGui's stack and produces malformed draw data — which the GPU driver
   faults on, looking exactly like a graphics bug.
-## Open: installing on a machine that is not the author's
-
-First install on someone else's PC took a lot of fiddling (2026-08-30), and the loading paths are
-the prime suspect. Not diagnosed — written down so it is not rediscovered from scratch.
-
-What is known:
-
-- **The release zip has never been install-tested.** It was built by copying `bin/Debug` wholesale
-  and assuming Dalamud extracts it flat. Nothing has confirmed that a repo-installed copy ends up
-  with `libvlc/win-x64/` in the right place relative to the assembly.
-- **`Core.Initialize` is pointed at `libvlc/win-x64` beside the assembly**, resolved from
-  `pluginInterface.AssemblyLocation`. A dev plugin loaded from an explicit DLL path and a plugin
-  extracted by the installer do not necessarily lay out the same way, and this is the one path that
-  has to be right or nothing decodes at all.
-- The custom repo did not appear at first. Two candidates, neither confirmed: the manifest was
-  missing `TestingAssemblyVersion` and `TestingDalamudApiLevel` (since added), and
-  `raw.githubusercontent.com` was failing for seven other repos on the same machine — which is why
-  there is now a mirror served from luna.
-
-First thing to check: install from the repo onto a clean machine and look at where the libvlc
-folder actually lands, rather than assuming it matches the dev-plugin layout.
-
 - **Validate every game pointer before dereferencing** (`SafeMemory`, via `VirtualQuery`). Arrays
   like `ModelResourceHandle.MaterialResourceHandles` carry no count.
 - **Never read a field twice when a background task replaces it.** `if (items.Count > 0) … items[0]`
@@ -118,7 +179,49 @@ folder actually lands, rather than assuming it matches the dev-plugin layout.
   explain why a control is greyed out are precisely the ones that never appear. Pass
   `ImGuiHoveredFlags.AllowWhenDisabled`.
 
-## Running
+## Releasing
+
+The zip is `bin\Debug` of the plugin project, flat: `Aetherstream.dll` and `Aetherstream.json` at
+the root with `Fonts\` and `libvlc\` beside them. Dalamud extracts it as-is, and
+`Core.Initialize` finds `libvlc\win-x64` relative to `AssemblyLocation` in both the installer and
+dev-plugin layouts — confirmed by the first install on another machine (2026-08-30), which took
+fiddling for a different reason: `raw.githubusercontent.com` was failing on that machine for
+several repos at once, which is why `repo.json` is also mirrored from luna. Bump the version in the
+`.csproj`, `Aetherstream.json` and `repo.json` (both `AssemblyVersion` fields and the three download
+links), tag, publish the release with the zip, then push the mirror.
+
+## Live TV, and why channels used to die at twenty seconds
+
+Channels come from any extended M3U (`M3uPlaylist`); `#EXTVLCOPT:` lines are literally libvlc
+options, and the user agent and referrer they carry travel on `ResolvedStream.HttpHeaders` — several
+hundred channels in the public list refuse to serve without them, which is why a channel is started
+directly rather than sent back through the resolver chain as a bare string.
+
+Some portals answer their advertised URL with a redirect to a tokenised playlist that is valid for
+a few seconds. libvlc resolves the redirect once and refreshes the tokenised URL forever, so the
+first refresh — and every one after — gets HTTP 509. It plays out the segments it has and stops,
+about twenty seconds in. Plain VLC does the same. `HlsRelay` is a loopback HTTP server that
+re-resolves the original URL behind a stable address, renames segments by media sequence and
+proxies the bytes; the decoder never sees a token. It is used automatically, once, when a relayable
+stream stalls. Three things it had to get right that a first draft did not:
+
+- `HttpClient` refuses to auto-follow an HTTPS→HTTP redirect, and that downgrade is exactly what
+  these portals do. Redirects are followed by hand.
+- The client *does* auto-follow same-scheme hops, so the final address must come from
+  `response.RequestMessage.RequestUri`, not from the loop's own bookkeeping — or every segment path
+  resolves against the wrong host and the origin answers 403.
+- `#EXT-X-KEY` and `#EXT-X-MAP` URIs live on the same expiring host and must be proxied too.
+
+It speaks HTTP over a raw socket rather than `HttpListener`, which on Windows needs an
+administrative URL reservation — not something to ask of someone installing a plugin.
+
+**Stall detection had never fired** before this: it accepted progress from position as well as
+delivered audio, and libvlc's clock keeps running on a starved live stream. Delivered audio is the
+authority whenever there is an audio track. libvlc's own log is now forwarded at warning and above
+(`Plugin.VlcLog.cs`), rate-limited and with the routine start-up messages filtered, so the next
+stream failure names itself instead of being reproduced in a desktop harness.
+
+## Running the harness
 
 ```
 Aetherstream.PoC.exe <url-or-twitch-channel> [flags]
@@ -142,11 +245,18 @@ Audio is opt-in because a wrong audio format does not fail quietly — it plays 
 
 Resolution goes through a chain (`StreamResolvers.For`), so no service is wired into the app:
 
-1. **Direct media URL** (`.m3u8`, `.mpd`, `.mp4`, …) — played as-is.
-2. **yt-dlp** — anything it supports. Requires `winget install yt-dlp`.
-3. **Built-in Twitch** — the fallback that still works with nothing installed.
+1. **Party code** — six characters, resolved by the party service.
+2. **Plex** (`plex:` sources) — your own server, behind your own token.
+3. **Direct media URL** (`.m3u8`, `.mpd`, `.mp4`, …) — played as-is.
+4. **yt-dlp** — anything it supports. Found beside the plugin, beside the game, or on `PATH`;
+   requires `winget install yt-dlp` and a game restart.
+5. **Built-in Twitch** — the fallback that still works with nothing installed.
 
-Verified working: Twitch live, YouTube live, YouTube VOD, direct HLS, Plex.
+A resolution failure reaches the screen as `NO PICTURE` with the first line of the reason; the
+whole reason is in the Dalamud log. It used to go only to the log, which on a machine without
+yt-dlp made a YouTube link look like nothing happened.
+
+Verified working: Twitch live, YouTube live, YouTube VOD, direct HLS, Plex, live TV.
 
 Ordinary YouTube videos work too, provided yt-dlp is reasonably current. They earlier did not, and
 the reason is worth knowing: `-f best` means *best **muxed*** stream, and YouTube has stopped
