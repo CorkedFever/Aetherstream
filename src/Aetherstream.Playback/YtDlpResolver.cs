@@ -15,9 +15,24 @@ namespace Aetherstream.Playback;
 /// </summary>
 public sealed class YtDlpResolver(string executable) : IStreamResolver
 {
-    /// <summary>Finds yt-dlp on PATH or beside the application; null when it is not installed.</summary>
-    public static string? Locate()
+    /// <summary>
+    /// Finds yt-dlp beside the plugin, beside the application, or on PATH; null when it is not
+    /// installed.
+    /// <para>
+    /// The plugin's own folder is checked first because it is the one place someone without
+    /// winget can reasonably be told to drop the file. Inside a Dalamud plugin the "application"
+    /// directory is the game's, which nobody would guess.
+    /// </para>
+    /// </summary>
+    public static string? Locate(string? besideThis = null)
     {
+        if (besideThis is not null)
+        {
+            var bundled = Path.Combine(besideThis, "yt-dlp.exe");
+            if (File.Exists(bundled))
+                return bundled;
+        }
+
         var local = Path.Combine(AppContext.BaseDirectory, "yt-dlp.exe");
         if (File.Exists(local))
             return local;

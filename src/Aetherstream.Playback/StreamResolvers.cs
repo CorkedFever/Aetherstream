@@ -40,7 +40,8 @@ public static class StreamResolvers
         HttpClient http,
         out string description,
         PlexSettings plex = default,
-        PartySettings party = default)
+        PartySettings party = default,
+        string? toolsDirectory = null)
     {
         // A party code, checked before anything else: it is the one thing a guest is ever asked to
         // paste, and it has to work wherever a URL would, including "/aether play ABC123".
@@ -66,7 +67,7 @@ public static class StreamResolvers
             return new DirectUrlResolver();
         }
 
-        if (YtDlpResolver.Locate() is { } ytDlp)
+        if (YtDlpResolver.Locate(toolsDirectory) is { } ytDlp)
         {
             description = "yt-dlp";
             return new YtDlpResolver(ytDlp);
@@ -78,11 +79,13 @@ public static class StreamResolvers
             return new TwitchResolver(http);
         }
 
+        // The first line is all the screen has room for, so it carries the fix. The restart is
+        // not optional: PATH is read when the game starts, so yt-dlp installed while it is
+        // running stays invisible until it is relaunched.
         throw new InvalidOperationException(
-            $"Nothing here can resolve '{input}'.\n\n" +
-            "Install yt-dlp to play from YouTube, Kick, and most other sites:\n" +
-            "    winget install yt-dlp\n\n" +
-            "Without it, only Twitch and direct .m3u8 URLs work.");
+            "yt-dlp is not installed — run \"winget install yt-dlp\", then restart the game.\n\n" +
+            $"Nothing here can resolve '{input}' without it. yt-dlp plays YouTube, Kick and most " +
+            "other sites; without it, only Twitch, Plex, live TV and direct stream URLs work.");
     }
 
     private static bool IsDirectMedia(string input)

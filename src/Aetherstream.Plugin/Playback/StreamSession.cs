@@ -55,6 +55,18 @@ internal sealed class StreamSession(
 
     public string? Error { get; private set; }
 
+    /// <summary>
+    /// Reports a failure that happened before anything started — a source that could not be
+    /// resolved. Without this, that failure only reached the log, and someone pasting a YouTube
+    /// link on a machine without yt-dlp saw "no signal" and nothing else. Safe from any thread:
+    /// the screen only reads it.
+    /// </summary>
+    public void Fail(string message)
+    {
+        this.Error = message;
+        this.Status = null;
+    }
+
     public IFrameUploader? Uploader => this.uploader;
 
     public long FramesPresented => this.source?.Stats.FramesPresented ?? 0;
