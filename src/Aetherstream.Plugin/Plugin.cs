@@ -9,6 +9,7 @@ using Aetherstream.Plugin.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.Command;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -27,6 +28,7 @@ public sealed partial class Plugin : IDalamudPlugin
     private readonly IObjectTable objects;
     private readonly IPluginLog log;
     private readonly WindowSystem windows = new("Aetherstream");
+    private readonly FileDialogManager fileDialogs = new();
     private readonly Configuration config;
     private readonly LibVLC vlc;
     private readonly StreamSession session;
@@ -125,6 +127,7 @@ public sealed partial class Plugin : IDalamudPlugin
             FindAnchor = () => this.FindAnchor(this.config.Placement),
             UnbindSurface = this.UnbindSurfaces,
             LocateYtDlp = () => YtDlpResolver.Locate(this.config.YtDlpPath, this.ToolDirectories()),
+            FileDialogs = this.fileDialogs,
         };
 
         // The display face is loaded before the window so the first frame is drawn in it.
@@ -235,6 +238,9 @@ public sealed partial class Plugin : IDalamudPlugin
 
         this.DrawWorldScreen();
         this.windows.Draw();
+
+        // Drawn outside the window system so an open dialog survives the window being closed.
+        this.fileDialogs.Draw();
     }
 
     /// <summary>
