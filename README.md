@@ -194,6 +194,12 @@ several repos at once, which is why `repo.json` is also mirrored from luna. Bump
 `.csproj`, `Aetherstream.json` and `repo.json` (both `AssemblyVersion` fields and the three download
 links), tag, publish the release with the zip, then push the mirror.
 
+**Check `dotnet build`'s exit code directly, never through a pipe.** `dotnet build … | grep` reports
+grep's status, so a failed compile sails past `set -e` and everything after it — the copy, the zip,
+the upload — runs against the *previous* binaries under the new version number. v0.2.2 shipped that
+way for a few minutes: a stale zip whose own manifest disagreed with `repo.json`. Also compare the
+manifest version inside the zip against the one being released before uploading.
+
 ## Live TV, and why channels used to die at twenty seconds
 
 Channels come from any extended M3U (`M3uPlaylist`); `#EXTVLCOPT:` lines are literally libvlc
