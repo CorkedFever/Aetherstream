@@ -162,6 +162,12 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Folded down to the title bar. The picture carries on wherever it is showing.</summary>
     public bool WindowMinimised { get; set; }
 
+    /// <summary>
+    /// Where yt-dlp is, when it is not somewhere the plugin would find on its own. A file or the
+    /// folder holding it. Empty means "look in the usual places".
+    /// </summary>
+    public string YtDlpPath { get; set; } = string.Empty;
+
     // -- Live TV -----------------------------------------------------------------------------------
 
     /// <summary>

@@ -16,21 +16,36 @@ namespace Aetherstream.Playback;
 public sealed class YtDlpResolver(string executable) : IStreamResolver
 {
     /// <summary>
-    /// Finds yt-dlp beside the plugin, beside the application, or on PATH; null when it is not
-    /// installed.
+    /// Finds yt-dlp: a path the user gave, then the given folders, then beside the application,
+    /// then PATH. Null when it is nowhere.
     /// <para>
-    /// The plugin's own folder is checked first because it is the one place someone without
-    /// winget can reasonably be told to drop the file. Inside a Dalamud plugin the "application"
-    /// directory is the game's, which nobody would guess.
+    /// The folders passed in are the plugin's config directory and its install directory. The
+    /// config directory matters more: Dalamud installs each plugin version into its own numbered
+    /// folder, so a file dropped beside the DLL vanishes on the next update, whereas the config
+    /// folder is the same for the life of the install. Inside a Dalamud plugin the "application"
+    /// directory is the game's, which nobody would guess, so it is only a last resort.
     /// </para>
     /// </summary>
-    public static string? Locate(string? besideThis = null)
+    public static string? Locate(string? explicitPath = null, params string[] directories)
     {
-        if (besideThis is not null)
+        // A path someone typed wins outright — a file or the folder it is in. This is the answer for
+        // "I downloaded it to my Desktop": nobody should have to learn where a plugin lives.
+        if (!string.IsNullOrWhiteSpace(explicitPath))
         {
-            var bundled = Path.Combine(besideThis, "yt-dlp.exe");
-            if (File.Exists(bundled))
-                return bundled;
+            var typed = explicitPath.Trim().Trim('"');
+            if (File.Exists(typed))
+                return typed;
+
+            var inFolder = Path.Combine(typed, "yt-dlp.exe");
+            if (Directory.Exists(typed) && File.Exists(inFolder))
+                return inFolder;
+        }
+
+        foreach (var directory in directories)
+        {
+            var candidate = Path.Combine(directory, "yt-dlp.exe");
+            if (File.Exists(candidate))
+                return candidate;
         }
 
         var local = Path.Combine(AppContext.BaseDirectory, "yt-dlp.exe");
