@@ -70,7 +70,7 @@ public static class StreamResolvers
         if (YtDlpResolver.Locate(tools.YtDlpPath, tools.Directories ?? []) is { } ytDlp)
         {
             description = "yt-dlp";
-            return new YtDlpResolver(ytDlp);
+            return new YtDlpResolver(ytDlp, tools.CookiesBrowser);
         }
 
         if (TwitchResolver.Matches(input))
@@ -93,7 +93,10 @@ public static class StreamResolvers
     /// Where to look for external tools: a path the user typed, and the plugin's own folders in
     /// the order they should be searched.
     /// </summary>
-    public readonly record struct Tools(string? YtDlpPath, IReadOnlyList<string>? Directories);
+    public readonly record struct Tools(
+        string? YtDlpPath,
+        IReadOnlyList<string>? Directories,
+        string? CookiesBrowser = null);
 
     private static bool IsDirectMedia(string input)
     {

@@ -521,7 +521,8 @@ public sealed partial class Plugin : IDalamudPlugin
         this.pluginInterface.AssemblyLocation.Directory?.FullName ?? AppContext.BaseDirectory,
     ];
 
-    private StreamResolvers.Tools Tools() => new(this.config.YtDlpPath, this.ToolDirectories());
+    private StreamResolvers.Tools Tools() =>
+        new(this.config.YtDlpPath, this.ToolDirectories(), this.config.YtDlpCookiesBrowser);
 
     private void OnCommand(string command, string arguments)
     {

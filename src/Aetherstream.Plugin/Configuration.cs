@@ -168,6 +168,12 @@ public sealed class Configuration : IPluginConfiguration
     /// </summary>
     public string YtDlpPath { get; set; } = string.Empty;
 
+    /// <summary>
+    /// A browser yt-dlp may read a signed-in YouTube session from, by yt-dlp's own name for it
+    /// ("brave", "firefox", …). Empty means no sign-in, which is the default and works for most.
+    /// </summary>
+    public string YtDlpCookiesBrowser { get; set; } = string.Empty;
+
     // -- Live TV -----------------------------------------------------------------------------------
 
     /// <summary>
