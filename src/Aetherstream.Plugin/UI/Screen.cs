@@ -120,7 +120,7 @@ internal sealed class Screen(UiContext ui)
         if (!playing && !failed)
             this.DrawSignal("NO SIGNAL", Theme.TextFaint, "pick an input below");
         else if (failed)
-            this.DrawSignal("NO PICTURE", Theme.Bad, Ui.Ellipsis(session.Error!.ReplaceLineEndings(" "), 70));
+            this.DrawSignal("NO PICTURE", Theme.Bad, Ui.Ellipsis(session.Error!.ReplaceLineEndings(" "), 96));
         else if (tuning)
             this.DrawSignal(session.Current is { Relayed: true } ? "RELAYING…" : "TUNING…", Theme.Accent, string.Empty);
         else if (stalled)

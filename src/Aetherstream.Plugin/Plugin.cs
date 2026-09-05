@@ -603,7 +603,8 @@ public sealed partial class Plugin : IDalamudPlugin
                             this.config.PlexServer,
                             this.config.PlexToken,
                             this.config.PlexMaxKilobits),
-                        new StreamResolvers.PartySettings(this.config.PartyApiHost, this.config.PartyKey));
+                        new StreamResolvers.PartySettings(this.config.PartyApiHost, this.config.PartyKey),
+                        this.pluginInterface.AssemblyLocation.Directory?.FullName);
                     var stream = await resolver.ResolveAsync(source, token);
                     if (token.IsCancellationRequested)
                         return;
@@ -618,6 +619,9 @@ public sealed partial class Plugin : IDalamudPlugin
                 catch (Exception ex)
                 {
                     this.log.Error(ex, $"Could not resolve '{source}'.");
+
+                    // The first line is what the screen shows; the log keeps the whole thing.
+                    this.session.Fail(ex.Message.Split('\n')[0].Trim());
                 }
             },
             token);
