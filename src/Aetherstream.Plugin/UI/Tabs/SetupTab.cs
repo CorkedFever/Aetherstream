@@ -156,6 +156,54 @@ internal sealed class SetupTab(UiContext ui)
             ImGui.SameLine();
             ImGui.TextColored(Theme.Warn, "close the browser first");
         }
+
+        // The route that works when the browser one does not — which for Brave, Chrome and Edge
+        // is most of the time ("failed to decrypt with DPAPI").
+        var file = ui.Config.YtDlpCookiesFile;
+        var haveFile = file.Length > 0 && File.Exists(file);
+
+        ImGui.TextColored(Theme.TextDim, "or use a cookies file exported from your browser");
+
+        if (ImGui.Button(haveFile ? "Use a different cookies file…" : "Pick a cookies file…"))
+        {
+            ui.FileDialogs.OpenFileDialog(
+                "Pick the exported cookies file",
+                "Cookies{.txt},All files{.*}",
+                (accepted, paths) =>
+                {
+                    if (accepted && paths.Count > 0)
+                    {
+                        ui.Config.YtDlpCookiesFile = paths[0];
+                        ui.SaveConfig();
+                    }
+                },
+                selectionCountMax: 1,
+                startPath: Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "\\Downloads",
+                isModal: false);
+        }
+
+        Ui.Tip(
+            "How to make one: install the \"Get cookies.txt LOCALLY\" extension in your browser, " +
+            "open youtube.com while signed in, click the extension, Export. That saves a cookies.txt " +
+            "— pick it here. It works for every browser, Brave included.\n\n" +
+            "That file is your YouTube sign-in. Keep it to yourself, and pick it again after you " +
+            "sign out or the cookies expire.");
+
+        if (file.Length > 0)
+        {
+            ImGui.SameLine();
+            Ui.Dot(haveFile ? Theme.Good : Theme.Bad, haveFile ? "using it" : "file is missing");
+            ImGui.SameLine();
+            ImGui.TextColored(haveFile ? Theme.TextDim : Theme.Bad, Ui.Ellipsis(Path.GetFileName(file), 30));
+            Ui.Tip(file);
+
+            ImGui.SameLine();
+            if (ImGui.Button("Forget it##cookies"))
+            {
+                ui.Config.YtDlpCookiesFile = string.Empty;
+                ui.SaveConfig();
+            }
+        }
     }
 
     private static string Capitalise(string name) =>
