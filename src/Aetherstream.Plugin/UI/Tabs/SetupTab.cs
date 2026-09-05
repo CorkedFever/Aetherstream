@@ -1,5 +1,7 @@
 using System.Numerics;
 
+using Aetherstream.Playback;
+
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 
@@ -37,14 +39,34 @@ internal sealed class SetupTab(UiContext ui)
 
         if (found is not null)
         {
-            ImGui.TextColored(Theme.TextDim, "yt-dlp found:");
+            ImGui.TextColored(Theme.TextDim, "yt-dlp");
             ImGui.SameLine();
-            ImGui.TextColored(Theme.Text, Ui.Ellipsis(found, 60));
-            Ui.Tip(found);
+            Theme.Displayed(Theme.Accent, this.VersionOf(found));
+            ImGui.SameLine();
+            ImGui.TextColored(Theme.TextDim, Ui.Ellipsis(found, 52));
+            Ui.Tip($"{found}\n\nIf this version is months old, YouTube will refuse it. Update with \"yt-dlp -U\" or reinstall with winget.");
         }
         else
         {
             ImGui.TextColored(Theme.Warn, "yt-dlp not found — YouTube, Kick and most sites will not play.");
+        }
+
+        // Whether YouTube can be handled at all is the second question, and it has nothing to do
+        // with yt-dlp's own presence — so it gets its own line rather than being folded in.
+        var runtime = YtDlpResolver.LocateJsRuntime();
+        Ui.Dot(runtime is not null ? Theme.Good : Theme.Warn, runtime is not null ? "found" : "not found");
+        ImGui.SameLine();
+        if (runtime is not null)
+        {
+            ImGui.TextColored(Theme.TextDim, "JavaScript runtime for YouTube");
+            ImGui.SameLine();
+            ImGui.TextColored(Theme.Text, Path.GetFileNameWithoutExtension(runtime));
+            Ui.Tip(runtime);
+        }
+        else
+        {
+            ImGui.TextColored(Theme.Warn, "no JavaScript runtime — YouTube will half-work at best.");
+            Ui.Tip("yt-dlp solves YouTube's challenges with Deno. \"winget install DenoLand.Deno\", then restart the game.");
         }
 
         // A picker, not a text box. Nobody should be typing a path into a game.
@@ -84,6 +106,88 @@ internal sealed class SetupTab(UiContext ui)
             "Easiest: in PowerShell run \"winget install yt-dlp\" and \"winget install DenoLand.Deno\", " +
             "then restart the game. Deno is what yt-dlp uses to handle YouTube; without it YouTube " +
             "half-works at best.");
+
+        this.DrawSignIn();
+    }
+
+    /// <summary>
+    /// The way past YouTube's "confirm you're not a bot" wall, which is the remedy that error
+    /// itself names: read the signed-in session from a browser. Off by default, because most
+    /// people never see the wall and reading a browser's cookies is not something to do unasked.
+    /// </summary>
+    private void DrawSignIn()
+    {
+        ImGui.Spacing();
+        ImGui.TextColored(Theme.TextDim, "If YouTube says \"confirm you're not a bot\": sign in using");
+
+        var current = ui.Config.YtDlpCookiesBrowser;
+        var label = current.Length == 0 ? "nothing (default)" : Capitalise(current);
+
+        ImGui.SetNextItemWidth(160);
+        using (var combo = ImRaii.Combo("##cookiesbrowser", label))
+        {
+            if (combo)
+            {
+                if (ImGui.Selectable("nothing (default)", current.Length == 0))
+                {
+                    ui.Config.YtDlpCookiesBrowser = string.Empty;
+                    ui.SaveConfig();
+                }
+
+                foreach (var browser in YtDlpResolver.Browsers)
+                {
+                    if (ImGui.Selectable(Capitalise(browser), browser == current))
+                    {
+                        ui.Config.YtDlpCookiesBrowser = browser;
+                        ui.SaveConfig();
+                    }
+                }
+            }
+        }
+
+        Ui.Tip(
+            "yt-dlp reads the YouTube sign-in from that browser and uses it, so YouTube sees a " +
+            "signed-in person rather than a bot. Nothing leaves this machine except to YouTube.\n\n" +
+            "Firefox works reliably. Brave, Chrome and Edge encrypt their cookies in a way yt-dlp " +
+            "can often only read while that browser is fully closed — close it first, then try.");
+
+        if (current.Length > 0 && current is not "firefox")
+        {
+            ImGui.SameLine();
+            ImGui.TextColored(Theme.Warn, "close the browser first");
+        }
+    }
+
+    private static string Capitalise(string name) =>
+        name.Length == 0 ? name : char.ToUpperInvariant(name[0]) + name[1..];
+
+    // -- version readout -----------------------------------------------------------------------------
+
+    private string? versionForPath;
+    private string versionText = "…";
+
+    /// <summary>
+    /// The version of the yt-dlp at <paramref name="path"/>, probed once per path off the render
+    /// thread. "…" while it is being asked.
+    /// </summary>
+    private string VersionOf(string path)
+    {
+        if (path != this.versionForPath)
+        {
+            this.versionForPath = path;
+            this.versionText = "…";
+
+            _ = Task.Run(async () =>
+            {
+                var version = await YtDlpResolver.VersionAsync(path, CancellationToken.None);
+
+                // Only if the path has not moved on while we were asking.
+                if (path == this.versionForPath)
+                    this.versionText = version;
+            });
+        }
+
+        return this.versionText;
     }
 
     /// <summary>

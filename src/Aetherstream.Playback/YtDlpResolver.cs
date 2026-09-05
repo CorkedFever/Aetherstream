@@ -13,8 +13,71 @@ namespace Aetherstream.Playback;
 /// exists so Twitch still works with nothing installed.
 /// </para>
 /// </summary>
-public sealed class YtDlpResolver(string executable) : IStreamResolver
+public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null) : IStreamResolver
 {
+    /// <summary>Browsers yt-dlp can read a signed-in YouTube session from, as it names them.</summary>
+    public static readonly string[] Browsers = ["brave", "chrome", "edge", "firefox", "vivaldi", "opera"];
+
+    /// <summary>
+    /// The JavaScript runtime yt-dlp would use for YouTube's challenges, or null. Deno is the one
+    /// yt-dlp enables by default; node and bun are recognised but have to be opted into on the
+    /// yt-dlp side, so they are reported for information rather than relied on.
+    /// </summary>
+    public static string? LocateJsRuntime()
+    {
+        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        foreach (var name in new[] { "deno.exe", "node.exe", "bun.exe" })
+        {
+            foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                try
+                {
+                    var candidate = Path.Combine(directory.Trim('"'), name);
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+                catch (ArgumentException)
+                {
+                    // A malformed PATH entry is not worth failing over.
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Asks a yt-dlp for its version. Off the render thread — it is a process spawn — and never
+    /// throws, because a readout that crashes the tab is worse than a readout that says "unknown".
+    /// </summary>
+    public static async Task<string> VersionAsync(string path, CancellationToken ct)
+    {
+        try
+        {
+            var start = new ProcessStartInfo(path)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            start.ArgumentList.Add("--version");
+
+            using var process = Process.Start(start);
+            if (process is null)
+                return "unknown";
+
+            var output = await process.StandardOutput.ReadToEndAsync(ct);
+            _ = await process.StandardError.ReadToEndAsync(ct);
+            await process.WaitForExitAsync(ct);
+
+            return output.Trim() is { Length: > 0 } version ? version : "unknown";
+        }
+        catch (Exception)
+        {
+            return "unknown";
+        }
+    }
     /// <summary>
     /// Finds yt-dlp: a path the user gave, then the given folders, then beside the application,
     /// then PATH. Null when it is nowhere.
@@ -97,6 +160,17 @@ public sealed class YtDlpResolver(string executable) : IStreamResolver
         // it in hardware or cheaply in software; AAC over Opus for the same reason.
         start.ArgumentList.Add("-S");
         start.ArgumentList.Add("res:720,vcodec:h264,acodec:aac");
+
+        // YouTube's "confirm you're not a bot" wall wants a signed-in session, and this is the
+        // remedy yt-dlp itself names in that error: read the cookies of a browser the person is
+        // already signed into. Opt-in, and everything stays on this machine — the cookies go from
+        // the browser's store to yt-dlp to YouTube, nowhere else.
+        if (!string.IsNullOrWhiteSpace(cookiesBrowser))
+        {
+            start.ArgumentList.Add("--cookies-from-browser");
+            start.ArgumentList.Add(cookiesBrowser.Trim().ToLowerInvariant());
+        }
+
         start.ArgumentList.Add("--dump-single-json");
         start.ArgumentList.Add(input);
 
