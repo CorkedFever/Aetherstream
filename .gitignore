@@ -13,3 +13,6 @@ libvlc/
 
 .vs/
 *.user
+
+# Release zips are GitHub release assets, never repository contents.
+*.zip
