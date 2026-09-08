@@ -1,3 +1,5 @@
+<p align="center"><img src="src/Aetherstream.Plugin/images/banner.png" alt="Aetherstream — live from the Lifestream" width="660"></p>
+
 # Aetherstream
 
 A television in Final Fantasy XIV. Live streams, your Plex library and thousands of live TV channels,
