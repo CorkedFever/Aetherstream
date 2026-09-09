@@ -2,6 +2,8 @@
 
 # Aetherstream
 
+**[corkedfever.github.io/Aetherstream](https://corkedfever.github.io/Aetherstream/)** — install and how-to, on one page.
+
 A television in Final Fantasy XIV. Live streams, your Plex library and thousands of live TV channels,
 painted **onto a real in-game furnishing** so the game lights and occludes the picture like anything
 else in the room — and party groups so a few friends can watch the same thing together.
