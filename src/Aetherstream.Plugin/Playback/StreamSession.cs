@@ -138,6 +138,24 @@ internal sealed class StreamSession(
             this.Status = null;
         }
 
+        // Raised on libvlc's thread; acted on here, because teardown is render-thread work.
+        if (this.endedPending)
+        {
+            this.endedPending = false;
+            this.Ended = true;
+            this.endedUnconsumed = true;
+            this.TearDown();
+            this.Status = null;
+            log.Information("[playback] reached the end");
+        }
+
+        if (this.failedPending)
+        {
+            this.failedPending = false;
+            this.Error ??= "The decoder gave up on this stream — libvlc's reason is in the log.";
+            this.TearDown();
+        }
+
         if (this.pendingStart is { } request)
         {
             this.pendingStart = null;
@@ -367,6 +385,22 @@ internal sealed class StreamSession(
     }
 
     private bool stallPending;
+    private volatile bool endedPending;
+    private volatile bool failedPending;
+    private bool endedUnconsumed;
+
+    /// <summary>The last thing played ran to its end, as opposed to stopping or failing.</summary>
+    public bool Ended { get; private set; }
+
+    /// <summary>Reports a reached end, once — for whoever wants to play the next thing.</summary>
+    public bool ConsumeEnded()
+    {
+        if (!this.endedUnconsumed)
+            return false;
+
+        this.endedUnconsumed = false;
+        return true;
+    }
 
     /// <summary>
     /// Reports a newly detected stall, once.
@@ -526,9 +560,13 @@ internal sealed class StreamSession(
                     Math.Min(0, config.AudioOffsetMs),
                     config.NetworkCachingMs);
 
+                created.PlaybackEnded += (_, _) => this.endedPending = true;
+                created.PlaybackFailed += (_, _) => this.failedPending = true;
+
                 this.source = created;
                 this.current = stream;
                 this.audio = output;
+                this.Ended = false;
                 this.StalledAtMs = -1;
                 this.lastProgressAtMs = 0;
                 this.lastDeliveredMs = -1;

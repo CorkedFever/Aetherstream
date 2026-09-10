@@ -20,9 +20,9 @@ else in the room — and party groups so a few friends can watch the same thing 
 | To do this | You need | Notes |
 | --- | --- | --- |
 | Twitch, Plex, live TV, direct stream URLs | nothing | works out of the box |
-| **YouTube**, Kick and most other sites | **yt-dlp** | `winget install yt-dlp` in a terminal, then **restart the game** — it reads `PATH` when it starts, so an install made while it is running is invisible until you relaunch. If YouTube stops working later, `yt-dlp -U` is the first thing to try. |
-| **YouTube** in particular | **Deno** (a JavaScript runtime) | `winget install DenoLand.Deno`, then restart the game. yt-dlp needs it to solve YouTube's challenges; without it YouTube half-works at best. |
-| Broadcasting to a party | **ffmpeg** on `PATH` | `winget install ffmpeg`. Watching a party needs nothing. |
+| **YouTube**, Kick and most other sites | **yt-dlp** | `winget install --id yt-dlp.yt-dlp --exact` in a terminal, then **restart the game** — it reads `PATH` when it starts, so an install made while it is running is invisible until you relaunch. If YouTube stops working later, `yt-dlp -U` is the first thing to try. |
+| **YouTube** in particular | **Deno** (a JavaScript runtime) | `winget install --id DenoLand.Deno --exact`, then restart the game. yt-dlp needs it to solve YouTube's challenges; without it YouTube half-works at best. |
+| Broadcasting to a party | **ffmpeg** on `PATH` | `winget install --id Gyan.FFmpeg --exact`. Watching a party needs nothing. |
 
 If a YouTube link does nothing, the screen says why: `NO PICTURE — yt-dlp is not installed…`.
 
@@ -60,9 +60,9 @@ the "no Opus decoder" theory that turned out to be wrong — at the cost of the 
 
 | Dependency | Needed for | Install | Licence |
 | --- | --- | --- | --- |
-| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | YouTube, Kick and most other sites | `winget install yt-dlp`, then restart the game | Unlicense |
-| [Deno](https://deno.com/) | **YouTube specifically** — yt-dlp solves YouTube's JavaScript challenges with an external runtime, and without one it warns, drops its preferred formats and hands back what is left | `winget install DenoLand.Deno`, then restart the game | MIT |
-| [ffmpeg](https://ffmpeg.org/) | Broadcasting to a party (not watching one) | `winget install ffmpeg` | LGPL 2.1+ / GPL 2+ depending on build |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | YouTube, Kick and most other sites | `winget install --id yt-dlp.yt-dlp --exact`, then restart the game | Unlicense |
+| [Deno](https://deno.com/) | **YouTube specifically** — yt-dlp solves YouTube's JavaScript challenges with an external runtime, and without one it warns, drops its preferred formats and hands back what is left | `winget install --id DenoLand.Deno --exact`, then restart the game | MIT |
+| [ffmpeg](https://ffmpeg.org/) | Broadcasting to a party (not watching one) | `winget install --id Gyan.FFmpeg --exact` | LGPL 2.1+ / GPL 2+ depending on build |
 
 Both are looked up on `PATH` at the moment they are needed. yt-dlp is also found in the plugin's
 config folder, or wherever the **Setup tab**'s file picker is pointed — so a copy downloaded by
@@ -265,7 +265,7 @@ Resolution goes through a chain (`StreamResolvers.For`), so no service is wired 
 2. **Plex** (`plex:` sources) — your own server, behind your own token.
 3. **Direct media URL** (`.m3u8`, `.mpd`, `.mp4`, …) — played as-is.
 4. **yt-dlp** — anything it supports. Found beside the plugin, beside the game, or on `PATH`;
-   requires `winget install yt-dlp` and a game restart.
+   requires `winget install --id yt-dlp.yt-dlp --exact` and a game restart.
 5. **Built-in Twitch** — the fallback that still works with nothing installed.
 
 A resolution failure reaches the screen as `NO PICTURE` with the first line of the reason; the

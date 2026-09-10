@@ -135,7 +135,7 @@ public sealed partial class Plugin : IDalamudPlugin
         this.window = new ControlWindow(this.uiContext, this.SaveConfig);
 
         // The account calls are network work and must not run inside Draw.
-        this.plex = new PlexAccount(this.http);
+        this.plex = new PlexAccount(this.http, this.config.ClientId);
         this.window.Screen.ResumeStalled = this.ResumeStalled;
         this.window.Library.BeginSignIn = this.BeginPlexSignIn;
         this.window.Library.CompleteSignIn = this.CompletePlexSignIn;
@@ -222,6 +222,10 @@ public sealed partial class Plugin : IDalamudPlugin
 
         // Checked here so a stall is noticed whether or not the control window is open.
         this.RetryStalledThroughRelay();
+
+        // A finished episode hands over to the next one in the list it was picked from.
+        if (this.session.ConsumeEnded() && this.uiContext.PlayNext())
+            this.log.Information("[playback] next up");
 
         // Driven from here rather than from the window, because a closed or collapsed window does
         // not draw — and retired poster textures would then sit un-released until it was reopened.
@@ -623,7 +627,8 @@ public sealed partial class Plugin : IDalamudPlugin
                         new StreamResolvers.PlexSettings(
                             this.config.PlexServer,
                             this.config.PlexToken,
-                            this.config.PlexMaxKilobits),
+                            this.config.PlexMaxKilobits,
+                            this.config.ClientId),
                         new StreamResolvers.PartySettings(this.config.PartyApiHost, this.config.PartyKey),
                         this.Tools());
                     var stream = await resolver.ResolveAsync(source, token);

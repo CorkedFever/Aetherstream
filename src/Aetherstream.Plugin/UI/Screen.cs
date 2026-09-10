@@ -117,7 +117,9 @@ internal sealed class Screen(UiContext ui)
         var position = session.PositionMs;
         var live = playing && duration <= 0;
 
-        if (!playing && !failed)
+        if (!playing && !failed && session.Ended)
+            this.DrawSignal("END", Theme.TextDim, "that's the end — pick something else below");
+        else if (!playing && !failed)
             this.DrawSignal("NO SIGNAL", Theme.TextFaint, "pick an input below");
         else if (failed)
             this.DrawSignal("NO PICTURE", Theme.Bad, Ui.Ellipsis(session.Error!.ReplaceLineEndings(" "), 96));

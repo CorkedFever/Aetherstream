@@ -63,9 +63,30 @@ internal sealed class UiContext
     /// </summary>
     public ScreenPreset? OfferedScreen { get; private set; }
 
+    /// <summary>What plays after the current thing ends, in order. Set when an episode is picked from a list.</summary>
+    public List<(string Source, string Label, string Thumb)> NextUp { get; } = [];
+
+    /// <summary>Plays the next queued item, if any. Called when playback reaches its end.</summary>
+    public bool PlayNext()
+    {
+        if (this.NextUp.Count == 0)
+            return false;
+
+        var (source, label, thumb) = this.NextUp[0];
+        this.NextUp.RemoveAt(0);
+
+        this.Config.Source = source;
+        this.Config.Remember(source, label, thumb);
+        this.SaveConfig();
+        this.Play(source);
+        return true;
+    }
+
     /// <summary>Plays something and records it in the history, which is almost always what is wanted.</summary>
     public void PlayAndRemember(string source, string label, string thumb = "")
     {
+        // A deliberate choice replaces whatever was queued to follow the last one.
+        this.NextUp.Clear();
         this.Config.Source = source;
         this.Config.Remember(source, label, thumb);
         this.SaveConfig();

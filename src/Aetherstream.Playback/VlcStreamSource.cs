@@ -165,7 +165,11 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
     public PlaybackStats Stats { get; } = new();
 
     /// <summary>Fires on a libvlc thread when the stream errors or ends; do not tear down from it.</summary>
+    /// <summary>The media reached its end. Not raised on failure — see <see cref="PlaybackFailed"/>.</summary>
     public event EventHandler? PlaybackEnded;
+
+    /// <summary>libvlc gave up on the stream. Its own log says why; the plugin forwards it.</summary>
+    public event EventHandler? PlaybackFailed;
 
     /// <param name="audioDesyncMs">
     /// Shifts audio against video inside libvlc. Negative delivers audio earlier, which is what
@@ -284,7 +288,7 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
 
         var previous = this.media;
         this.media = new Media(this.vlc, stream.PlaylistUrl, FromType.FromLocation, options.ToArray());
-        this.player.EncounteredError += this.OnPlayerStopped;
+        this.player.EncounteredError += this.OnPlayerFailed;
         this.player.EndReached += this.OnPlayerStopped;
         this.player.Play(this.media);
         previous?.Dispose();
@@ -337,7 +341,7 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
         lock (this.control)
             this.tearingDown = true;
 
-        this.player.EncounteredError -= this.OnPlayerStopped;
+        this.player.EncounteredError -= this.OnPlayerFailed;
         this.player.EndReached -= this.OnPlayerStopped;
         this.player.Stop();
         this.player.Dispose();
@@ -450,4 +454,7 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
 
     private void OnPlayerStopped(object? sender, EventArgs e) =>
         this.PlaybackEnded?.Invoke(this, EventArgs.Empty);
+
+    private void OnPlayerFailed(object? sender, EventArgs e) =>
+        this.PlaybackFailed?.Invoke(this, EventArgs.Empty);
 }

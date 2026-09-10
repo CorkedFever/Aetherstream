@@ -345,6 +345,15 @@ internal sealed class LibraryTab(UiContext ui)
                         PlexResolver.SourceFor(item.RatingKey),
                         FullName(item),
                         item.Thumb);
+
+                    // An episode picked from a list carries the rest of the list with it, so a
+                    // season plays through instead of stopping on END after every one.
+                    if (item.IsEpisode)
+                    {
+                        var at = shown.IndexOf(item);
+                        foreach (var later in shown.Skip(at + 1).Where(e => e.IsEpisode))
+                            ui.NextUp.Add((PlexResolver.SourceFor(later.RatingKey), FullName(later), later.Thumb));
+                    }
                 }
             }
 

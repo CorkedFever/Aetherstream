@@ -135,7 +135,7 @@ public sealed class Recent
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public const int CurrentVersion = 6;
+    public const int CurrentVersion = 7;
 
     public int Version { get; set; } = CurrentVersion;
 
@@ -152,6 +152,16 @@ public sealed class Configuration : IPluginConfiguration
     /// impractical from a remote server.
     /// </summary>
     public int PlexMaxKilobits { get; set; }
+
+    /// <summary>
+    /// This install's identity to Plex. Generated once per install.
+    /// <para>
+    /// Plex keys transcode sessions and "now playing" on the client identifier. When every
+    /// install presented the same one, two people watching from the same server collapsed into
+    /// one session fighting over one transcode — the exact case a watch party is.
+    /// </para>
+    /// </summary>
+    public string ClientId { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>What to play: a channel name, a page URL, or a direct media URL.</summary>
     public string Source { get; set; } = string.Empty;
@@ -480,6 +490,9 @@ public sealed class Configuration : IPluginConfiguration
             if (this.PartyApiHost.Length == 0)
                 this.PartyApiHost = DefaultPartyApiHost;
         }
+
+        if (this.Version < 7 && string.IsNullOrWhiteSpace(this.ClientId))
+            this.ClientId = Guid.NewGuid().ToString();
 
         this.Version = CurrentVersion;
         return true;

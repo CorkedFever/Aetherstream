@@ -181,6 +181,11 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
         }
 
         start.ArgumentList.Add("--dump-single-json");
+
+        // Everything after this is the input, whatever it looks like. Without it a source that
+        // happens to begin with '-' is parsed as an option — which is option injection into a
+        // process this plugin runs with the user's rights.
+        start.ArgumentList.Add("--");
         start.ArgumentList.Add(input);
 
         using var process = Process.Start(start)

@@ -66,7 +66,7 @@ internal sealed class SetupTab(UiContext ui)
         else
         {
             ImGui.TextColored(Theme.Warn, "no JavaScript runtime — YouTube will half-work at best.");
-            Ui.Tip("yt-dlp solves YouTube's challenges with Deno. \"winget install DenoLand.Deno\", then restart the game.");
+            Ui.Tip("yt-dlp solves YouTube's challenges with Deno. \"winget install --id DenoLand.Deno --exact\", then restart the game.");
         }
 
         // A picker, not a text box. Nobody should be typing a path into a game.
@@ -103,7 +103,7 @@ internal sealed class SetupTab(UiContext ui)
         }
 
         Ui.Hint(
-            "Easiest: in PowerShell run \"winget install yt-dlp\" and \"winget install DenoLand.Deno\", " +
+            "Easiest: in PowerShell run \"winget install --id yt-dlp.yt-dlp --exact\" and \"winget install --id DenoLand.Deno --exact\", " +
             "then restart the game. Deno is what yt-dlp uses to handle YouTube; without it YouTube " +
             "half-works at best.");
 

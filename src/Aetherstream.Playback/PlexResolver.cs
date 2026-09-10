@@ -18,14 +18,15 @@ namespace Aetherstream.Playback;
 /// a media library contains.
 /// </para>
 /// </summary>
-public sealed class PlexResolver(HttpClient http, string server, string token, int maxKilobits = 0)
+public sealed class PlexResolver(HttpClient http, string server, string token, int maxKilobits = 0, string? clientId = null)
     : IStreamResolver
 {
     /// <summary>
-    /// Identifies this client to the server. Plex wants one, and a stable value keeps a single
-    /// transcode session rather than starting a new one on every play.
+    /// Identifies this install to the server. Plex keys transcode sessions on it, so it has to
+    /// differ per install — one value shared by everyone made two viewers fight over one session.
+    /// Stable per install, so re-playing reuses the session rather than opening another.
     /// </summary>
-    private const string ClientId = "aetherstream-ffxiv";
+    private readonly string clientId = string.IsNullOrWhiteSpace(clientId) ? "aetherstream-ffxiv" : clientId;
 
     /// <summary>Anything beginning with "plex:" is a search of your library.</summary>
     public const string Scheme = "plex:";
@@ -296,12 +297,12 @@ public sealed class PlexResolver(HttpClient http, string server, string token, i
             "&videoQuality=100" +
             "&subtitles=none" +
             "&audioBoost=100" +
-            $"&session={ClientId}" +
+            $"&session={this.clientId}" +
 
             // Plex refuses the whole request with HTTP 400 unless the client identifies itself:
             // it builds the transcode profile from these, and treats their absence as malformed
             // rather than as a default. Identifier alone is not enough.
-            $"&X-Plex-Client-Identifier={ClientId}" +
+            $"&X-Plex-Client-Identifier={this.clientId}" +
             "&X-Plex-Product=Aetherstream" +
             "&X-Plex-Version=1.0" +
             "&X-Plex-Platform=Windows" +

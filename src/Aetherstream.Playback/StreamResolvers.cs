@@ -21,7 +21,7 @@ public static class StreamResolvers
     /// Bitrate ceiling for server-side transcoding. Zero means direct play, which is right on a
     /// LAN and wrong across the internet — the original file can be tens of gigabytes.
     /// </param>
-    public readonly record struct PlexSettings(string Server, string Token, int MaxKilobits = 0)
+    public readonly record struct PlexSettings(string Server, string Token, int MaxKilobits = 0, string ClientId = "")
     {
         public bool IsConfigured => this.Server.Length > 0 && this.Token.Length > 0;
     }
@@ -58,7 +58,7 @@ public static class StreamResolvers
                 throw new InvalidOperationException("Set the Plex server address and token first.");
 
             description = "Plex";
-            return new PlexResolver(http, plex.Server, plex.Token, plex.MaxKilobits);
+            return new PlexResolver(http, plex.Server, plex.Token, plex.MaxKilobits, plex.ClientId);
         }
 
         if (IsDirectMedia(input))
@@ -83,7 +83,7 @@ public static class StreamResolvers
         // not optional: PATH is read when the game starts, so yt-dlp installed while it is
         // running stays invisible until it is relaunched.
         throw new InvalidOperationException(
-            "yt-dlp not found — \"winget install yt-dlp\" and restart, or point Setup at your copy.\n\n" +
+            "yt-dlp not found — \"winget install --id yt-dlp.yt-dlp --exact\" and restart, or point Setup at your copy.\n\n" +
             $"Nothing here can resolve '{input}' without it. yt-dlp plays YouTube, Kick and most " +
             "other sites; without it, only Twitch, Plex, live TV and direct stream URLs work. If " +
             "you already downloaded yt-dlp.exe somewhere, paste that location on the Setup tab.");

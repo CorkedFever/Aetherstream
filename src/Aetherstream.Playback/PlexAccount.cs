@@ -13,12 +13,12 @@ namespace Aetherstream.Playback;
 /// rather than transcribed.
 /// </para>
 /// </summary>
-public sealed class PlexAccount(HttpClient http)
+public sealed class PlexAccount(HttpClient http, string? clientId = null)
 {
     private const string Product = "Aetherstream";
 
-    /// <summary>Identifies this application to the account. Stable, so a link is remembered.</summary>
-    private const string ClientId = "aetherstream-ffxiv";
+    /// <summary>Identifies this install to the account. Stable per install, so a link is remembered.</summary>
+    private readonly string clientId = string.IsNullOrWhiteSpace(clientId) ? "aetherstream-ffxiv" : clientId;
 
     /// <summary>A sign-in in progress: show <see cref="Code"/>, then poll with <see cref="Id"/>.</summary>
     public readonly record struct Pin(int Id, string Code);
@@ -112,10 +112,10 @@ public sealed class PlexAccount(HttpClient http)
         return servers;
     }
 
-    private static void Identify(HttpRequestMessage request)
+    private void Identify(HttpRequestMessage request)
     {
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         request.Headers.Add("X-Plex-Product", Product);
-        request.Headers.Add("X-Plex-Client-Identifier", ClientId);
+        request.Headers.Add("X-Plex-Client-Identifier", this.clientId);
     }
 }
