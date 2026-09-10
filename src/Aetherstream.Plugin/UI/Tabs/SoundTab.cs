@@ -9,6 +9,7 @@ internal sealed class SoundTab(UiContext ui)
 {
     private List<(string Id, string Name)> devices = [];
     private bool devicesListed;
+    private bool everListed;
 
     /// <summary>
     /// Which output the sound plays through. Exists because Windows cannot redirect it for us:
@@ -18,6 +19,15 @@ internal sealed class SoundTab(UiContext ui)
     private void DrawDevicePicker()
     {
         var chosen = ui.Config.AudioDeviceId;
+
+        // A chosen device needs its name before the list is ever opened, or the closed picker
+        // would call it missing. Once, not per frame — enumeration is a COM round trip.
+        if (chosen.Length > 0 && !this.everListed)
+        {
+            this.devices = AudioOutput.Devices();
+            this.everListed = true;
+        }
+
         var label = chosen.Length == 0
             ? "System default"
             : this.devices.FirstOrDefault(d => d.Id == chosen).Name ?? "(chosen device not present)";
