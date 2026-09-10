@@ -28,12 +28,18 @@ internal sealed class AudioOutput : IDisposable
     /// direct, deterministic way to hold the sound back behind the picture. Unlike asking libvlc
     /// to shift it, this is entirely ours and can be reasoned about.
     /// </param>
-    public AudioOutput(StereoRingBuffer ring, int delayFrames = 0)
+    /// <param name="deviceId">
+    /// A specific output, by endpoint id, or null for whatever Windows calls the default. Chosen
+    /// explicitly because an endpoint opened by id is exactly that endpoint: Windows' per-app
+    /// routing cannot move it, and the default changing later does not move it either — so
+    /// "put it on my headset" has to be something the plugin itself offers.
+    /// </param>
+    public AudioOutput(StereoRingBuffer ring, int delayFrames = 0, string? deviceId = null)
     {
         // The endpoint is queried and released here rather than held: this runs on the plugin load
         // thread, and holding a COM object across threads invites apartment trouble.
         using var enumerator = new MMDeviceEnumerator();
-        using var endpoint = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        using var endpoint = Resolve(enumerator, deviceId);
 
         this.MixFormat = endpoint.AudioClient.MixFormat;
         this.provider = new RingProvider(ring, this.MixFormat, delayFrames);
@@ -46,6 +52,62 @@ internal sealed class AudioOutput : IDisposable
     }
 
     public WaveFormat MixFormat { get; }
+
+    /// <summary>Every active output on the machine, for the Sound tab's picker.</summary>
+    public static List<(string Id, string Name)> Devices()
+    {
+        var found = new List<(string, string)>();
+
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
+            {
+                using (device)
+                    found.Add((device.ID, device.FriendlyName));
+            }
+        }
+        catch (Exception)
+        {
+            // No audio subsystem is a valid state (remote desktop, a headless box); an empty list
+            // is the honest answer.
+        }
+
+        return found;
+    }
+
+    /// <summary>The sample rate a given output runs at — what the decoder must be configured to.</summary>
+    public static int MixRateOf(string? deviceId)
+    {
+        using var enumerator = new MMDeviceEnumerator();
+        using var endpoint = Resolve(enumerator, deviceId);
+        return endpoint.AudioClient.MixFormat.SampleRate;
+    }
+
+    /// <summary>
+    /// The chosen device, or the default when none is chosen or the chosen one is gone — a headset
+    /// that was unplugged should fall back to the speakers, not to silence.
+    /// </summary>
+    private static MMDevice Resolve(MMDeviceEnumerator enumerator, string? deviceId)
+    {
+        if (!string.IsNullOrEmpty(deviceId))
+        {
+            try
+            {
+                var chosen = enumerator.GetDevice(deviceId);
+                if (chosen.State == DeviceState.Active)
+                    return chosen;
+
+                chosen.Dispose();
+            }
+            catch (Exception)
+            {
+                // Unknown id: fall through to the default.
+            }
+        }
+
+        return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+    }
 
     /// <summary>Linear gain applied as samples are handed to the device.</summary>
     public float Volume

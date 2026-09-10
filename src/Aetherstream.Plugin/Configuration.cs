@@ -299,6 +299,15 @@ public sealed class Configuration : IPluginConfiguration
     public float Volume { get; set; } = 0.6f;
 
     /// <summary>
+    /// Which output to play through, by Windows endpoint id. Empty means the system default.
+    /// <para>
+    /// Needed because the stream is opened on a specific endpoint, which Windows' own per-app
+    /// routing cannot redirect — so choosing the headset has to happen here.
+    /// </para>
+    /// </summary>
+    public string AudioDeviceId { get; set; } = string.Empty;
+
+    /// <summary>
     /// Milliseconds to shift the sound against the picture, applied by libvlc at the source.
     /// Positive holds the sound back, negative brings it forward.
     /// <para>

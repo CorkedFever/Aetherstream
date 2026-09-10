@@ -385,6 +385,54 @@ internal sealed class StreamSession(
         return true;
     }
 
+    private StereoRingBuffer? ring;
+    private int delayFrames;
+
+    /// <summary>
+    /// Moves the sound to the output the config now names, without stopping the picture.
+    /// <para>
+    /// The decoder was configured for the old device's sample rate. When the new one runs at the
+    /// same rate — nearly always 48 kHz on both — the output is simply reopened on it and the ring
+    /// carries on. When it differs, the only correct answer is to restart the decoder for the new
+    /// rate, which is done in place, resuming at the current position.
+    /// </para>
+    /// </summary>
+    public void ReopenAudio()
+    {
+        if (this.source is not { } playing || this.ring is null || this.current is null)
+            return;
+
+        int rate;
+        try
+        {
+            rate = AudioOutput.MixRateOf(config.AudioDeviceId);
+        }
+        catch (Exception ex)
+        {
+            log.Warning(ex, "Could not open the chosen audio device; keeping the current one.");
+            return;
+        }
+
+        if (rate != playing.SampleRate)
+        {
+            log.Information($"[audio] device runs at {rate} Hz, stream is {playing.SampleRate} Hz — restarting in place");
+            this.RequestStart(this.current, Math.Max(0, playing.PositionMs));
+            return;
+        }
+
+        try
+        {
+            var replacement = new AudioOutput(this.ring, this.delayFrames, config.AudioDeviceId);
+            this.audio?.Dispose();
+            this.audio = replacement;
+            log.Information("[audio] output moved to the chosen device");
+        }
+        catch (Exception ex)
+        {
+            log.Warning(ex, "Could not move the sound; keeping the current device.");
+        }
+    }
+
     /// <summary>
     /// Silenced for now, without touching the saved volume. Applied every frame by
     /// <see cref="ApplyVolume"/>, so it is a runtime state rather than a setting.
@@ -448,13 +496,7 @@ internal sealed class StreamSession(
                 // The device decides the rate; the decoder is configured to match it, never the
                 // other way round.
                 if (wantsAudio)
-                {
-                    using var enumerator = new NAudio.CoreAudioApi.MMDeviceEnumerator();
-                    using var endpoint = enumerator.GetDefaultAudioEndpoint(
-                        NAudio.CoreAudioApi.DataFlow.Render,
-                        NAudio.CoreAudioApi.Role.Multimedia);
-                    sampleRate = endpoint.AudioClient.MixFormat.SampleRate;
-                }
+                    sampleRate = AudioOutput.MixRateOf(config.AudioDeviceId);
 
                 created = new VlcStreamSource(
                     vlc,
@@ -468,8 +510,12 @@ internal sealed class StreamSession(
                 {
                     // A positive offset holds the sound back, which we do ourselves by buffering.
                     var delayFrames = Math.Max(0, config.AudioOffsetMs) * sampleRate / 1000;
-                    output = new AudioOutput(ring, delayFrames);
+                    output = new AudioOutput(ring, delayFrames, config.AudioDeviceId);
                     output.Volume = config.Volume;
+
+                    // Kept so the output can be reopened on another device mid-stream.
+                    this.ring = ring;
+                    this.delayFrames = delayFrames;
                 }
 
                 this.uploader = this.CreateUploader();
