@@ -196,7 +196,9 @@ dev-plugin layouts — confirmed by the first install on another machine (2026-0
 fiddling for a different reason: `raw.githubusercontent.com` was failing on that machine for
 several repos at once, which is why `repo.json` is also mirrored from luna. Bump the version in the
 `.csproj`, `Aetherstream.json` and `repo.json` (both `AssemblyVersion` fields and the three download
-links), tag, publish the release with the zip, then push the mirror.
+links), tag, publish the release with the zip, and copy `repo.json` to `docs/repo.json` — the
+GitHub Pages copy at `corkedfever.github.io/Aetherstream/repo.json` is the fallback mirror for
+machines where `raw.githubusercontent.com` misbehaves, replacing the one luna used to serve.
 
 **Check `dotnet build`'s exit code directly, never through a pipe.** `dotnet build … | grep` reports
 grep's status, so a failed compile sails past `set -e` and everything after it — the copy, the zip,
