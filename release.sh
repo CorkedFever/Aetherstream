@@ -132,7 +132,8 @@ with zipfile.ZipFile(out) as z:
 print(f'   {out} ({os.path.getsize(out) / 1e6:.1f} MB), manifest {assembly}, author and icon verified')
 PY
 
-if [ "$DEV_COPY" = 1 ] && [ -d "$DEV_DIR" ]; then
+# Not on a dry run: the dev folder would otherwise carry a version number nothing was released as.
+if [ "$DRY_RUN" = 0 ] && [ "$DEV_COPY" = 1 ] && [ -d "$DEV_DIR" ]; then
     say "dev copy"
     for f in Aetherstream.dll Aetherstream.json Aetherstream.Core.dll Aetherstream.Playback.dll; do cp -f "$OUT_DIR/$f" "$DEV_DIR/$f"; done
     mkdir -p "$DEV_DIR/images" && cp -f "$OUT_DIR/images/icon.png" "$DEV_DIR/images/icon.png"
