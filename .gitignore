@@ -16,3 +16,8 @@ libvlc/
 
 # Release zips are GitHub release assets, never repository contents.
 *.zip
+
+# Generated on meteor by deploy/meteor/setup.sh. These hold real credentials.
+deploy/meteor/api.env
+deploy/meteor/mediamtx.yml
+deploy/meteor/Caddyfile

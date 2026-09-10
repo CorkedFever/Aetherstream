@@ -1,0 +1,54 @@
+# The whole Aetherstream server: TLS, the party service, and the stream relay, in one project.
+#
+#   ./setup.sh aetherstream.example.com     # once — generates secrets and the real config files
+#   docker compose up -d
+#
+# Unlike the original luna deployment, nothing here joins anyone else's network: Caddy is part of
+# this stack, so the box can hold exactly one thing and owe nothing to any other.
+
+services:
+  caddy:
+    image: caddy:2
+    container_name: aether-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+      # HLS, served HTTP/1.1-only: libvlc 3 aborts HLS segment fetches over HTTP/2 with
+      # RST_STREAM, so the player gets its own listener with h2 switched off.
+      - "8443:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: aether-stream
+    restart: unless-stopped
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    ports:
+      # SRT ingest — the only port MediaMTX itself opens to the internet. Encrypted with a
+      # passphrase, UDP, and it recovers from packet loss instead of stalling like RTMP-over-TCP.
+      # HLS (8888) stays internal; Caddy proxies to it across the compose network.
+      - "8890:8890/udp"
+
+  party-api:
+    image: python:3.12-alpine
+    container_name: aether-api
+    restart: unless-stopped
+    working_dir: /app
+    command: python -u app.py
+    volumes:
+      - ./app.py:/app/app.py:ro
+      - party-api-data:/data
+    env_file:
+      - api.env
+
+volumes:
+  caddy-data:
+  caddy-config:
+  # Parties are permanent identities; this holds state.json and must survive restarts.
+  party-api-data:

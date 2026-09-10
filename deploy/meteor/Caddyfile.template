@@ -1,0 +1,21 @@
+# setup.sh fills __DOMAIN__ in and writes the real Caddyfile.
+{
+	servers :8443 {
+		# libvlc 3 cannot fetch HLS over HTTP/2 — it aborts segments with RST_STREAM.
+		# This listener exists solely for the player, so it speaks HTTP/1.1 only.
+		protocols h1
+	}
+}
+
+__DOMAIN__ {
+	# The auth callback is for MediaMTX, which reaches the API directly over the compose
+	# network. Nobody outside has any business probing it.
+	@auth path /auth
+	respond @auth 403
+
+	reverse_proxy party-api:8099
+}
+
+__DOMAIN__:8443 {
+	reverse_proxy mediamtx:8888
+}

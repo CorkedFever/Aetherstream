@@ -1,0 +1,47 @@
+# MediaMTX — accept published streams, serve them to the group as HLS.
+# setup.sh fills the __PLACEHOLDERS__ in and writes the real mediamtx.yml (chmod 600).
+
+logLevel: info
+
+# --- Ingest ---------------------------------------------------------------------------------
+rtmp: no
+srt: yes
+srtAddress: :8890
+
+# --- Delivery -------------------------------------------------------------------------------
+hls: yes
+hlsAddress: :8888   # container-internal; Caddy proxies to it over the compose network
+
+# mpegts, not lowLatency: LL-HLS uses fragmented MP4 and partial segments, which libvlc
+# handles poorly — and the plugin is libvlc. Latency costs nothing for a movie night.
+hlsVariant: mpegts
+hlsSegmentDuration: 2s
+hlsSegmentCount: 15
+hlsAlwaysRemux: no
+
+# Nothing lands on disk: segments live in memory as a rolling window and age out. The server
+# never holds the film — only the seconds currently in flight.
+pathDefaults:
+  record: no
+
+# --- Off ------------------------------------------------------------------------------------
+rtsp: no
+webrtc: no
+moq: no
+api: no
+metrics: no
+pprof: no
+
+# --- Access ---------------------------------------------------------------------------------
+# Every publish and read is checked with the party service: publishing to a path needs to be
+# the owner of the group bound to it, which is what stops one member's credentials hijacking
+# another member's party.
+authMethod: http
+authHTTPAddress: http://party-api:8099/auth
+
+paths:
+  "~^party-[0-9a-f]{24}$":
+    source: publisher
+    # SRT ingest is encrypted with this; without it the stream and its credentials would
+    # cross the internet in the clear.
+    srtPublishPassphrase: __SRT_PASSPHRASE__
