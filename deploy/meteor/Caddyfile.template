@@ -8,12 +8,25 @@
 }
 
 __DOMAIN__ {
-	# The auth callback is for MediaMTX, which reaches the API directly over the compose
-	# network. Nobody outside has any business probing it.
-	@auth path /auth
-	respond @auth 403
+	# The party service lives under /party — the plugin joins host and path naively, so
+	# "domain/party" typed as the server address is all the routing there is.
+	handle_path /party/* {
+		# The auth callback is for MediaMTX, which reaches the API directly over the
+		# compose network. Nobody outside has any business probing it.
+		@auth path /auth
+		respond @auth 403
 
-	reverse_proxy party-api:8099
+		reverse_proxy party-api:8099
+	}
+
+	# Everything else is the website, proxied from GitHub Pages — a git push to docs/
+	# updates the site here with nothing to copy onto the box.
+	handle {
+		rewrite * /Aetherstream{path}
+		reverse_proxy https://corkedfever.github.io {
+			header_up Host corkedfever.github.io
+		}
+	}
 }
 
 __DOMAIN__:8443 {
