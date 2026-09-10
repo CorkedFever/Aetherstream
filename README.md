@@ -189,22 +189,27 @@ the picture into the solid region), `Brightness`, and painting a second texture 
 
 ## Releasing
 
-The zip is `bin\Debug` of the plugin project, flat: `Aetherstream.dll` and `Aetherstream.json` at
-the root with `Fonts\` and `libvlc\` beside them. Dalamud extracts it as-is, and
-`Core.Initialize` finds `libvlc\win-x64` relative to `AssemblyLocation` in both the installer and
-dev-plugin layouts — confirmed by the first install on another machine (2026-08-30), which took
-fiddling for a different reason: `raw.githubusercontent.com` was failing on that machine for
-several repos at once, which is why `repo.json` is also mirrored from luna. Bump the version in the
-`.csproj`, `Aetherstream.json` and `repo.json` (both `AssemblyVersion` fields and the three download
-links), tag, publish the release with the zip, and copy `repo.json` to `docs/repo.json` — the
-GitHub Pages copy at `corkedfever.github.io/Aetherstream/repo.json` is the fallback mirror for
-machines where `raw.githubusercontent.com` misbehaves, replacing the one luna used to serve.
+```
+./release.sh 0.2.10 --notes notes.md
+```
 
-**Check `dotnet build`'s exit code directly, never through a pipe.** `dotnet build … | grep` reports
-grep's status, so a failed compile sails past `set -e` and everything after it — the copy, the zip,
-the upload — runs against the *previous* binaries under the new version number. v0.2.2 shipped that
-way for a few minutes: a stale zip whose own manifest disagreed with `repo.json`. Also compare the
-manifest version inside the zip against the one being released before uploading.
+One command, and it refuses to cut a release from anything but a clean, pushed `main`. It bumps the
+version in the `.csproj`, the plugin manifest and both `repo.json` copies; builds with the exit code
+checked directly; packages `bin\Debug` flat (`Aetherstream.dll` and `Aetherstream.json` at the root,
+`Fonts\`, `images\` and `libvlc\` beside them) into a zip *outside* the tree; asserts the version,
+author and icon inside that zip; commits, tags, pushes and publishes the release; then updates the
+mirrors and tells GitHub Pages to build, waiting until the fallback copy actually serves the new
+version. `--dry-run` does everything up to the commit and puts the bumps back.
+
+Every step is there because its absence once shipped something wrong. Piping `dotnet build` into
+`grep` masked a failed compile and shipped the previous binaries under a new version; a zip in the
+working tree ended up in history; Pages twice stopped building on its own and the fallback mirror
+fell three releases behind. The dev-plugin folder gets the fresh build too (`--no-dev` to skip), so
+"testing a stale build" cannot happen either.
+
+The first install on another machine (2026-08-30) confirmed the flat zip layout works with
+`Core.Initialize` resolving `libvlc\win-x64` relative to `AssemblyLocation`; the fiddling that day
+was `raw.githubusercontent.com` failing on that machine, which is why the manifest is mirrored.
 
 ## Live TV, and why channels used to die at twenty seconds
 
