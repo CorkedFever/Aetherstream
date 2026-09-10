@@ -223,6 +223,8 @@ public sealed partial class Plugin : IDalamudPlugin
         // Checked here so a stall is noticed whether or not the control window is open.
         this.RetryStalledThroughRelay();
 
+        this.ApplyVolumeForFrame();
+
         // A finished episode hands over to the next one in the list it was picked from.
         if (this.session.ConsumeEnded() && this.uiContext.PlayNext())
             this.log.Information("[playback] next up");
@@ -453,6 +455,36 @@ public sealed partial class Plugin : IDalamudPlugin
     /// Where to look for the furnishing in the layout. The object table entry is only a proxy, but
     /// it stands in the right place, which is all the layout lookup needs.
     /// </summary>
+    /// <summary>
+    /// Applies volume, mute and the distance fade every frame, whichever way the picture is shown.
+    /// <para>
+    /// This used to sit at the end of the floating-panel draw, which the painted-surface path
+    /// returned before reaching — so on a painted furnishing the mute button did nothing, the
+    /// volume slider only took effect at the next play, and the distance fade never ran at all.
+    /// Sound is not a drawing concern; it belongs beside the session update, and it has to run
+    /// with the screen hidden or the player absent too, or a mute pressed on a loading screen
+    /// would be ignored.
+    /// </para>
+    /// </summary>
+    private void ApplyVolumeForFrame()
+    {
+        if (!this.session.IsPlaying)
+            return;
+
+        var distance = 0f;
+        if (this.objects.LocalPlayer is { } player)
+        {
+            Vector3? at = this.config.PaintOnSurface
+                ? this.SurfaceAnchorPosition()
+                : this.ResolveQuad()?.Centre;
+
+            if (at is { } centre)
+                distance = Vector3.Distance(player.Position, centre);
+        }
+
+        this.session.ApplyVolume(distance);
+    }
+
     private Vector3 SurfaceAnchorPosition() =>
         this.config.SurfacePosition != Vector3.Zero
             ? this.config.SurfacePosition
@@ -509,9 +541,6 @@ public sealed partial class Plugin : IDalamudPlugin
 
         if (this.config.ShowOutline && !drew)
             this.screen.DrawOutline(drawList, quad);
-
-        if (this.objects.LocalPlayer is { } player)
-            this.session.ApplyVolume(Vector3.Distance(player.Position, quad.Centre));
     }
 
     /// <summary>
