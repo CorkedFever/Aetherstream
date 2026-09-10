@@ -145,7 +145,14 @@ public sealed partial class Plugin
         if (this.session.Current is not { } current)
             return;
 
-        if (current is { Relayable: true, Relayed: false })
+        // Never relay a party stream. The relay exists for public channels whose tokenised
+        // playlists expire; a party stall means the broadcast paused or stopped, and re-proxying
+        // it only churns relay sessions on the server while hiding what actually happened.
+        var isParty = this.config.PartyWatchHost.Length > 0
+            && Uri.TryCreate(current.PlaylistUrl, UriKind.Absolute, out var uri)
+            && string.Equals($"{uri.Host}:{uri.Port}", this.config.PartyWatchHost, StringComparison.OrdinalIgnoreCase);
+
+        if (current is { Relayable: true, Relayed: false } && !isParty)
         {
             this.log.Information($"[relay] '{current.DisplayName}' stalled; retrying through the relay.");
             this.PlayResolved(this.relay.Publish(current));
