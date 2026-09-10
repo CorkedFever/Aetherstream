@@ -30,6 +30,12 @@ public sealed partial class Plugin
 
         this.partyLoop = new CancellationTokenSource();
         _ = Task.Run(() => this.PartyLoopAsync(this.partyLoop.Token));
+
+        // Sign in straight away. The host defaults to the Aetherstream server and the key was just
+        // minted above, so a fresh install has everything it needs — pressing Connect would only
+        // be a ritual. A server that cannot be reached leaves the tab saying so, same as before.
+        if (this.config.PartyApiHost.Length > 0)
+            this.RefreshGroups();
     }
 
     private bool Connected => this.config.PartyApiHost.Length > 0 && this.config.PartyKey.Length > 0;

@@ -135,7 +135,7 @@ public sealed class Recent
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
 
     public int Version { get; set; } = CurrentVersion;
 
@@ -228,8 +228,14 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>What was last broadcast, so movie night resumes without retyping a path.</summary>
     public string PartyInput { get; set; } = string.Empty;
 
-    /// <summary>The party service everyone connects to, e.g. party.example.com.</summary>
-    public string PartyApiHost { get; set; } = string.Empty;
+    /// <summary>
+    /// The party service everyone connects to. Defaults to the Aetherstream server, so a fresh
+    /// install is a member of the same world as everyone else without typing anything; it can
+    /// still be pointed elsewhere on the Share tab.
+    /// </summary>
+    public string PartyApiHost { get; set; } = DefaultPartyApiHost;
+
+    public const string DefaultPartyApiHost = "aetherstream.corkedfever.com/party";
 
     /// <summary>
     /// This install's identity. Generated here, never chosen, and the server only ever stores a
@@ -465,6 +471,14 @@ public sealed class Configuration : IPluginConfiguration
                     Url = this.LiveTvPlaylistUrl,
                 });
             }
+        }
+
+        if (this.Version < 6)
+        {
+            // Installs that never connected anywhere get the default server; one that was pointed
+            // at a server of its own keeps it.
+            if (this.PartyApiHost.Length == 0)
+                this.PartyApiHost = DefaultPartyApiHost;
         }
 
         this.Version = CurrentVersion;

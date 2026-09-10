@@ -217,7 +217,7 @@ internal sealed class ShareTab(UiContext ui)
         ImGui.SetNextItemWidth(-110);
         var submitted = ImGui.InputTextWithHint(
             "##apihost",
-            this.Connected ? ui.Config.PartyApiHost : "party.example.com",
+            this.Connected ? ui.Config.PartyApiHost : Configuration.DefaultPartyApiHost,
             ref this.hostBuffer,
             200,
             ImGuiInputTextFlags.EnterReturnsTrue);

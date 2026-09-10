@@ -35,8 +35,8 @@ If a YouTube link does nothing, the screen says why: `NO PICTURE — yt-dlp is n
   step through those. Plenty of channels in a public list are dead at any given moment — if one does
   nothing, try another. Add your own list (an ErsatzTV or Tunarr server, say) from the playlist
   picker.
-- **Share.** Make a party, send the six-character code. Whoever pastes it into the Watch tab sees
-  what you broadcast.
+- **Share.** The plugin is signed in to the Aetherstream party server out of the box. Make a party,
+  send the six-character code. Whoever pastes it into the Watch tab sees what you broadcast.
 
 ## Dependencies
 
