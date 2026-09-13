@@ -113,7 +113,10 @@ echo "   ok"
 # -- package -------------------------------------------------------------------------------------
 
 say "packaging"
-ZIP="$(mktemp -u "${TMPDIR:-/tmp}/Aetherstream-XXXXXX").zip"   # outside the tree: never near git add
+# Outside the tree (never near git add), and named exactly Aetherstream.zip: the asset takes the
+# file's name, and the manifests link to that name. A temp-suffixed file once shipped as a 404.
+ZIP_DIR="$(mktemp -d)"
+ZIP="$ZIP_DIR/Aetherstream.zip"
 python - "$OUT_DIR" "$ZIP" "$ASSEMBLY" <<'PY'
 import os, sys, zipfile
 root, out, assembly = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -160,9 +163,9 @@ echo "   $(git rev-parse --short HEAD)"
 
 say "publishing the release"
 gh release create "$TAG" "$ZIP" --title "Aetherstream $TAG" --notes-file "$NOTES" >/dev/null
-rm -f "$ZIP"
 gh release view "$TAG" --json assets -q '.assets[] | "   \(.name) \(.size) bytes"'
-curl -sIL "https://github.com/$REPO/releases/download/$TAG/Aetherstream.zip" | grep -qE '^HTTP/2 200' || fail "the release asset does not answer 200"
+curl -sIL "https://github.com/$REPO/releases/download/$TAG/Aetherstream.zip" | grep -qE '^HTTP/2 200' || fail "the release asset does not answer 200 — the zip is still at $ZIP"
+rm -rf "$ZIP_DIR"
 
 # -- mirrors -------------------------------------------------------------------------------------
 
