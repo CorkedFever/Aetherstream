@@ -331,6 +331,38 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
             this.player.SetSpu(id);
     }
 
+    /// <summary>The audio tracks — dubs, commentaries — libvlc knows about once the media is open.</summary>
+    public IReadOnlyList<(int Id, string Name)> AudioTracks()
+    {
+        if (this.disposed)
+            return [];
+
+        try
+        {
+            return this.player.AudioTrackDescription
+                .Where(t => t.Id >= 0)
+                .Select(t => (t.Id, t.Name ?? $"Track {t.Id}"))
+                .ToList();
+        }
+        catch (Exception)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>The playing audio track's id, or -1.</summary>
+    public int CurrentAudioTrack => this.disposed ? -1 : this.player.AudioTrack;
+
+    /// <summary>
+    /// Switches audio track by libvlc id, mid-stream. The decoder re-primes; our ring simply
+    /// keeps draining, so the switch is a short hiccup rather than a restart.
+    /// </summary>
+    public void SetAudioTrack(int id)
+    {
+        if (!this.disposed)
+            this.player.SetAudioTrack(id);
+    }
+
     /// <summary>
     /// Copies the newest presented frame; repeats the last one when nothing new has been
     /// presented (live video legitimately repeats frames). Zero-alloc, never blocks.

@@ -348,6 +348,12 @@ public sealed class Configuration : IPluginConfiguration
     public string SubtitleLanguage { get; set; } = string.Empty;
 
     /// <summary>
+    /// Which audio track to pick when a stream offers several — a dub, say — matched against the
+    /// track's name. Empty leaves it to the decoder.
+    /// </summary>
+    public string AudioLanguage { get; set; } = string.Empty;
+
+    /// <summary>
     /// Milliseconds to shift the sound against the picture, applied by libvlc at the source.
     /// Positive holds the sound back, negative brings it forward.
     /// <para>

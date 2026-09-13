@@ -116,6 +116,56 @@ internal sealed class StreamSession(
 
     private bool subtitlePreferenceApplied;
 
+    public IReadOnlyList<(int Id, string Name)> AudioTracks => this.source?.AudioTracks() ?? [];
+
+    public int CurrentAudioTrack => this.source?.CurrentAudioTrack ?? -1;
+
+    /// <summary>A deliberate choice, which also stops the language preference from overriding it.</summary>
+    public void SetAudioTrack(int id)
+    {
+        this.source?.SetAudioTrack(id);
+        this.audioPreferenceApplied = true;
+    }
+
+    private bool audioPreferenceApplied;
+
+    /// <summary>
+    /// Applies the preferred audio language once the tracks are listed. Same shape as the
+    /// subtitle preference; there is no "off" here, because silence is what mute is for.
+    /// </summary>
+    private void ApplyAudioPreference()
+    {
+        if (this.audioPreferenceApplied || this.source is null)
+            return;
+
+        var preference = config.AudioLanguage.Trim();
+        if (preference.Length == 0)
+        {
+            this.audioPreferenceApplied = true;
+            return;
+        }
+
+        var tracks = this.source.AudioTracks();
+        if (tracks.Count == 0 && this.sinceStart.ElapsedMilliseconds < 5000)
+            return;
+
+        this.audioPreferenceApplied = true;
+
+        foreach (var (id, name) in tracks)
+        {
+            if (name.Contains(preference, StringComparison.OrdinalIgnoreCase))
+            {
+                if (id != this.source.CurrentAudioTrack)
+                {
+                    this.source.SetAudioTrack(id);
+                    log.Information($"[audio] '{name}' for preference '{preference}'");
+                }
+
+                return;
+            }
+        }
+    }
+
     /// <summary>
     /// Applies the preferred subtitle language once the tracks are known. libvlc lists them a
     /// moment after the media opens, so this waits for them — but not forever: five seconds in,
@@ -245,6 +295,7 @@ internal sealed class StreamSession(
         }
 
         this.ApplySubtitlePreference();
+        this.ApplyAudioPreference();
 
         this.source.RenderFrame(this.frame);
 
@@ -746,6 +797,7 @@ internal sealed class StreamSession(
                 this.audio = output;
                 this.Ended = false;
                 this.subtitlePreferenceApplied = false;
+                this.audioPreferenceApplied = false;
                 this.ResumedAtMs = -1;
                 this.StalledAtMs = -1;
                 this.lastProgressAtMs = 0;

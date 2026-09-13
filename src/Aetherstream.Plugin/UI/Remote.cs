@@ -121,6 +121,17 @@ internal sealed class Remote(UiContext ui, ChannelDial dial, Screen screen)
 
         this.DrawSubtitleMenu(session);
 
+        // Audio tracks: dubs and commentaries. Lit when there is actually a choice to make.
+        ImGui.SameLine();
+        var audioChoice = playing && session.AudioTracks.Count > 1;
+        using (ImRaii.PushColor(ImGuiCol.Button, Theme.GlassLit, audioChoice).Push(ImGuiCol.Border, Theme.Accent, audioChoice))
+        {
+            if (Ui.IconButton(FontAwesomeIcon.Language, audioChoice ? "Audio track — this stream has several" : "Audio track", "##audiotrack", playing))
+                ImGui.OpenPopup("##audiomenu");
+        }
+
+        this.DrawAudioMenu(session);
+
         // -- readout ----------------------------------------------------------------------------
 
         if (playing && session.FramesPresented > 0)
@@ -131,6 +142,50 @@ internal sealed class Remote(UiContext ui, ChannelDial dial, Screen screen)
             var tag = session.Current is { Relayed: true } ? "relay · " : string.Empty;
             Ui.RightAlignedText($"{tag}{session.FramesPresented:N0} frames", Theme.TextFaint);
         }
+    }
+
+    private string audioLanguageBuffer = string.Empty;
+    private bool audioLanguageLoaded;
+
+    private void DrawAudioMenu(Playback.StreamSession session)
+    {
+        using var popup = ImRaii.Popup("##audiomenu");
+        if (!popup)
+            return;
+
+        var tracks = session.AudioTracks;
+        var current = session.CurrentAudioTrack;
+
+        Theme.Displayed(Theme.Accent, "AUDIO");
+
+        if (tracks.Count == 0)
+            ImGui.TextColored(Theme.TextFaint, "no tracks listed yet");
+
+        foreach (var (id, name) in tracks)
+        {
+            if (ImGui.Selectable($"{name}##aud{id}", id == current))
+                session.SetAudioTrack(id);
+        }
+
+        ImGui.Separator();
+        ImGui.TextColored(Theme.TextDim, "Always prefer");
+
+        if (!this.audioLanguageLoaded)
+        {
+            this.audioLanguageBuffer = ui.Config.AudioLanguage;
+            this.audioLanguageLoaded = true;
+        }
+
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.InputTextWithHint("##audlang", "Japanese, eng…", ref this.audioLanguageBuffer, 32, ImGuiInputTextFlags.EnterReturnsTrue))
+        {
+            ui.Config.AudioLanguage = this.audioLanguageBuffer.Trim();
+            ui.SaveConfig();
+        }
+
+        Ui.Tip(
+            "Picked automatically when a stream starts, by matching the track's name — the original " +
+            "Japanese over a dub, say. Leave it empty to let the decoder choose. Press Enter to save.");
     }
 
     private string languageBuffer = string.Empty;
