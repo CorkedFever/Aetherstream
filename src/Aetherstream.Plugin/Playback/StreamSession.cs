@@ -103,6 +103,60 @@ internal sealed class StreamSession(
 
     public bool TrySetPaused(bool paused) => this.source?.TrySetPaused(paused) ?? false;
 
+    public IReadOnlyList<(int Id, string Name)> Subtitles => this.source?.Subtitles() ?? [];
+
+    public int CurrentSubtitle => this.source?.CurrentSubtitle ?? -1;
+
+    /// <summary>A deliberate choice, which also stops the language preference from overriding it.</summary>
+    public void SetSubtitle(int id)
+    {
+        this.source?.SetSubtitle(id);
+        this.subtitlePreferenceApplied = true;
+    }
+
+    private bool subtitlePreferenceApplied;
+
+    /// <summary>
+    /// Applies the preferred subtitle language once the tracks are known. libvlc lists them a
+    /// moment after the media opens, so this waits for them — but not forever: five seconds in,
+    /// a stream with no listed tracks simply has none.
+    /// </summary>
+    private void ApplySubtitlePreference()
+    {
+        if (this.subtitlePreferenceApplied || this.source is null)
+            return;
+
+        var preference = config.SubtitleLanguage.Trim();
+        if (preference.Length == 0)
+        {
+            // No preference: libvlc's own choice stands (a track flagged default plays, else none).
+            this.subtitlePreferenceApplied = true;
+            return;
+        }
+
+        var tracks = this.source.Subtitles();
+        if (tracks.Count == 0 && this.sinceStart.ElapsedMilliseconds < 5000)
+            return;
+
+        this.subtitlePreferenceApplied = true;
+
+        if (preference.Equals("off", StringComparison.OrdinalIgnoreCase))
+        {
+            this.source.SetSubtitle(-1);
+            return;
+        }
+
+        foreach (var (id, name) in tracks)
+        {
+            if (name.Contains(preference, StringComparison.OrdinalIgnoreCase))
+            {
+                this.source.SetSubtitle(id);
+                log.Information($"[subtitles] '{name}' for preference '{preference}'");
+                return;
+            }
+        }
+    }
+
     /// <summary>Queues a stream to start. Safe from any thread.</summary>
     public void RequestStart(ResolvedStream stream, long resumeAtMs = 0)
     {
@@ -189,6 +243,8 @@ internal sealed class StreamSession(
             this.ResumedTicks = Environment.TickCount64;
             this.resumeTargetMs = 0;
         }
+
+        this.ApplySubtitlePreference();
 
         this.source.RenderFrame(this.frame);
 
@@ -689,6 +745,7 @@ internal sealed class StreamSession(
                 this.current = stream;
                 this.audio = output;
                 this.Ended = false;
+                this.subtitlePreferenceApplied = false;
                 this.ResumedAtMs = -1;
                 this.StalledAtMs = -1;
                 this.lastProgressAtMs = 0;

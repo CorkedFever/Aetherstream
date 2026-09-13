@@ -292,6 +292,43 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
         this.player.EndReached += this.OnPlayerStopped;
         this.player.Play(this.media);
         previous?.Dispose();
+
+        // Sidecar subtitle files are attached to the player, not the media, and after Play: a
+        // slave added before playback starts is dropped with the media change.
+        foreach (var url in stream.SubtitleUrls ?? [])
+            this.player.AddSlave(MediaSlaveType.Subtitle, url, false);
+    }
+
+    /// <summary>
+    /// The subtitle tracks libvlc knows about, once the media is open. libvlc lists its own
+    /// "Disable" entry with id -1; that is left out and offered by the caller as "Off".
+    /// </summary>
+    public IReadOnlyList<(int Id, string Name)> Subtitles()
+    {
+        if (this.disposed)
+            return [];
+
+        try
+        {
+            return this.player.SpuDescription
+                .Where(t => t.Id >= 0)
+                .Select(t => (t.Id, t.Name ?? $"Track {t.Id}"))
+                .ToList();
+        }
+        catch (Exception)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>The selected subtitle track's id, or -1 for none.</summary>
+    public int CurrentSubtitle => this.disposed ? -1 : this.player.Spu;
+
+    /// <summary>Selects a subtitle track by libvlc id; -1 turns them off.</summary>
+    public void SetSubtitle(int id)
+    {
+        if (!this.disposed)
+            this.player.SetSpu(id);
     }
 
     /// <summary>

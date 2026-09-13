@@ -342,6 +342,12 @@ public sealed class Configuration : IPluginConfiguration
     public bool SpatialSound { get; set; } = true;
 
     /// <summary>
+    /// Which subtitle track to pick when a stream offers several, matched against the track's
+    /// name ("English", "eng", "Japanese"…). Empty leaves it to the decoder; "off" forces none.
+    /// </summary>
+    public string SubtitleLanguage { get; set; } = string.Empty;
+
+    /// <summary>
     /// Milliseconds to shift the sound against the picture, applied by libvlc at the source.
     /// Positive holds the sound back, negative brings it forward.
     /// <para>

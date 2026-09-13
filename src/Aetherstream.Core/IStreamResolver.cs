@@ -37,6 +37,12 @@ public sealed record ResolvedStream(
     int? AudioTrackIndex = null,
 
     /// <summary>
+    /// Subtitle files served separately from the media — Plex keeps external .srt files as their
+    /// own streams — to be loaded alongside it. Tracks inside the container need nothing here.
+    /// </summary>
+    IReadOnlyList<string>? SubtitleUrls = null,
+
+    /// <summary>
     /// Whether this may be retried through the local HLS relay if it stalls.
     /// <para>
     /// Set for channels out of a public playlist, where a stall usually means an expiring upstream

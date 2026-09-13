@@ -176,7 +176,8 @@ public sealed class PlexResolver(HttpClient http, string server, string token, i
         return new ResolvedStream(
             $"{baseUrl}{path}?X-Plex-Token={Uri.EscapeDataString(token)}",
             title,
-            AudioTrackIndex: track);
+            AudioTrackIndex: track,
+            SubtitleUrls: ReadExternalSubtitles(part, baseUrl));
     }
 
     /// <summary>
@@ -251,6 +252,35 @@ public sealed class PlexResolver(HttpClient http, string server, string token, i
             Channels > 2 && Codec.Equals("opus", StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Subtitle files Plex keeps beside the media rather than inside it. Only text formats: a
+    /// bitmap subtitle (PGS, VobSub) is not something a sidecar load can render.
+    /// </summary>
+    private List<string> ReadExternalSubtitles(JsonElement part, string baseUrl)
+    {
+        var urls = new List<string>();
+        if (!part.TryGetProperty("Stream", out var streams))
+            return urls;
+
+        foreach (var stream in streams.EnumerateArray())
+        {
+            if (!stream.TryGetProperty("streamType", out var type) || type.GetInt32() != 3)
+                continue;
+
+            // An external stream has a key of its own; an embedded one does not.
+            if (!stream.TryGetProperty("key", out var key) || key.GetString() is not { Length: > 0 } path)
+                continue;
+
+            var codec = stream.TryGetProperty("codec", out var c) ? c.GetString() ?? string.Empty : string.Empty;
+            if (codec is not ("srt" or "subrip" or "ass" or "ssa" or "vtt" or "webvtt"))
+                continue;
+
+            urls.Add($"{baseUrl}{path}?X-Plex-Token={Uri.EscapeDataString(token)}");
+        }
+
+        return urls;
+    }
+
     private static List<AudioTrack> ReadAudioTracks(JsonElement part)
     {
         var tracks = new List<AudioTrack>();
@@ -295,7 +325,7 @@ public sealed class PlexResolver(HttpClient http, string server, string token, i
             "&fastSeek=1" +
             $"&maxVideoBitrate={kilobits}" +
             "&videoQuality=100" +
-            "&subtitles=none" +
+            "&subtitles=embed" +
             "&audioBoost=100" +
             $"&session={this.clientId}" +
 

@@ -109,6 +109,18 @@ internal sealed class Remote(UiContext ui, ChannelDial dial, Screen screen)
             session.Muted = !session.Muted;
         }
 
+        // -- subtitles --------------------------------------------------------------------------
+
+        ImGui.SameLine();
+        var subtitleOn = playing && session.CurrentSubtitle >= 0;
+        using (ImRaii.PushColor(ImGuiCol.Button, Theme.GlassLit, subtitleOn).Push(ImGuiCol.Border, Theme.Accent, subtitleOn))
+        {
+            if (Ui.IconButton(FontAwesomeIcon.ClosedCaptioning, "Subtitles", "##cc", playing))
+                ImGui.OpenPopup("##ccmenu");
+        }
+
+        this.DrawSubtitleMenu(session);
+
         // -- readout ----------------------------------------------------------------------------
 
         if (playing && session.FramesPresented > 0)
@@ -119,5 +131,56 @@ internal sealed class Remote(UiContext ui, ChannelDial dial, Screen screen)
             var tag = session.Current is { Relayed: true } ? "relay · " : string.Empty;
             Ui.RightAlignedText($"{tag}{session.FramesPresented:N0} frames", Theme.TextFaint);
         }
+    }
+
+    private string languageBuffer = string.Empty;
+    private bool languageLoaded;
+
+    /// <summary>
+    /// The tracks the stream offers, and the standing preference. Both here rather than on a
+    /// settings tab, because the moment anyone wants subtitles is the moment they are watching.
+    /// </summary>
+    private void DrawSubtitleMenu(Playback.StreamSession session)
+    {
+        using var popup = ImRaii.Popup("##ccmenu");
+        if (!popup)
+            return;
+
+        var tracks = session.Subtitles;
+        var current = session.CurrentSubtitle;
+
+        Theme.Displayed(Theme.Accent, "SUBTITLES");
+
+        if (ImGui.Selectable("Off", current < 0))
+            session.SetSubtitle(-1);
+
+        if (tracks.Count == 0)
+            ImGui.TextColored(Theme.TextFaint, "this stream offers none");
+
+        foreach (var (id, name) in tracks)
+        {
+            if (ImGui.Selectable($"{name}##sub{id}", id == current))
+                session.SetSubtitle(id);
+        }
+
+        ImGui.Separator();
+        ImGui.TextColored(Theme.TextDim, "Always prefer");
+
+        if (!this.languageLoaded)
+        {
+            this.languageBuffer = ui.Config.SubtitleLanguage;
+            this.languageLoaded = true;
+        }
+
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.InputTextWithHint("##sublang", "English, jpn, off…", ref this.languageBuffer, 32, ImGuiInputTextFlags.EnterReturnsTrue))
+        {
+            ui.Config.SubtitleLanguage = this.languageBuffer.Trim();
+            ui.SaveConfig();
+        }
+
+        Ui.Tip(
+            "Picked automatically when a stream starts, by matching the track's name. Leave it " +
+            "empty to let the decoder choose, or type \"off\" to always start without them. Press Enter to save.");
     }
 }
