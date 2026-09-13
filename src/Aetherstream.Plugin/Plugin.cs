@@ -93,7 +93,15 @@ public sealed partial class Plugin : IDalamudPlugin
         // thousands of lines a minute.
         this.vlc.Log += this.OnVlcLog;
 
-        this.session = new StreamSession(this.vlc, textures, log, this.config);
+        this.session = new StreamSession(this.vlc, textures, log, this.config)
+        {
+            IdleCard = new TestCard(
+                Path.Combine(
+                    pluginInterface.AssemblyLocation.Directory?.FullName ?? AppContext.BaseDirectory,
+                    "images",
+                    "testcard.rgba.gz"),
+                log),
+        };
         this.screen = new WorldScreen(gameGui);
         this.gameGuiRef = gameGui;
         this.binding = new SurfaceBinding(log);
@@ -224,10 +232,18 @@ public sealed partial class Plugin : IDalamudPlugin
         this.RetryStalledThroughRelay();
 
         this.ApplyVolumeForFrame();
+        this.RecordProgress();
 
-        // A finished episode hands over to the next one in the list it was picked from.
-        if (this.session.ConsumeEnded() && this.uiContext.PlayNext())
-            this.log.Information("[playback] next up");
+        // A finished episode hands over to the next one in the list it was picked from — and a
+        // finished anything is not something to resume into.
+        if (this.session.ConsumeEnded())
+        {
+            if (this.config.ResumePositions.Remove(this.config.Source))
+                this.configDirty = true;
+
+            if (this.uiContext.PlayNext())
+                this.log.Information("[playback] next up");
+        }
 
         // Driven from here rather than from the window, because a closed or collapsed window does
         // not draw — and retired poster textures would then sit un-released until it was reopened.
@@ -472,6 +488,8 @@ public sealed partial class Plugin : IDalamudPlugin
             return;
 
         var distance = 0f;
+        var pan = 0f;
+
         if (this.objects.LocalPlayer is { } player)
         {
             Vector3? at = this.config.PaintOnSurface
@@ -479,11 +497,73 @@ public sealed partial class Plugin : IDalamudPlugin
                 : this.ResolveQuad()?.Centre;
 
             if (at is { } centre)
+            {
                 distance = Vector3.Distance(player.Position, centre);
+
+                // Where the screen sits on the display is where the sound should come from. The
+                // camera does the projection for us: a set that lands left of centre is on the
+                // left. Behind the camera it cannot be placed, so it stays centred.
+                if (this.config.SpatialSound && this.gameGuiRef.WorldToScreen(centre, out var onScreen))
+                {
+                    var viewport = ImGui.GetMainViewport();
+                    var half = viewport.Size.X * 0.5f;
+                    if (half > 1f)
+                        pan = Math.Clamp((onScreen.X - viewport.Pos.X - half) / half, -1f, 1f);
+                }
+            }
         }
 
-        this.session.ApplyVolume(distance);
+        this.session.ApplyVolume(distance, pan);
     }
+
+    private long lastProgressTicks;
+    private long lastProgressSaveTicks;
+
+    /// <summary>
+    /// Notes where a seekable source has reached, every few seconds, so it can be picked up
+    /// later. The first half-minute and the last minute are not worth resuming into, so those
+    /// clear the entry instead — a film watched to the credits starts from the top next time.
+    /// </summary>
+    private void RecordProgress()
+    {
+        var now = Environment.TickCount64;
+        if (now - this.lastProgressTicks < 5000)
+            return;
+
+        this.lastProgressTicks = now;
+
+        var source = this.config.Source;
+        var duration = this.session.DurationMs;
+        if (source.Length == 0 || !this.session.IsPlaying || duration <= 0 || !this.session.IsSeekable)
+            return;
+
+        var position = this.session.PositionMs;
+        var table = this.config.ResumePositions;
+
+        if (position < 30_000 || position > duration - 60_000)
+        {
+            if (table.Remove(source))
+                this.configDirty = true;
+
+            return;
+        }
+
+        table[source] = position;
+
+        // Bounded: nobody needs to resume into something they last touched two hundred films ago.
+        if (table.Count > 200)
+            table.Remove(table.Keys.First());
+
+        // Written every half minute rather than every sample; a crash loses at most that.
+        if (now - this.lastProgressSaveTicks > 30_000)
+        {
+            this.lastProgressSaveTicks = now;
+            this.configDirty = true;
+        }
+    }
+
+    private long ResumePointFor(string source) =>
+        this.config.ResumePositions.TryGetValue(source, out var ms) ? ms : 0;
 
     private Vector3 SurfaceAnchorPosition() =>
         this.config.SurfacePosition != Vector3.Zero
@@ -665,7 +745,7 @@ public sealed partial class Plugin : IDalamudPlugin
                         return;
 
                     this.log.Information($"Resolved '{source}' via {via}.");
-                    this.session.RequestStart(stream);
+                    this.session.RequestStart(stream, this.ResumePointFor(source));
                 }
                 catch (OperationCanceledException)
                 {

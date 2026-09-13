@@ -330,7 +330,8 @@ internal sealed class LibraryTab(UiContext ui)
                 title,
                 subtitle,
                 item.IsContainer,
-                wide))
+                wide,
+                this.Progress(item)))
             {
                 if (item.IsContainer)
                 {
@@ -366,6 +367,12 @@ internal sealed class LibraryTab(UiContext ui)
             Ui.Hint($"Only the first {PlexLibrary.MaxItems} are shown. Use the search box to narrow it down.");
         }
     }
+
+    /// <summary>How far through an item was left, 0 when it was not started or was finished.</summary>
+    private float Progress(PlexLibrary.Item item) =>
+        item.DurationMs > 0 && ui.Config.ResumePositions.TryGetValue(PlexResolver.SourceFor(item.RatingKey), out var ms)
+            ? Math.Clamp(ms / (float)item.DurationMs, 0f, 1f)
+            : 0f;
 
     /// <summary>What goes on the tile. An episode leads with its number, since that is how it is found.</summary>
     private static (string Title, string Subtitle) Label(PlexLibrary.Item item)

@@ -659,6 +659,25 @@ internal sealed class ScreenTab(UiContext ui)
             ui.SaveConfig();
         }
 
+        var card = ui.Config.IdleCard;
+        if (ImGui.Checkbox("Test card when nothing's on", ref card))
+        {
+            ui.Config.IdleCard = card;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip("Colour bars, the mark and a clock, the way a set looks between programmes.");
+
+        ImGui.SameLine();
+        var retro = ui.Config.RetroMode;
+        if (ImGui.Checkbox("Retro look", ref retro))
+        {
+            ui.Config.RetroMode = retro;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip("Scanlines and a soft vignette on every frame. Costs a couple of milliseconds a frame.");
+
         if (ui.Config.PaintOnSurface)
             return;
 

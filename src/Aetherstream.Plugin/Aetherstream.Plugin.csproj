@@ -14,6 +14,8 @@
     <!-- Dalamud shows images\icon.png in the installer for an installed plugin; the repo manifest
          points at the same file on GitHub for the listing. -->
     <None Include="images\icon.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The test card: raw 1280x720 RGBA, gzipped. Rendered at build time from the site's palette. -->
+    <None Include="images\testcard.rgba.gz" CopyToOutputDirectory="PreserveNewest" />
     <!-- VT323, SIL Open Font License. The licence ships beside it, as the OFL requires. -->
     <None Include="Fonts\VT323-Regular.ttf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Fonts\OFL.txt" CopyToOutputDirectory="PreserveNewest" />

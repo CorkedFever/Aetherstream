@@ -169,6 +169,12 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Most recent first.</summary>
     public List<Recent> Recents { get; set; } = [];
 
+    /// <summary>
+    /// Where each seekable source was left, by source string, so playing it again picks up
+    /// there. Entries are dropped once a source is finished or barely started.
+    /// </summary>
+    public Dictionary<string, long> ResumePositions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Folded down to the title bar. The picture carries on wherever it is showing.</summary>
     public bool WindowMinimised { get; set; }
 
@@ -296,6 +302,12 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Outline the screen's bounds even when nothing is playing, to help place it.</summary>
     public bool ShowOutline { get; set; } = true;
 
+    /// <summary>Show a test card on the screen when nothing is playing, the way a set would.</summary>
+    public bool IdleCard { get; set; } = true;
+
+    /// <summary>Scanlines and a vignette baked into every frame. A look, not a correction.</summary>
+    public bool RetroMode { get; set; }
+
     public float Opacity { get; set; } = 1f;
 
     /// <summary>
@@ -322,6 +334,12 @@ public sealed class Configuration : IPluginConfiguration
     /// </para>
     /// </summary>
     public string AudioDeviceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Pan the sound towards where the screen is on your display, so a set on your left sounds
+    /// like it is on your left. Attenuation only, never boost, so nothing can clip.
+    /// </summary>
+    public bool SpatialSound { get; set; } = true;
 
     /// <summary>
     /// Milliseconds to shift the sound against the picture, applied by libvlc at the source.

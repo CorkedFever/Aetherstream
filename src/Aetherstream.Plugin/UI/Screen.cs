@@ -119,7 +119,7 @@ internal sealed class Screen(UiContext ui)
 
         if (!playing && !failed && session.Ended)
             this.DrawSignal("END", Theme.TextDim, "that's the end — pick something else below");
-        else if (!playing && !failed)
+        else if (!playing && !failed && !session.IdleShowing)
             this.DrawSignal("NO SIGNAL", Theme.TextFaint, "pick an input below");
         else if (failed)
             this.DrawSignal("NO PICTURE", Theme.Bad, Ui.Ellipsis(session.Error!.ReplaceLineEndings(" "), 96));
@@ -153,6 +153,10 @@ internal sealed class Screen(UiContext ui)
             if (session.IsPaused)
                 this.OsdText(p0 + new Vector2(10f, 30f), Theme.Warn, "PAUSED", alpha);
         }
+
+        // A resume says so for a few seconds, whatever the OSD hold is doing.
+        if (playing && session.ResumedAtMs > 0 && Environment.TickCount64 - session.ResumedTicks < 6000)
+            this.OsdText(p0 + new Vector2(10f, 30f), Theme.TextDim, $"RESUMED {Ui.Clock(session.ResumedAtMs)}", 1f);
 
         // -- progress and scrub -----------------------------------------------------------------
 

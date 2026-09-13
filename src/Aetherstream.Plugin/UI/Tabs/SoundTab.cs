@@ -108,6 +108,17 @@ internal sealed class SoundTab(UiContext ui)
             "Sound quietens as you walk away from the screen, so it behaves like something in the " +
             "room. Set it to zero to keep the level constant wherever you are.");
 
+        var spatial = ui.Config.SpatialSound;
+        if (ImGui.Checkbox("Sound comes from where the screen is", ref spatial))
+        {
+            ui.Config.SpatialSound = spatial;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip(
+            "A set on your left sounds like it is on your left. It follows the camera, not your " +
+            "character, and it only ever turns the far side down — nothing gets louder.");
+
         Ui.Section("Sync");
 
         var offset = ui.Config.AudioOffsetMs;

@@ -63,6 +63,15 @@ internal sealed class Remote(UiContext ui, ChannelDial dial, Screen screen)
                 screen.ResumeStalled?.Invoke();
         }
 
+        // Offered for a while after a resume: the one time "from the beginning" is what someone
+        // might have meant instead.
+        if (playing && session.ResumedAtMs > 0 && Environment.TickCount64 - session.ResumedTicks < 20_000)
+        {
+            ImGui.SameLine();
+            if (Ui.IconButton(FontAwesomeIcon.StepBackward, "Start over from the beginning", "##startover"))
+                session.TrySeek(0);
+        }
+
         // -- channels ---------------------------------------------------------------------------
 
         ImGui.SameLine(0f, 18f);

@@ -120,6 +120,17 @@ internal sealed class AudioOutput : IDisposable
         }
     }
 
+    /// <summary>-1 is fully left, +1 fully right, 0 centred. Applied as the samples are handed over.</summary>
+    public float Pan
+    {
+        get => this.provider?.Pan ?? 0f;
+        set
+        {
+            if (this.provider is not null)
+                this.provider.Pan = Math.Clamp(value, -1f, 1f);
+        }
+    }
+
     public void Dispose()
     {
         if (this.disposed)
@@ -143,6 +154,8 @@ internal sealed class AudioOutput : IDisposable
         public WaveFormat WaveFormat { get; } = format;
 
         public float Volume { get; set; } = 1f;
+
+        public float Pan { get; set; }
 
         public int Read(byte[] buffer, int offset, int count)
         {
@@ -186,10 +199,17 @@ internal sealed class AudioOutput : IDisposable
             }
             else
             {
+                // A balance, not a true pan: the far side is turned down, the near side is never
+                // turned up, so the centre is unity and nothing can clip. Seven tenths at most —
+                // a set across the room still reaches both ears.
+                var pan = this.Pan;
+                var left = gain * (1f - (Math.Max(0f, pan) * 0.7f));
+                var right = gain * (1f + (Math.Min(0f, pan) * 0.7f));
+
                 for (var f = 0; f < frames; f++)
                 {
-                    destination[f * channels] = this.scratch[f * 2] * gain;
-                    destination[(f * channels) + 1] = this.scratch[(f * 2) + 1] * gain;
+                    destination[f * channels] = this.scratch[f * 2] * left;
+                    destination[(f * channels) + 1] = this.scratch[(f * 2) + 1] * right;
                 }
             }
 

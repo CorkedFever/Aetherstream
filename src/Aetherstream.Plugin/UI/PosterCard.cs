@@ -40,9 +40,10 @@ internal static class PosterCard
         string title,
         string subtitle,
         bool container,
-        bool wide = false) =>
+        bool wide = false,
+        float progress = 0f) =>
         Draw(ui, id, () => ui.Art.Get(ui.Config.PlexServer, ui.Config.PlexToken, thumb),
-             title, subtitle, container, wide);
+             title, subtitle, container, wide, progress);
 
     /// <summary>
     /// A tile whose art comes from anywhere.
@@ -59,7 +60,8 @@ internal static class PosterCard
         string title,
         string subtitle,
         bool container,
-        bool wide = false)
+        bool wide = false,
+        float progress = 0f)
     {
         var width = WidthOf(wide);
         var size = new Vector2(width, HeightOf(wide));
@@ -134,6 +136,15 @@ internal static class PosterCard
                 3f);
 
             draw.AddText(corner, ImGui.ColorConvertFloat4ToU32(Ui.Accent), badge);
+        }
+
+        // How far through it was left, as a line along the bottom of the art — the same thing
+        // every streaming service draws, because it answers the question before it is asked.
+        if (progress > 0f)
+        {
+            var trackTop = new Vector2(origin.X, posterMax.Y - 3f);
+            draw.AddRectFilled(trackTop, posterMax, ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 0f, 0f, 0.55f)));
+            draw.AddRectFilled(trackTop, new Vector2(origin.X + (width * Math.Clamp(progress, 0f, 1f)), posterMax.Y), ImGui.ColorConvertFloat4ToU32(Ui.Accent));
         }
 
         var textTop = posterMax.Y + 4f;

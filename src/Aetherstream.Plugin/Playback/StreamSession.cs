@@ -164,7 +164,13 @@ internal sealed class StreamSession(
             this.Start(request, resumeAt);
         }
 
-        if (this.source is null || this.uploader is null)
+        if (this.source is null)
+        {
+            this.ShowIdleCard();
+            return;
+        }
+
+        if (this.uploader is null)
             return;
 
         // RenderFrame repeats the last picture when nothing new has been presented, so this is
@@ -179,10 +185,16 @@ internal sealed class StreamSession(
         if (this.resumeTargetMs > 0 && this.source.TrySeek(this.resumeTargetMs))
         {
             log.Information($"[resume] picked up at {this.resumeTargetMs}ms");
+            this.ResumedAtMs = this.resumeTargetMs;
+            this.ResumedTicks = Environment.TickCount64;
             this.resumeTargetMs = 0;
         }
 
         this.source.RenderFrame(this.frame);
+
+        if (config.RetroMode)
+            this.Retro(this.frame);
+
         this.ReportSync();
 
         if (config.PaintOnSurface)
@@ -467,6 +479,115 @@ internal sealed class StreamSession(
         }
     }
 
+    /// <summary>The card shown when nothing plays. Set by the plugin; null when the artwork is missing.</summary>
+    public TestCard? IdleCard { get; set; }
+
+    /// <summary>Whether the uploader currently holds the test card rather than video.</summary>
+    public bool IdleShowing { get; private set; }
+
+    private (int Minute, bool Retro, bool Opaque, bool Fit) idleStamp = (-1, false, false, false);
+
+    /// <summary>Where the last resume landed, or -1; and when, for the OSD and the start-over button.</summary>
+    public long ResumedAtMs { get; private set; } = -1;
+
+    public long ResumedTicks { get; private set; }
+
+    /// <summary>
+    /// Paints the test card while nothing is playing, and only re-paints when the clock or the
+    /// look changes — once a minute, not once a frame.
+    /// </summary>
+    private void ShowIdleCard()
+    {
+        if (!config.IdleCard || this.IdleCard is not { Available: true } card)
+        {
+            if (this.IdleShowing)
+                this.TearDown();
+
+            return;
+        }
+
+        var now = DateTime.Now;
+        var stamp = ((now.Hour * 60) + now.Minute, config.RetroMode, config.PaintOnSurface, config.HasFit);
+
+        if (this.uploader is null)
+        {
+            this.uploader = this.CreateUploader();
+            this.IdleShowing = true;
+            this.idleStamp = (-1, false, false, false);
+        }
+
+        if (stamp == this.idleStamp)
+            return;
+
+        this.idleStamp = stamp;
+        card.Render(this.frame, now);
+
+        if (config.RetroMode)
+            this.Retro(this.frame);
+
+        if (config.PaintOnSurface)
+            this.MakeOpaque(this.frame);
+
+        try
+        {
+            this.uploader.Upload(config.HasFit ? this.Fit(this.frame) : this.frame);
+        }
+        catch (Exception ex)
+        {
+            log.Warning(ex, "Could not show the test card.");
+            this.TearDown();
+        }
+    }
+
+    private ushort[]? retroFactor;
+
+    /// <summary>
+    /// Scanlines and a vignette, from one precomputed per-pixel factor in 8.8 fixed point. About
+    /// a million multiplies per frame, which is a couple of milliseconds — fine for an opt-in look.
+    /// </summary>
+    private void Retro(uint[] pixels)
+    {
+        var factor = this.retroFactor ??= BuildRetroFactor();
+
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            var f = (uint)factor[i];
+            if (f == 256)
+                continue;
+
+            var p = pixels[i];
+            var r = ((p & 0xFFu) * f) >> 8;
+            var g = (((p >> 8) & 0xFFu) * f) >> 8;
+            var b = (((p >> 16) & 0xFFu) * f) >> 8;
+            pixels[i] = (p & 0xFF000000u) | (b << 16) | (g << 8) | r;
+        }
+    }
+
+    private static ushort[] BuildRetroFactor()
+    {
+        var table = new ushort[Width * Height];
+
+        for (var y = 0; y < Height; y++)
+        {
+            // Every other line dimmed: the scanline. The tube's own look, at the cost of a little light.
+            var line = (y & 1) == 1 ? 0.74f : 1f;
+            var ny = ((y / (Height - 1f)) * 2f) - 1f;
+
+            for (var x = 0; x < Width; x++)
+            {
+                var nx = ((x / (Width - 1f)) * 2f) - 1f;
+
+                // A soft vignette from about 70% of the way out, never below 45% in the corners.
+                var radius = MathF.Sqrt((nx * nx * 0.85f) + (ny * ny));
+                var vignette = radius < 0.7f ? 1f : Math.Max(0.45f, 1f - ((radius - 0.7f) / 0.55f * 0.55f));
+
+                table[(y * Width) + x] = (ushort)Math.Round(line * vignette * 256f);
+            }
+        }
+
+        return table;
+    }
+
     /// <summary>
     /// Silenced for now, without touching the saved volume. Applied every frame by
     /// <see cref="ApplyVolume"/>, so it is a runtime state rather than a setting.
@@ -480,7 +601,7 @@ internal sealed class StreamSession(
     public float DistanceGain { get; private set; } = 1f;
 
     /// <summary>Applies the configured volume, optionally attenuated by distance to the screen.</summary>
-    public void ApplyVolume(float distanceYalms)
+    public void ApplyVolume(float distanceYalms, float pan = 0f)
     {
         if (this.audio is null)
             return;
@@ -495,6 +616,7 @@ internal sealed class StreamSession(
 
         this.DistanceGain = falloff;
         this.audio.Volume = this.Muted ? 0f : config.Volume * falloff;
+        this.audio.Pan = pan;
     }
 
     public void Dispose()
@@ -567,6 +689,7 @@ internal sealed class StreamSession(
                 this.current = stream;
                 this.audio = output;
                 this.Ended = false;
+                this.ResumedAtMs = -1;
                 this.StalledAtMs = -1;
                 this.lastProgressAtMs = 0;
                 this.lastDeliveredMs = -1;
@@ -643,6 +766,7 @@ internal sealed class StreamSession(
             this.retiring.Add((this.uploader, RetireFrames));
 
         this.uploader = null;
+        this.IdleShowing = false;
 
         this.lastPresented = -1;
         this.sinceStart.Reset();
