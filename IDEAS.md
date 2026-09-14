@@ -157,6 +157,9 @@ From the game, no network:
 
 - **Eorzea clock.** A full-screen flip clock in Eorzea time, sunrise and sunset, moon phase.
 - **Hunt and FATE board.** What is up in the zone from the object table, like a departures board.
+  *Weak in practice: the set lives in a housing ward, where the client sees no FATEs and no marks.
+  Only worth it fed from outside — Sonar's IPC if the viewer has it, or a train route a conductor
+  pastes into the party — so it sits low on the list.*
 - **Duty roulette board.** Daily and weekly reset countdowns, which roulettes are done today.
 - **Retainer and venture timers.** Who is back when.
 - **Zone map.** The current map texture with you and the party as blips.
