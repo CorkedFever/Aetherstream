@@ -77,6 +77,7 @@ a plugin that fetches executables is not something to ask people to trust.
 | Source | What | Notes |
 | --- | --- | --- |
 | [iptv-org](https://github.com/iptv-org/iptv) | The default live TV playlist (`index.m3u`) | Volunteer-maintained index of publicly available streams. Cached locally for 12 hours; any other extended M3U can be used instead or alongside it. |
+| [iptv-org API](https://github.com/iptv-org/api) | Other addresses for a channel whose listed one has died (`streams.json`) | The playlist lists one address per channel and the free services move theirs without notice; when a lineup channel dies, the index's other addresses for the same channel id are probed and the first that answers stands in for it, with the channel still listed under its own number. Read once per session, only when something dies. |
 | [Plex](https://www.plex.tv/) | Your own library, via `plex.tv/link` sign-in | The token is stored locally and only ever sent to your own server. |
 | [Final Fantasy Wiki](https://finalfantasy.fandom.com/) renders | The story hour's Twelve, as sprites | Square Enix's official renders of the Twelve, pixelated to ninety-six rows by `tools/make_twelve.py` and bundled as `data/twelve.json.gz`. Fan use, inside a plugin for their own game. |
 | [Carbuncle Plushy fish tracker](https://github.com/icykoneko/ff14-fish-tracker-app) | The fishing channel's windows: weather, preceding weather, hours, bait | MIT, by icykoneko. Trimmed to the fish with a window by `tools/make_fishdata.py` and bundled as `data/fish.json.gz`; nothing is fetched at run time. |

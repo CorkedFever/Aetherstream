@@ -68,11 +68,26 @@ public sealed partial class Plugin
             return;
 
         var source = this.config.Source;
-        if (this.window.Dial.Find(source) is null || this.IsDead(source))
+        if (this.window.Dial.Find(source) is not { } channel)
             return;
 
-        this.MarkDead(source, "the decoder gave up");
+        // What actually failed: the listed address, or an alternate standing in for it.
+        var playing = this.session.Current is { Relayed: false } c ? c.PlaylistUrl : source;
+        if (this.IsDead(playing))
+        {
+            // Already marked, perhaps from an earlier session: still worth one look for another address.
+            this.TryAlternate(channel, play: true);
+            return;
+        }
+
+        var viaAlternate = !string.Equals(playing, source, StringComparison.OrdinalIgnoreCase);
+        this.MarkDead(playing, viaAlternate ? "the alternate gave up too" : "the decoder gave up");
+        if (viaAlternate)
+            this.config.LiveTvAlternates.Remove(source);
+        else
+            this.MarkDead(source, "the decoder gave up");
         this.window.Dial.MarkOffline(source);
+        this.TryAlternate(channel, play: true);
     }
 
     /// <summary>
@@ -149,7 +164,23 @@ public sealed partial class Plugin
                 await gate.WaitAsync();
                 try
                 {
-                    var alive = await ProbeAsync(channel);
+                    var address = this.AddressOf(channel.Url);
+                    var alive = await this.ProbeAsync(channel with { Url = address });
+                    if (!alive && channel.TvgId.Length > 0)
+                    {
+                        // The listed address is gone; another from the index may not be.
+                        this.MarkDead(address, "no answer");
+                        if (address != channel.Url)
+                            this.config.LiveTvAlternates.Remove(channel.Url);
+                        if (await this.FindAlternateAsync(channel) is { } other)
+                        {
+                            this.config.LiveTvAlternates[channel.Url] = other;
+                            this.configDirty = true;
+                            this.log.Information($"[health] '{channel.Name}' moved to another address: {other}");
+                            alive = true;
+                        }
+                    }
+
                     Interlocked.Increment(ref checkedCount);
                     if (!alive)
                     {

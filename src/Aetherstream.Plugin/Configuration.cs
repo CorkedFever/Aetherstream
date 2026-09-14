@@ -342,6 +342,9 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Live channels found dead — no answer, or a black picture — with when to try them again, as unix seconds.</summary>
     public Dictionary<string, long> LiveTvDead { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Lineup channels whose listed address died, and the other address from the index they play through instead.</summary>
+    public Dictionary<string, string> LiveTvAlternates { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// What the guide lists after the pins: channels of this country (the playlist's two-letter
     /// code; empty means the character's region) and, when set, only this group.

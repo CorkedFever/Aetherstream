@@ -165,8 +165,15 @@ public sealed partial class Plugin
 
         // Stalled and nothing left to try: the guide marks it so nobody keeps clicking it. The
         // origin, not the relay's loopback address, is what the guide knows the channel by.
-        this.window.Dial.MarkOffline(current.Origin ?? current.PlaylistUrl);
-        this.MarkDead(current.Origin ?? current.PlaylistUrl, "stalled and would not come back");
+        var origin = current.Origin ?? current.PlaylistUrl;
+        this.window.Dial.MarkOffline(origin);
+        this.MarkDead(current.PlaylistUrl, "stalled and would not come back");
+        if (current.Origin is not null)
+            this.config.LiveTvAlternates.Remove(origin);
+        else
+            this.MarkDead(origin, "stalled and would not come back");
+        if (this.window.Dial.Find(origin) is { } stalled)
+            this.TryAlternate(stalled, play: true);
     }
 
     /// <summary>Starts something already resolved, bypassing resolution.</summary>
@@ -174,8 +181,9 @@ public sealed partial class Plugin
     {
         // A relayed stream's address is a loopback port valid only for this session, so remembering
         // it would restore a dead URL on the next launch. The original source is already saved.
+        stream = this.WithAlternate(stream);
         if (!stream.Relayed)
-            this.config.Source = stream.PlaylistUrl;
+            this.config.Source = stream.Origin ?? stream.PlaylistUrl;
 
         // Any in-flight resolution is for a source we are replacing.
         this.resolving?.Cancel();
