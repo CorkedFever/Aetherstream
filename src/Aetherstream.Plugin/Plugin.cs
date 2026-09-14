@@ -144,7 +144,7 @@ public sealed partial class Plugin : IDalamudPlugin
             ("Horoscope", "A Sharlayan reading a day, for those born under your guardian.", new HoroscopeChannel(face, this.HoroscopeSnapshot)),
             ("Kitchen", "A cooking show. Every episode a real recipe, ingredient by ingredient.", new CookingChannel(face, this.Dishes, this.Icon)),
             ("Wildlife", "A ranger in khaki gets far too close to the hunting log, one beast at a time.", new NatureChannel(face, this.Creatures, this.Icon)),
-            ("Stories", "The bard's hour: a tale a time from the game's own places, beasts and treasures.", new BardChannel(face, this.StoryStockNow, this.Icon)),
+            ("Stories", "The bard's hour: the tales of the Twelve, one a time, by the fire.", new BardChannel(face)),
             ("Scrambled", "Channel 99. You did not subscribe. Nothing to see, and you keep looking.", new ScrambledChannel(face)),
         ];
         this.screen = new WorldScreen(gameGui);

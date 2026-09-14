@@ -1,6 +1,3 @@
-using System.IO.Compression;
-using System.Text.Json;
-
 using Aetherstream.Plugin.Video;
 
 using Lumina.Excel.Sheets;
@@ -8,14 +5,12 @@ using Lumina.Excel.Sheets;
 namespace Aetherstream.Plugin;
 
 /// <summary>
-/// What the wildlife show and the story hour are made from: the hunting log's creatures with
-/// where they live, the outdoor zones with their regions, and a shelf of things worth a quest.
-/// Read once from the game's tables.
+/// What the wildlife show is made from: the hunting log's creatures with where they live, and
+/// the outdoor zones with their regions. Read once from the game's tables.
 /// </summary>
 public sealed partial class Plugin
 {
     private List<Creature>? creatures;
-    private StoryStock? storyStock;
 
     private IReadOnlyList<Creature> Creatures()
     {
@@ -55,84 +50,6 @@ public sealed partial class Plugin
         }
 
         this.creatures = list;
-        return list;
-    }
-
-    private StoryStock? StoryStockNow()
-    {
-        if (this.storyStock is not null)
-            return this.storyStock;
-
-        try
-        {
-            var regions = this.ZoneRegions();
-            var places = regions.Select(kv => (kv.Key, kv.Value)).OrderBy(p => p.Key).ToList();
-
-            var beasts = this.Creatures().Select(c => (c.Name, c.Icon)).Distinct().ToList();
-
-            // Treasures: the game's own oddities, by category — anything that sounds like a
-            // thing worth a story. Furnishings and materia are too many and too dull.
-            var treasures = new List<(string, uint)>();
-            foreach (var item in this.dataManager.GetExcelSheet<Item>())
-            {
-                var name = item.Name.ToString();
-                if (name.Length == 0 || item.Icon == 0)
-                    continue;
-
-                var category = item.ItemUICategory.ValueNullable?.Name.ToString() ?? string.Empty;
-                var worthIt = category is "Miscellany" or "Other" or "Seasonal Miscellany" or "Orchestrion Roll" or "Minion" or "Reagent"
-                    || name.Contains("Relic", StringComparison.OrdinalIgnoreCase)
-                    || name.Contains("Crown", StringComparison.OrdinalIgnoreCase)
-                    || name.Contains("Chalice", StringComparison.OrdinalIgnoreCase)
-                    || name.Contains("Ring", StringComparison.OrdinalIgnoreCase) && category.Contains("Ring");
-                if (!worthIt || name.Length > 34)
-                    continue;
-
-                treasures.Add((name, item.Icon));
-            }
-
-            var scions = this.ReadScions();
-            this.storyStock = new StoryStock(places, beasts, treasures, scions);
-            this.log.Information($"[stories] {places.Count} places, {beasts.Count} beasts, {treasures.Count} treasures, {scions.Count} scions");
-        }
-        catch (Exception ex)
-        {
-            this.log.Warning(ex, "Could not read the story stock; the bard has lost his book.");
-            this.storyStock = new StoryStock([], [], [], []);
-        }
-
-        return this.storyStock;
-    }
-
-    /// <summary>The Scions' sprites, from data/scions.json.gz beside the fish; none if the file is missing.</summary>
-    private List<ScionSprite> ReadScions()
-    {
-        var list = new List<ScionSprite>();
-        try
-        {
-            var path = Path.Combine(Path.GetDirectoryName(this.fishDataPath)!, "scions.json.gz");
-            if (!File.Exists(path))
-                return list;
-
-            using var file = File.OpenRead(path);
-            using var gz = new GZipStream(file, CompressionMode.Decompress);
-            using var doc = JsonDocument.Parse(gz);
-            foreach (var e in doc.RootElement.EnumerateArray())
-            {
-                var w = e.GetProperty("w").GetInt32();
-                var h = e.GetProperty("h").GetInt32();
-                var px = e.GetProperty("p").EnumerateArray().Select(v => (uint)v.GetInt64()).ToArray();
-                if (px.Length != w * h)
-                    continue;
-
-                list.Add(new ScionSprite(e.GetProperty("n").GetString() ?? string.Empty, e.GetProperty("c").GetString() ?? string.Empty, w, h, px));
-            }
-        }
-        catch (Exception ex)
-        {
-            this.log.Warning($"[stories] the scions could not be read: {ex.Message}");
-        }
-
         return list;
     }
 

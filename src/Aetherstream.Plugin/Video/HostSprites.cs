@@ -430,15 +430,6 @@ internal static class HostSprites
 
 
 
-    /// <summary>How big each people draws, relative to a Hyur.</summary>
-    public static float HeroScale(string race) => race switch
-    {
-        "Lalafell" => 0.6f,
-        "Roegadyn" or "Hrothgar" => 1.2f,
-        "Elezen" or "Viera" => 1.08f,
-        _ => 1f,
-    };
-
     public static void DrawRanger(Span<uint> target, Ranger action, double seconds, int x, int y, int scale, bool flip = false)
     {
         var (frames, rate) = action switch

@@ -130,7 +130,7 @@ with zipfile.ZipFile(out) as z:
     # The zip is what people install. Its own manifest is the truth, not the working tree.
     assert f'"AssemblyVersion": "{assembly}"' in manifest, 'zip manifest has the wrong version'
     assert '"Author": "CorkedFever"' in manifest, 'zip manifest has the wrong author'
-    for required in ('Aetherstream.dll', 'Aetherstream.json', 'SixLabors.ImageSharp.dll', 'images/icon.png', 'images/testcard.rgba.gz', 'images/guidefont.a8.gz', 'data/fish.json.gz', 'data/scions.json.gz', 'Fonts/VT323-Regular.ttf', 'libvlc/win-x64/libvlc.dll'):
+    for required in ('Aetherstream.dll', 'Aetherstream.json', 'SixLabors.ImageSharp.dll', 'images/icon.png', 'images/testcard.rgba.gz', 'images/guidefont.a8.gz', 'data/fish.json.gz', 'Fonts/VT323-Regular.ttf', 'libvlc/win-x64/libvlc.dll'):
         assert required in names, f'zip is missing {required}'
 print(f'   {out} ({os.path.getsize(out) / 1e6:.1f} MB), manifest {assembly}, author and icon verified')
 PY
