@@ -86,7 +86,7 @@ internal sealed class ControlWindow : Window
             | (folded ? ImGuiWindowFlags.AlwaysAutoResize : ImGuiWindowFlags.None);
 
         this.SizeConstraints = folded
-            ? new WindowSizeConstraints { MinimumSize = new Vector2(360f, TitleBarHeight + 24f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) }
+            ? new WindowSizeConstraints { MinimumSize = new Vector2(430f, TitleBarHeight + 24f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) }
             : new WindowSizeConstraints { MinimumSize = new Vector2(440f, 460f), MaximumSize = new Vector2(1400f, 1600f) };
 
         if (this.sizeToRestore is { } restore)
@@ -211,7 +211,7 @@ internal sealed class ControlWindow : Window
 
             var foldHovered = ImGui.IsItemHovered();
             if (foldHovered)
-                ImGui.SetTooltip(this.ui.Config.WindowMinimised ? "Unfold" : "Fold down to the bar; the picture keeps playing");
+                ImGui.SetTooltip(this.ui.Config.WindowMinimised ? "Unfold" : "Fold down to a small remote; the picture keeps playing");
 
             ImGui.SetCursorScreenPos(origin + new Vector2(width - buttonsWidth + 6f, (TitleBarHeight - captionSize.Y) / 2f - 4f));
             ImGui.TextColored(foldHovered ? Theme.Text : Theme.TextFaint, this.ui.Config.WindowMinimised ? "^" : "_");
@@ -237,33 +237,62 @@ internal sealed class ControlWindow : Window
         var session = this.ui.Session;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        const float Height = 20f;
+        var width = ImGui.GetContentRegionAvail().X;
+
+        const float StatusHeight = 20f;
+        const float RemoteHeight = 30f;
+        const float Height = StatusHeight + 4f + RemoteHeight;
+
+        // The picture, small, on the right; everything else sits to its left.
+        var thumb = new Vector2(Height * 16f / 9f, Height);
+        var hasThumb = session.Uploader is { HasFrame: true };
+        var left = width - (hasThumb ? thumb.X + 10f : 0f);
 
         var led = session.Error is not null ? Theme.Bad
             : session.StalledAtMs > 0 ? Theme.Warn
             : session.IsPlaying ? Theme.Good
             : Theme.Edge;
 
-        drawList.AddCircleFilled(origin + new Vector2(8f, Height / 2f), 3f, Theme.U32(led), 12);
+        drawList.AddCircleFilled(origin + new Vector2(8f, StatusHeight / 2f), 3f, Theme.U32(led), 12);
 
         var state = session.Error is not null ? "NO PICTURE"
             : session.StalledAtMs > 0 ? "SIGNAL LOST"
             : session.IsPaused ? "PAUSED"
             : session.IsPlaying ? (session.DurationMs <= 0 ? "LIVE" : Ui.Clock(session.PositionMs))
+            : session.Channel is not null ? "CHANNEL"
             : "NO SIGNAL";
 
         ImGui.SetCursorScreenPos(origin + new Vector2(20f, 0f));
         Theme.Displayed(session.IsPlaying ? Theme.Accent : Theme.TextFaint, state);
 
-        if (session.Uploader is { HasFrame: true } uploader)
+        // The channel number, when on one, and the music under a channel, when there is any.
+        var note = this.Dial.NumberOf(this.ui.Config.Source) is > 0 and var number ? $"CH {number}"
+            : session.MusicNowPlaying is { Length: > 0 } track ? Ui.Ellipsis(track, 22)
+            : string.Empty;
+
+        if (note.Length > 0)
         {
-            var thumb = new Vector2(Height * 16f / 9f, Height);
-            var at = origin + new Vector2(ImGui.GetContentRegionAvail().X - thumb.X, 0f);
+            ImGui.SameLine(0f, 10f);
+            ImGui.TextColored(Theme.TextDim, note);
+        }
+
+        if (hasThumb && session.Uploader is { } uploader)
+        {
+            var at = origin + new Vector2(width - thumb.X, 0f);
             drawList.AddImage(uploader.Handle, at, at + thumb);
+            drawList.AddRect(at, at + thumb, Theme.U32(Theme.GlassEdge), 2f);
+        }
+
+        // The remote, under the status. A widget rather than a bar: the reason to fold the window
+        // is to keep watching, and the buttons you want while watching are these.
+        ImGui.SetCursorScreenPos(origin + new Vector2(0f, StatusHeight + 4f));
+        using (ImRaii.Child("##foldedremote", new Vector2(Math.Max(1f, left), RemoteHeight), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+        {
+            this.remote.DrawCompact();
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, Height));
+        ImGui.Dummy(new Vector2(width, Height));
     }
 
     /// <summary>
