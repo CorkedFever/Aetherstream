@@ -325,10 +325,10 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
         var all = new BitmapFont.Clip(0, 0, W, H);
         var title = $"{TitleA[Pick(seed + 2, TitleA.Length)]} {TitleB[Pick(seed + 3, TitleB.Length)]}".ToUpperInvariant();
         var tagline = Taglines[Pick(seed + 4, Taglines.Length)].ToUpperInvariant();
-        var star = "STARRING " + Starring[Pick(seed + 5, Starring.Length)].ToUpperInvariant();
         var rating = Ratings[Pick(seed + 6, Ratings.Length)];
-        var lead = Pick(seed + 7, 9);
-        var foil = (lead + 1 + Pick(seed + 8, 8)) % 9;
+        var lead = Pick(seed + 7, 6);
+        var foil = (lead + 1 + Pick(seed + 8, 5)) % 6;
+        var star = $"STARRING {HostSprites.CastNames[lead]} AND {HostSprites.CastNames[foil]}".ToUpperInvariant();
         var biomeA = (Biome)Pick(seed, 7);
         var biomeB = (Biome)Pick(seed + 9, 7);
         var (lineA, lineB) = Dialogue[Pick(seed + 10, Dialogue.Length)];
@@ -361,7 +361,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
                 // Wide: the lead walks in from the left as the words arrive.
                 Scenery.Paint(span, W, 0, 380, H, biomeA, 0.85f, seed, into * 40);
                 var x = -80 + (int)(into * 70);
-                Actor(span, lead, walk: true, seconds, x, 330, 7, flip: false);
+                HostSprites.DrawCast(span, lead, walk: true, seconds, x, 330, 7);
                 if (rains)
                     Rain(span, seconds);
                 var lines = Canvas.Wrap(tagline, font.Fit(W - 200), 3);
@@ -385,7 +385,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
             {
                 // Close-up at dusk: the foil, large, and a line.
                 Scenery.Paint(span, W, 0, 380, H, biomeB, 0.3f, seed + 1, 0);
-                Actor(span, foil, walk: false, seconds, 760, 160 + (int)(into * 6), 12, flip: true);
+                HostSprites.DrawCast(span, foil, walk: false, seconds, 760, 160 + (int)(into * 6), 12, flip: true);
                 Subtitle(span, lineA, all);
                 break;
             }
@@ -398,8 +398,8 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
                 Canvas.Disc(span, W / 2, 470, 90 + flicker, Canvas.Rgb(0x6A, 0x30, 0x10));
                 Canvas.Disc(span, W / 2, 470, 40 + (flicker / 2), Canvas.Rgb(0xFF, 0x9A, 0x30));
                 Canvas.Disc(span, W / 2, 458, 16, Canvas.Rgb(0xFF, 0xE0, 0x80));
-                Actor(span, lead, walk: false, seconds, 300, 300, 8, flip: false);
-                Actor(span, foil, walk: false, seconds, 780, 300, 8, flip: true);
+                HostSprites.DrawCast(span, lead, walk: false, seconds, 300, 300, 8);
+                HostSprites.DrawCast(span, foil, walk: false, seconds, 780, 300, 8, flip: true);
                 if (rains)
                 {
                     Rain(span, seconds);
@@ -449,23 +449,6 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
 
     /// <summary>One frame of a trailer into an array; the harness calls this, since it cannot pass a span.</summary>
     private void TrailerFrame(uint[] target, int seed, double t, double seconds) => this.Trailer(target.AsSpan(), seed, t, seconds);
-
-    /// <summary>The cast: the hosts, by number, walking or standing, at a size, facing a way.</summary>
-    private static void Actor(Span<uint> span, int who, bool walk, double seconds, int x, int y, int scale, bool flip)
-    {
-        switch (who)
-        {
-            case 0: HostSprites.DrawRanger(span, walk ? HostSprites.Ranger.Run : HostSprites.Ranger.Stand, seconds, x, y, scale, flip); break;
-            case 1: HostSprites.DrawGoblin(span, walk ? HostSprites.Goblin.Excited : HostSprites.Goblin.Talk, seconds, x, y, scale, flip); break;
-            case 2: HostSprites.DrawPainter(span, walk ? HostSprites.Painter.Wave : HostSprites.Painter.Stand, seconds, x, y, scale, flip); break;
-            case 3: HostSprites.DrawLoporrit(span, walk ? HostSprites.Loporrit.Point : HostSprites.Loporrit.Talk, seconds, x, y, scale, flip); break;
-            case 4: HostSprites.DrawPixie(span, walk ? HostSprites.Pixie.Point : HostSprites.Pixie.Hover, seconds, x, y, scale, flip); break;
-            case 5: HostSprites.DrawKobold(span, walk ? HostSprites.Kobold.Cheer : HostSprites.Kobold.Talk, seconds, x, y, scale, flip); break;
-            case 6: HostSprites.DrawSahagin(span, walk ? HostSprites.Sahagin.Point : HostSprites.Sahagin.Talk, seconds, x, y, scale, flip); break;
-            case 7: HostSprites.DrawMandragora(span, walk ? HostSprites.Mandragora.Wild : HostSprites.Mandragora.Talk, seconds, x, y, scale, flip); break;
-            default: ChefSprite.Draw(span, walk ? ChefSprite.Action.Wave : ChefSprite.Action.Present, seconds, x, y, scale); break;
-        }
-    }
 
     private static void Rain(Span<uint> span, double seconds)
     {

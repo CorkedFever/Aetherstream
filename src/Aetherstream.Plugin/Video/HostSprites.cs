@@ -1585,6 +1585,81 @@ internal static class HostSprites
         Canvas.Sprite(target, frame, c => Palette.GetValueOrDefault(c, 0u), x, y, scale, flip);
     }
 
+    /// <summary>The trailers' cast: the same peoples as the hosts, but other individuals, each with a look.</summary>
+    public static readonly string[] CastNames = ["Kupo Reeves", "Sahagin L. Jackson", "Goblin Ford", "Pixie Blanchett", "Mandragora Freeman", "Loporrit Cruise"];
+
+    private static readonly uint Shades = Canvas.Rgb(0x0A, 0x0A, 0x0E);
+    private static readonly uint Coat = Canvas.Rgb(0x14, 0x12, 0x18);
+    private static readonly uint Beret = Canvas.Rgb(0x5A, 0x2A, 0x7A);
+    private static readonly uint Brim = Canvas.Rgb(0x4A, 0x30, 0x1E);
+    private static readonly uint Crown = Canvas.Rgb(0xFF, 0xD1, 0x5C);
+    private static readonly uint Beard = Canvas.Rgb(0xA8, 0xA8, 0xB0);
+
+    /// <summary>
+    /// One of the cast, walking or standing, at a size, facing a way. Each is a host's people in
+    /// a costume: a coat and dark glasses, a beret, a brim, a crown, a beard, aviators. The costume
+    /// is a few rectangles in the sprite's own grid, so it scales and flips with the sprite.
+    /// </summary>
+    public static void DrawCast(Span<uint> target, int who, bool walk, double seconds, int x, int y, int scale, bool flip = false)
+    {
+        switch (who % 6)
+        {
+            case 0:
+                // Kupo Reeves: a moogle in a long black coat and dark glasses. He knows kupo fu.
+                DrawPainter(target, walk ? Painter.Wave : Painter.Stand, seconds, x, y, scale, flip);
+                Costume(target, x, y, scale, flip, 32, 9, 5, 14, 3, Coat);
+                Costume(target, x, y, scale, flip, 32, 7, 8, 18, 4, Coat);
+                Costume(target, x, y, scale, flip, 32, 6, 12, 3, 6, Coat);
+                Costume(target, x, y, scale, flip, 32, 23, 12, 3, 6, Coat);
+                Costume(target, x, y, scale, flip, 32, 8, 15, 16, 2, Shades);
+                Costume(target, x, y, scale, flip, 32, 8, 23, 16, 7, Coat);
+
+                break;
+            case 1:
+                // Sahagin L. Jackson: a beret, dark glasses, and a look that ends conversations.
+                DrawSahagin(target, walk ? Sahagin.Point : Sahagin.Talk, seconds, x, y, scale, flip);
+                Costume(target, x, y, scale, flip, 24, 6, 8, 12, 2, Shades);
+                Costume(target, x, y, scale, flip, 24, 7, 2, 10, 3, Beret);
+                Costume(target, x, y, scale, flip, 24, 5, 4, 14, 1, Beret);
+                break;
+            case 2:
+                // Goblin Ford: the hood becomes a hat with a brim. He has a bad feeling about this.
+                DrawGoblin(target, walk ? Goblin.Excited : Goblin.Talk, seconds, x, y, scale, flip);
+                Costume(target, x, y, scale, flip, 24, 2, 4, 20, 1, Brim);
+                Costume(target, x, y, scale, flip, 24, 6, 3, 12, 1, Shades);
+                break;
+            case 3:
+                // Pixie Blanchett: a crown, and the bearing to go with it.
+                DrawPixie(target, walk ? Pixie.Point : Pixie.Hover, seconds, x, y, scale, flip);
+                Costume(target, x, y, scale, flip, 24, 7, 1, 10, 1, Crown);
+                Costume(target, x, y, scale, flip, 24, 7, 0, 1, 1, Crown);
+                Costume(target, x, y, scale, flip, 24, 11, 0, 2, 1, Crown);
+                Costume(target, x, y, scale, flip, 24, 16, 0, 1, 1, Crown);
+                break;
+            case 4:
+                // Mandragora Freeman: a white beard, and a voice you can hear from here.
+                DrawMandragora(target, walk ? Mandragora.Wild : Mandragora.Talk, seconds, x, y, scale, flip);
+                Costume(target, x, y, scale, flip, 24, 7, 16, 10, 2, Beard);
+                Costume(target, x, y, scale, flip, 24, 8, 18, 8, 2, Beard);
+                Costume(target, x, y, scale, flip, 24, 10, 20, 4, 1, Beard);
+                break;
+            default:
+                // Loporrit Cruise: aviators. He does his own stunts, on the moon.
+                DrawLoporrit(target, walk ? Loporrit.Point : Loporrit.Talk, seconds, x, y, scale, flip);
+                Costume(target, x, y, scale, flip, 24, 6, 11, 5, 2, Shades);
+                Costume(target, x, y, scale, flip, 24, 13, 11, 5, 2, Shades);
+                Costume(target, x, y, scale, flip, 24, 11, 11, 2, 1, Shades);
+                break;
+        }
+    }
+
+    /// <summary>A rectangle of costume in a sprite's own grid: column, row, width and height in sprite pixels, mirrored when the sprite is.</summary>
+    private static void Costume(Span<uint> target, int x, int y, int scale, bool flip, int spriteWidth, int col, int row, int w, int h, uint colour)
+    {
+        var c = flip ? spriteWidth - col - w : col;
+        Canvas.Fill(target, x + (c * scale), y + (row * scale), w * scale, h * scale, colour);
+    }
+
     public static void DrawGoblin(Span<uint> target, Goblin action, double seconds, int x, int y, int scale, bool flip = false)
     {
         var (frames, rate) = action switch
