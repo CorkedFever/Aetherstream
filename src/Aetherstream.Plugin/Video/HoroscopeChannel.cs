@@ -332,7 +332,7 @@ internal sealed class HoroscopeChannel(BitmapFont font, Func<HoroscopeSnapshot?>
         Canvas.Fill(span, 0, 0, W, H, Canvas.Glass);
         Canvas.Fill(span, 0, 0, W, 56, Canvas.GlassLit);
         Canvas.Fill(span, 0, 56, W, 2, Canvas.Edge);
-        font.Draw(span, W, "SHARLAYAN ALMANAC", 24, 8, Canvas.Amber, 1, all);
+        font.Draw(span, W, "HOROSCOPE", 24, 8, Canvas.Amber, 1, all);
 
         // Eorzean seconds since the epoch: 1440/70 of a real second each.
         var unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
