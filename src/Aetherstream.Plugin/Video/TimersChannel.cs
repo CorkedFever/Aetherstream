@@ -6,10 +6,15 @@ internal sealed record TimerRow(string Name, string Detail, DateTime DueUtc, str
 /// <summary>A roulette and whether today's run is done.</summary>
 internal readonly record struct RouletteRow(string Name, bool Done);
 
+/// <summary>Something to do, or done: an allowance, a journal, a mission.</summary>
+internal readonly record struct TaskRow(string Name, string Value, bool Done);
+
 internal sealed record TimersSnapshot(
     IReadOnlyList<TimerRow> Rows,
     IReadOnlyList<RouletteRow> Roulettes,
-    string RetainerNote);
+    string RetainerNote,
+    IReadOnlyList<TaskRow> Tasks,
+    IReadOnlyList<TaskRow> Estate);
 
 /// <summary>
 /// The timers board: everything on a clock, soonest first, with a countdown that goes amber in
@@ -83,6 +88,8 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
                     "reset" => Canvas.Accent,
                     "boat" => Canvas.Rgb(0x6B, 0xC7, 0xFF),
                     "retainer" => Canvas.Good,
+                    "vessel" => Canvas.Rgb(0x5D, 0xCA, 0xA5),
+                    "squadron" => Canvas.Rgb(0xB0, 0x7A, 0xE0),
                     "cactpot" => Canvas.Rgb(0xFF, 0xD6, 0x4F),
                     _ => Canvas.Dim,
                 };
@@ -106,36 +113,55 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
             }
         }
 
-        // -- the right: roulettes and retainers ----------------------------------------------------
+        // -- the right: pages that turn every eight seconds -------------------------------------------
         Canvas.Fill(span, Split - 8, 72, 2, 590, Canvas.Edge);
-        var ry = 76;
-        font.Draw(span, W, "ROULETTES TODAY", Split + 16, ry, Canvas.Amber, 1, all);
-        ry += 40;
 
-        if (snapshot.Roulettes.Count == 0)
+        var pages = new List<(string Title, IReadOnlyList<TaskRow> Items, string Empty)>
         {
-            font.Draw(span, W, "NOT LOGGED IN", Split + 16, ry, Canvas.Faint, 1, all);
+            ("ROULETTES TODAY", snapshot.Roulettes.Select(r => new TaskRow(r.Name.Replace("Duty Roulette: ", string.Empty), string.Empty, r.Done)).ToList(), "NOT LOGGED IN"),
+            ("TO DO", snapshot.Tasks, "NOT LOGGED IN"),
+        };
+        if (snapshot.Estate.Count > 0)
+            pages.Add(("ESTATE", snapshot.Estate, string.Empty));
+
+        var page = (int)(seconds / 8.0) % pages.Count;
+        var (title, items, empty) = pages[page];
+        var ry = 76;
+        font.Draw(span, W, title, Split + 16, ry, Canvas.Amber, 1, all);
+
+        // Page dots, right of the title.
+        for (var i = 0; i < pages.Count; i++)
+            Canvas.Disc(span, W - 32 - ((pages.Count - 1 - i) * 18), ry + 20, i == page ? 5 : 3, i == page ? Canvas.Amber : Canvas.Edge);
+
+        ry += 40;
+        if (items.Count == 0)
+        {
+            font.Draw(span, W, empty, Split + 16, ry, Canvas.Faint, 1, all);
             ry += 40;
         }
 
-        foreach (var (name, done) in snapshot.Roulettes)
+        foreach (var (name, value, done) in items)
         {
-            if (ry > 440)
+            if (ry > 448)
                 break;
 
-            // A box, ticked when done.
+            // A box, ticked when done; the value dim beside or under the name.
             Canvas.Rect(span, Split + 16, ry + 10, 20, 20, done ? Canvas.Good : Canvas.Dim);
             if (done)
-            {
                 Canvas.Fill(span, Split + 20, ry + 14, 12, 12, Canvas.Good);
-            }
 
-            var label = Canvas.Cut(name.Replace("Duty Roulette: ", string.Empty).ToUpperInvariant(), font.Fit(W - Split - 72));
+            var label = Canvas.Cut(name.ToUpperInvariant(), font.Fit(W - Split - 72));
             font.Draw(span, W, label, Split + 48, ry, done ? Canvas.Faint : Canvas.White, 1, all);
             ry += 36;
+
+            if (value.Length > 0)
+            {
+                font.Draw(span, W, Canvas.Cut(value.ToUpperInvariant(), font.Fit(W - Split - 72)), Split + 48, ry - 6, Canvas.Dim, 1, all);
+                ry += 34;
+            }
         }
 
-        ry = Math.Max(ry + 12, 460);
+        ry = 488;
         font.Draw(span, W, "RETAINERS", Split + 16, ry, Canvas.Amber, 1, all);
         ry += 40;
         font.Draw(span, W, Canvas.Cut(snapshot.RetainerNote.ToUpperInvariant(), font.Fit(W - Split - 40)), Split + 16, ry, Canvas.Dim, 1, all);

@@ -283,7 +283,7 @@ implementing `IFrameChannel` in `Video\`, handed a snapshot by the plugin when i
 | News | Lodestone headlines, one story at a time, maintenance windows in local time with a countdown | lodestonenews.com, every fifteen minutes, cached in the config folder |
 | Market | The watch list priced, a chart of the featured item, a ticker | Universalis, every ten minutes, for the world you are on |
 | Gathering | Timed nodes as a departures board: up now, then soonest, with real-time countdowns | The game's gathering tables and the clock |
-| Almanac | Daily, Grand Company and weekly resets, the next ocean fishing boat and both routes' destinations, the Jumbo Cactpot draw for your region, retainers out on ventures, today's roulettes ticked | The clock; retainers and roulettes through ClientStructs |
+| Almanac | Daily, Grand Company and weekly resets, the next ocean fishing boat and both routes' destinations, the Jumbo Cactpot draw for your region, retainers out on ventures; the right column turns pages between today's roulettes, a to-do list (leve and allied society allowances, custom deliveries, Wondrous Tails, the squadron, Fashion Report) and the estate's submersibles and airships | The clock; the rest through ClientStructs. Vessels are read while you stand in the workshop and remembered after |
 | Aquarium, Fireplace, Starfield, Plasma, Mystify, 3D Maze, Pipes | Something on, nothing to read | Procedural; the heavy ones draw at a quarter size and scale up. The maze is a raycaster with the smileys that flip the world and the rat; Pipes is a 3D grid drawn back to front, teapot included |
 
 The weather channel's alerts come in two kinds. Rare weather — a one-in-ten chance or less for
