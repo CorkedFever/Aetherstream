@@ -1,7 +1,11 @@
 namespace Aetherstream.Plugin.Video;
 
-/// <summary>A creature from the hunting log: its name, where it lives, and its portrait.</summary>
-internal sealed record Creature(string Name, string Zone, string Region, uint Icon, int Rank);
+/// <summary>
+/// A creature for the show: from the hunting log, with its portrait, or a hunt mark, with none —
+/// no one who has seen one up close has drawn it. Rank is the log's page for the one and B, A or
+/// S (1, 2, 3) for the other.
+/// </summary>
+internal sealed record Creature(string Name, string Zone, string Region, uint Icon, int Rank, bool Mark);
 
 /// <summary>
 /// The wildlife show. A moogle in a bush hat and a khaki vest, Stevie Mogwyn, more enthusiasm than sense, and a
@@ -63,6 +67,14 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         "That is the {name}, and that is {zone}, kupo. Look after them both. I am off to find a healer, kupo.",
         "Kupo, what a day! Remember: if it has teeth, it has a reason. Until next time, kupo!",
         "The {name}, kupo. Remember the name, respect the name, and for the love of the Mogfather, keep your distance.",
+    ];
+
+    private static readonly string[] MarkApproach =
+    [
+        "Kupo. This one is on the board in {zone}: a {name}, rank {rank}. The board does not say what it looks like. Nobody comes back to say.",
+        "Right, this is different, kupo. The {name} is a hunt mark, rank {rank}, and there is a bounty on it, and I am going to go and say hello anyway.",
+        "Keep very quiet in {zone} today, kupo. A rank {rank} mark, the {name}, and the hunters have been looking for it for weeks. I have a feeling.",
+        "The hunters call it the {name}, kupo, and they do not call it anything else, because they are usually running when they see it.",
     ];
 
     private static readonly string[] Facts =
@@ -144,7 +156,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
                 Canvas.Disc(span, creatureX + 70, creatureY + 150, 90, Canvas.Lerp(Canvas.Black, Canvas.Rgb(0x40, 0x40, 0x40), 0.5f));
                 var bump = phase == Phase.Wrangle ? (int)(Math.Sin(seconds * 14.0) * 10) : 0;
                 var lunge = phase == Phase.Wrangle && t > 6.0 ? (int)((t - 6.0) * -60) : 0;
-                this.DrawIcon(span, creature.Icon, creatureX + bump + lunge, creatureY - breathe, 140);
+                this.DrawBeast(span, creature, creatureX + bump + lunge, creatureY - breathe, 140, seconds);
             }
         }
 
@@ -186,7 +198,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         if (phase == Phase.Close && t is > 1.5 and < 7.5)
         {
             Scenery.Paint(span, W, 0, Horizon + 120, H, biome, daylight, seed + 5, pan * 2);
-            this.DrawIcon(span, creature.Icon, 120, 120, 400);
+            this.DrawBeast(span, creature, 120, 120, 400, seconds);
             var y = 130;
             var name = Canvas.Cut(Canvas.Plain(creature.Name).ToUpperInvariant(), font.Fit(W - 600, 2));
             Canvas.Fill(span, 560, y - 8, font.Measure(name, 2) + 32, 96, Ink);
@@ -195,6 +207,10 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             foreach (var fact in Facts)
             {
                 var text = fact.Replace("{rank}", creature.Rank.ToString()).Replace("{zone}", creature.Zone.ToUpperInvariant()).Replace("{region}", creature.Region.ToUpperInvariant());
+                if (creature.Mark && fact.StartsWith("HUNTING LOG"))
+                    text = $"HUNT MARK, RANK {RankLetter(creature.Rank)}";
+                if (creature.Mark && fact.StartsWith("TEMPERAMENT"))
+                    text = creature.Rank == 3 ? "TEMPERAMENT: LEGENDARY" : "TEMPERAMENT: WANTED";
                 text = Canvas.Cut(text, font.Fit(W - 600));
                 Canvas.Fill(span, 560, y - 4, font.Measure(text) + 32, 44, Ink);
                 font.Draw(span, W, text, 576, y, fact.StartsWith("ADVICE") ? Danger : Cream, 1, all);
@@ -212,7 +228,11 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             font.Draw(span, W, Title, (W - font.Measure(Title, 2)) / 2, 176, Ink, 2, all);
             const string With = "WITH STEVIE MOGWYN, THE WIVRE WRANGLER, KUPO";
             font.Draw(span, W, With, (W - font.Measure(With)) / 2, 300, Cream, 1, all);
-            if (t > 2.5)
+            if (t > 2.5 && creature.Mark)
+            {
+                this.DrawPoster(span, creature, t - 2.5, seconds, all);
+            }
+            else if (t > 2.5)
             {
                 var today = Canvas.Cut($"THIS WEEK: THE {Canvas.Plain(creature.Name).ToUpperInvariant()} OF {creature.Zone.ToUpperInvariant()}", font.Fit(W - 100));
                 font.Draw(span, W, today, (W - font.Measure(today)) / 2, 360, Khaki, 1, all);
@@ -220,7 +240,9 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         }
         else if (phase == Phase.SignOff && t > 4.0)
         {
-            var nextText = Canvas.Cut($"NEXT WEEK: THE {Canvas.Plain(next.Name).ToUpperInvariant()} OF {next.Zone.ToUpperInvariant()}", font.Fit(W - 100));
+            var nextText = Canvas.Cut(next.Mark
+                ? $"NEXT WEEK: A RANK {RankLetter(next.Rank)} MARK, THE {Canvas.Plain(next.Name).ToUpperInvariant()}, IN {next.Zone.ToUpperInvariant()}"
+                : $"NEXT WEEK: THE {Canvas.Plain(next.Name).ToUpperInvariant()} OF {next.Zone.ToUpperInvariant()}", font.Fit(W - 100));
             Canvas.Fill(span, (W - font.Measure(nextText) - 32) / 2, 90, font.Measure(nextText) + 32, 48, Ink);
             font.Draw(span, W, nextText, (W - font.Measure(nextText)) / 2, 94, Khaki, 1, all);
         }
@@ -229,6 +251,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         var line = phase switch
         {
             Phase.Titles => string.Empty,
+            Phase.Approach when creature.Mark => MarkApproach[Pick(episode * 3, MarkApproach.Length)].Replace("{rank}", RankLetter(creature.Rank)),
             Phase.Approach => Approach[Pick(episode * 3, Approach.Length)],
             Phase.Close => Close[Pick(episode * 5, Close.Length)],
             Phase.Wrangle => Wrangle[Pick(episode * 7, Wrangle.Length)],
@@ -256,7 +279,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         Canvas.Fill(span, 0, 676, (int)(W * (into / EpisodeFor)), 4, Khaki);
         Canvas.Fill(span, 0, 680, W, 40, Ink);
         font.Draw(span, W, "AETHERSTREAM WILDLIFE", 24, 680, Khaki, 1, all);
-        var right = Canvas.Cut($"EP {episode % 10000}  /  {Canvas.Plain(creature.Name).ToUpperInvariant()}", 50);
+        var right = Canvas.Cut($"EP {episode % 10000}  /  {(creature.Mark ? $"RANK {RankLetter(creature.Rank)}: " : string.Empty)}{Canvas.Plain(creature.Name).ToUpperInvariant()}", 50);
         font.Draw(span, W, right, W - 24 - font.Measure(right), 680, Cream, 1, all);
     }
 
@@ -320,7 +343,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
                 }
 
                 Canvas.Rect(span, 860, 360, 190, 170, Ink, 3);
-                this.DrawIcon(span, creature.Icon, 885, 375, 140);
+                this.DrawBeast(span, creature, 885, 375, 140, seconds);
                 HostSprites.DrawRanger(span, HostSprites.Ranger.Point, seconds, 20, 330 + bob, 6);
                 break;
             }
@@ -415,7 +438,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
                 var bx = -200 + (int)(t * 130);
                 var hop = (int)(Math.Abs(Math.Sin(t * 8.0)) * 20);
                 Canvas.Disc(span, bx + 70, Horizon + 140, 60, Canvas.Lerp(Canvas.Black, Canvas.Rgb(0x40, 0x40, 0x40), 0.5f));
-                this.DrawIcon(span, creature.Icon, bx, Horizon - 10 - hop, 120);
+                this.DrawBeast(span, creature, bx, Horizon - 10 - hop, 120, seconds);
                 HostSprites.DrawRanger(span, HostSprites.Ranger.Run, seconds, bx - 260 + (int)(Math.Sin(t * 3.0) * 20), HoverY + bob, 7, flip: false);
                 for (var i = 0; i < 6; i++)
                     Canvas.Disc(span, bx - 300 - (i * 30), Ground - 30 - ((i * 7) % 20), 6 - i, Canvas.Rgb(0xC8, 0xB0, 0x78));
@@ -423,6 +446,137 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
                 break;
             }
         }
+    }
+
+    private static string RankLetter(int rank) => rank switch { 3 => "S", 2 => "A", 1 => "B", _ => rank.ToString() };
+
+    /// <summary>The creature: its portrait when the log has one; otherwise a silhouette with lit eyes.</summary>
+    private void DrawBeast(Span<uint> span, Creature creature, int x, int y, int size, double seconds)
+    {
+        if (!creature.Mark)
+        {
+            this.DrawIcon(span, creature.Icon, x, y, size);
+            return;
+        }
+
+        Silhouette(span, creature, x, y, size, seconds);
+    }
+
+    /// <summary>
+    /// A hunt mark as the hunters know it: a shape in the grass. The shape is picked by the name,
+    /// so the same mark always looks the same — a low crawler, a tall stalker, a winged thing or a
+    /// heap with too many limbs — and the eyes glow by rank: two for B, three for A, and for an S
+    /// rank a row of them.
+    /// </summary>
+    private static void Silhouette(Span<uint> span, Creature creature, int x, int y, int size, double seconds)
+    {
+        var seed = 0;
+        foreach (var ch in creature.Name)
+            seed = (seed * 31) + ch;
+        var kind = Math.Abs(seed) % 4;
+        var ink = Canvas.Rgb(0x14, 0x12, 0x18);
+        var cx = x + (size / 2);
+        var bottom = y + size;
+        var breathe = (int)(Math.Sin(seconds * 1.7) * (size / 40));
+        var eye = creature.Rank == 3 ? Canvas.Rgb(0xFF, 0x40, 0x40) : creature.Rank == 2 ? Canvas.Rgb(0xFF, 0xB0, 0x30) : Canvas.Rgb(0xE0, 0xE0, 0x60);
+
+        switch (kind)
+        {
+            case 0: // A low crawler: long body, short legs, a tail that twitches.
+                for (var i = 0; i < size / 3; i++)
+                {
+                    var half = (int)(Math.Sqrt(1.0 - Math.Pow((i - (size / 6.0)) / (size / 6.0), 2)) * size / 2);
+                    Canvas.Fill(span, cx - half, bottom - (size / 3) + i - breathe, half * 2, 1, ink);
+                }
+
+                for (var l = 0; l < 4; l++)
+                    Canvas.Fill(span, cx - (size / 2) + (size / 10) + (l * (size / 5)), bottom - (size / 8), size / 12, size / 8, ink);
+                Canvas.Disc(span, cx + (size / 2) - (size / 10), bottom - (size / 3) - (size / 12) - breathe, size / 9, ink);
+                Canvas.Line(span, cx - (size / 2), bottom - (size / 5), cx - (size / 2) - (size / 4), bottom - (size / 3) + (int)(Math.Sin(seconds * 3.0) * (size / 12)), ink);
+                Canvas.Disc(span, cx + (size / 2) - (size / 8), bottom - (size / 3) - (size / 10) - breathe, size / 40 + 2, eye);
+                Canvas.Disc(span, cx + (size / 2) - (size / 16), bottom - (size / 3) - (size / 10) - breathe, size / 40 + 2, eye);
+                break;
+            case 1: // A tall stalker: a narrow body high off the ground, a small head, long limbs.
+                Canvas.Fill(span, cx - (size / 8), y + (size / 4) - breathe, size / 4, size / 2, ink);
+                Canvas.Disc(span, cx, y + (size / 4) - breathe, size / 8, ink);
+                Canvas.Line(span, cx - (size / 8), bottom - (size / 4), cx - (size / 3), bottom, ink);
+                Canvas.Line(span, cx + (size / 8), bottom - (size / 4), cx + (size / 3), bottom, ink);
+                Canvas.Line(span, cx - (size / 8), y + (size / 2), cx - (size / 2), y + (size / 3) + (int)(Math.Sin(seconds * 2.0) * (size / 16)), ink);
+                Canvas.Line(span, cx + (size / 8), y + (size / 2), cx + (size / 2), y + (size / 3) - (int)(Math.Sin(seconds * 2.0) * (size / 16)), ink);
+                for (var k = 1; k < size / 16; k++)
+                {
+                    Canvas.Line(span, cx - (size / 8), bottom - (size / 4) + k, cx - (size / 3), bottom, ink);
+                    Canvas.Line(span, cx + (size / 8), bottom - (size / 4) + k, cx + (size / 3), bottom, ink);
+                }
+
+                Canvas.Disc(span, cx - (size / 24), y + (size / 4) - breathe, size / 40 + 2, eye);
+                Canvas.Disc(span, cx + (size / 24), y + (size / 4) - breathe, size / 40 + 2, eye);
+                break;
+            case 2: // A winged thing: a body and two wings that beat.
+            {
+                var flap = (int)(Math.Sin(seconds * 4.0) * (size / 5));
+                Canvas.Disc(span, cx, y + (size / 2), size / 6, ink);
+                for (var i = 0; i < size / 2; i++)
+                {
+                    var t = i / (size / 2.0);
+                    var wy = y + (size / 2) - (int)(t * flap) - (int)(Math.Sin(t * Math.PI) * (size / 8));
+                    Canvas.Fill(span, cx - (size / 6) - i, wy, 1, (int)((1.0 - t) * (size / 4)) + 2, ink);
+                    Canvas.Fill(span, cx + (size / 6) + i, wy, 1, (int)((1.0 - t) * (size / 4)) + 2, ink);
+                }
+
+                Canvas.Line(span, cx, y + (size / 2) + (size / 6), cx, bottom - (size / 8), ink);
+                Canvas.Disc(span, cx - (size / 30), y + (size / 2) - (size / 20), size / 40 + 2, eye);
+                Canvas.Disc(span, cx + (size / 30), y + (size / 2) - (size / 20), size / 40 + 2, eye);
+                break;
+            }
+
+            default: // A heap with too many limbs.
+                Canvas.Disc(span, cx, bottom - (size / 3), size / 3, ink);
+                for (var a = 0; a < 7; a++)
+                {
+                    var rad = ((a * 360.0 / 7) + (seconds * 20.0)) * Math.PI / 180.0;
+                    var reach = (size / 2) + (int)(Math.Sin((seconds * 2.0) + a) * (size / 10));
+                    Canvas.Line(span, cx, bottom - (size / 3), cx + (int)(Math.Cos(rad) * reach), bottom - (size / 3) + (int)(Math.Sin(rad) * reach * 0.5), ink);
+                    Canvas.Line(span, cx + 1, bottom - (size / 3), cx + 1 + (int)(Math.Cos(rad) * reach), bottom - (size / 3) + (int)(Math.Sin(rad) * reach * 0.5), ink);
+                    Canvas.Disc(span, cx + (int)(Math.Cos(rad) * reach), bottom - (size / 3) + (int)(Math.Sin(rad) * reach * 0.5), size / 30 + 1, ink);
+                }
+
+                for (var e = 0; e < 5; e++)
+                    Canvas.Disc(span, cx - (size / 5) + (e * (size / 10)), bottom - (size / 3) - (size / 12) + ((e % 2) * (size / 16)), size / 50 + 2, eye);
+                break;
+        }
+
+        // An S rank has more eyes than is reasonable.
+        if (creature.Rank == 3)
+        {
+            for (var e = 0; e < 4; e++)
+                Canvas.Disc(span, cx - (size / 3) + (e * (size / 4)), y + (size / 8) + ((e % 2) * (size / 12)), size / 60 + 2, eye);
+        }
+    }
+
+    /// <summary>The WANTED poster, on the titles, for a mark: name, rank, zone, and the shape nobody has drawn properly.</summary>
+    private void DrawPoster(Span<uint> span, Creature creature, double t, double seconds, in BitmapFont.Clip all)
+    {
+        var drop = (int)((1.0 - Math.Clamp(t / 0.6, 0.0, 1.0)) * -400);
+        var px = 760;
+        var py = 60 + drop;
+        var paper = Canvas.Rgb(0xE8, 0xD8, 0xB0);
+        Canvas.Fill(span, px, py, 440, 520, paper);
+        Canvas.Rect(span, px, py, 440, 520, Ink, 4);
+        Canvas.Rect(span, px + 10, py + 10, 420, 500, Ink, 2);
+        const string Wanted = "WANTED";
+        font.Draw(span, W, Wanted, px + ((440 - font.Measure(Wanted, 2)) / 2), py + 24, Ink, 2, all);
+        Canvas.Fill(span, px + 40, py + 120, 360, 200, Canvas.Rgb(0xD8, 0xC4, 0x98));
+        Canvas.Rect(span, px + 40, py + 120, 360, 200, Ink, 2);
+        Silhouette(span, creature, px + 130, py + 130, 180, seconds);
+        var name = Canvas.Cut(Canvas.Plain(creature.Name).ToUpperInvariant(), font.Fit(400));
+        font.Draw(span, W, name, px + ((440 - font.Measure(name)) / 2), py + 340, Ink, 1, all);
+        var rank = $"RANK {RankLetter(creature.Rank)} MARK";
+        font.Draw(span, W, rank, px + ((440 - font.Measure(rank)) / 2), py + 384, creature.Rank == 3 ? Danger : Ink, 1, all);
+        var zone = Canvas.Cut(creature.Zone.ToUpperInvariant(), font.Fit(400));
+        font.Draw(span, W, zone, px + ((440 - font.Measure(zone)) / 2), py + 428, Ink, 1, all);
+        const string Reward = "REWARD: SEALS, NUTS, AND A STORY";
+        font.Draw(span, W, Reward, px + ((440 - font.Measure(Reward)) / 2), py + 472, Canvas.Rgb(0x6A, 0x4A, 0x2A), 1, all);
     }
 
     private void DrawLowerThird(Span<uint> span, string tab, string line, bool danger, in BitmapFont.Clip all)

@@ -43,10 +43,39 @@ public sealed partial class Plugin
                     continue;
 
                 var region = regions.GetValueOrDefault(zone, string.Empty);
-                list.Add(new Creature(Capitalise(name), zone, region, (uint)target.Icon, (int)(target.RowId / 10 % 10) + 1));
+                list.Add(new Creature(Capitalise(name), zone, region, (uint)target.Icon, (int)(target.RowId / 10 % 10) + 1, false));
             }
 
-            this.log.Information($"[wildlife] {list.Count} creatures in the hunting log");
+            // The hunt marks: every B, A and S rank, by the zone whose board lists them. They have
+            // no portrait in the game's tables, so the show draws them as what they are: unseen.
+            var logCount = list.Count;
+            foreach (var t in this.dataManager.GetExcelSheet<TerritoryType>())
+            {
+                if (t.NotoriousMonsterTerritory.RowId == 0 || t.NotoriousMonsterTerritory.ValueNullable is not { } board)
+                    continue;
+
+                var zone = t.PlaceName.ValueNullable?.Name.ToString() ?? string.Empty;
+                if (zone.Length == 0)
+                    continue;
+
+                var region = t.PlaceNameRegion.ValueNullable?.Name.ToString() ?? regions.GetValueOrDefault(zone, string.Empty);
+                foreach (var mark in board.NotoriousMonsters)
+                {
+                    if (mark.RowId == 0 || mark.ValueNullable is not { } nm)
+                        continue;
+
+                    var name = nm.BNpcName.ValueNullable?.Singular.ToString() ?? string.Empty;
+                    if (name.Length == 0 || nm.Rank is < 1 or > 3)
+                        continue;
+
+                    if (list.Any(c => c.Mark && c.Name.Equals(Capitalise(name), StringComparison.OrdinalIgnoreCase)))
+                        continue;
+
+                    list.Add(new Creature(Capitalise(name), zone, region, 0, nm.Rank, true));
+                }
+            }
+
+            this.log.Information($"[wildlife] {logCount} creatures in the hunting log, {list.Count - logCount} hunt marks");
         }
         catch (Exception ex)
         {
