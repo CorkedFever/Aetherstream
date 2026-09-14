@@ -157,6 +157,7 @@ public sealed partial class Plugin : IDalamudPlugin
             ("Forecast", "The Forecast with Nimbly: every zone, the sky now and for the next three bells, and a rare-weather watch.", "Shows", breaks.Wrap("Forecast", new ForecastChannel(face, this.ForecastSnapshot))),
             ("Saucer", "Saucer Tonight with Ko Bi: your MGP, the cactpot, the next GATE, Fashion Report, and a card you do not have yet.", "Shows", breaks.Wrap("Saucer", new SaucerChannel(face, this.SaucerSnapshot, this.Icon))),
             ("Sea News", "Sea News with Wavv: the ocean fishing boats, where they are bound, and the conditions on the coasts.", "Shows", breaks.Wrap("Sea News", new CruiseChannel(face, this.CruiseSnapshot))),
+            ("Adverts", "The commercial breaks, back to back, every kind in turn. For the connoisseur.", "Ambience", breaks.Reel()),
             ("Scrambled", "Channel 99. You did not subscribe. Nothing to see, and you keep looking.", "Ambience", new ScrambledChannel(face)),
         ];
         this.screen = new WorldScreen(gameGui);

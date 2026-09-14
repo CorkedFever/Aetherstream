@@ -251,6 +251,15 @@ internal static class ChannelLogos
                     d.AddCircle(P(-8f + (wv * 8f), 13f), 3.5f * u, Theme.U32(Sky), 10, 1.4f * u);
                 break;
 
+            case "adverts":
+                // A billboard on two legs.
+                d.AddRectFilled(P(-13f, -11f), P(13f, 5f), Theme.U32(Paper), 1f);
+                d.AddRectFilled(P(-10f, -8f), P(10f, 2f), Theme.U32(Rose), 1f);
+                d.AddRectFilled(P(-7f, 5f), P(-5f, 13f), Theme.U32(Theme.TextFaint), 1f);
+                d.AddRectFilled(P(5f, 5f), P(7f, 13f), Theme.U32(Theme.TextFaint), 1f);
+                d.AddRectFilled(P(-6f, -5f), P(6f, -3f), Theme.U32(Paper), 1f);
+                break;
+
             case "scrambled":
                 // A picture torn into bands, each slid a different way, with a sync line through it.
                 for (var row = 0; row < 5; row++)

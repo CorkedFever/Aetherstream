@@ -113,6 +113,39 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
         }
     }
 
+    /// <summary>The adverts back to back, every kind in turn, with a label: for looking at them on their own.</summary>
+    public IFrameChannel Reel() => new ReelChannel(this);
+
+    private sealed class ReelChannel(CommercialBreak breaks) : IFrameChannel
+    {
+        public bool Available => breaks.font.Available;
+
+        public bool WantsPicture => false;
+
+        public bool WantsMusic => true;
+
+        public void Render(uint[] target, uint[]? picture, DateTime now, double seconds)
+        {
+            var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var index = (int)(unix / (long)SpotFor);
+            var t = (unix % (long)SpotFor) + (seconds % 1.0);
+            var span = target.AsSpan();
+            var kind = index % 4;
+            switch (kind)
+            {
+                case 0: breaks.Promo(span, index, t, seconds); break;
+                case 1: breaks.Item(span, index, t, seconds); break;
+                case 2: breaks.Trailer(span, index, t, seconds); break;
+                default: breaks.Sponsor(span, index, t, seconds); break;
+            }
+
+            var label = $"AD REEL  #{index % 10000}  {kind switch { 0 => "PROMO", 1 => "ITEM", 2 => "TRAILER", _ => "SPONSOR" }}  {(int)t + 1}/12";
+            var all = new BitmapFont.Clip(0, 0, W, H);
+            Canvas.Fill(span, 0, 0, breaks.font.Measure(label) + 24, 36, Ink);
+            breaks.font.Draw(span, W, label, 12, -2, Gold, 1, all);
+        }
+    }
+
     /// <summary>One frame of a break: which spot this is, and the bumpers at either end.</summary>
     private void RenderBreak(uint[] target, string returningTo, int cycle, double into, double seconds)
     {
