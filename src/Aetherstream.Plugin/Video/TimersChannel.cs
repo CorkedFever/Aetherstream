@@ -142,7 +142,7 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
 
         foreach (var (name, value, done) in items)
         {
-            if (ry > 448)
+            if (ry > 566)
                 break;
 
             // A box, ticked when done; the value dim beside or under the name.
@@ -161,10 +161,9 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
             }
         }
 
-        ry = 488;
+        ry = 604;
         font.Draw(span, W, "RETAINERS", Split + 16, ry, Canvas.Amber, 1, all);
-        ry += 40;
-        font.Draw(span, W, Canvas.Cut(snapshot.RetainerNote.ToUpperInvariant(), font.Fit(W - Split - 40)), Split + 16, ry, Canvas.Dim, 1, all);
+        font.Draw(span, W, Canvas.Cut(snapshot.RetainerNote.ToUpperInvariant(), font.Fit(W - Split - 40 - 200)), Split + 16 + 200, ry, Canvas.Dim, 1, all);
 
         this.DrawFooter(span, all);
     }
