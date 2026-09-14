@@ -56,6 +56,9 @@ internal sealed class AudioOutput : IDisposable
     /// <summary>How long the sound was held back before the device started, in ms; -1 until it has.</summary>
     public int HeldMs => this.provider?.HeldMs ?? -1;
 
+    /// <summary>How many times a backlog was dropped to catch the picture up, and how much in total.</summary>
+    public (int Times, int Ms) CatchUps => this.provider is { } p ? (p.CatchUps, p.CaughtUpMs) : (0, 0);
+
     /// <summary>Every active output on the machine, for the Sound tab's picker.</summary>
     public static List<(string Id, string Name)> Devices()
     {
@@ -156,13 +159,60 @@ internal sealed class AudioOutput : IDisposable
         private long firstDataTicks = -1;
         private int measuredLeadFrames = -1;
 
+        // The ring's depth when things are steady, and how long it has sat well above that.
+        private float steadyFrames = -1f;
+        private int backlogReads;
+
         public int HeldMs { get; private set; } = -1;
+
+        public int CatchUps { get; private set; }
+
+        public int CaughtUpMs { get; private set; }
 
         public WaveFormat WaveFormat { get; } = format;
 
         public float Volume { get; set; } = 1f;
 
         public float Pan { get; set; }
+
+        /// <summary>
+        /// After a stall the device has played silence, and the audio that then arrives sits
+        /// behind that silence for good: the sound trails the picture by the length of the gap
+        /// until something flushes the ring. So the ring's steady depth is tracked, slowly, and
+        /// when the depth has sat well above it for a second and a half the excess is dropped.
+        /// One short skip, then the sound is back with the picture.
+        /// </summary>
+        private void CatchUp()
+        {
+            var depth = ring.Count;
+            if (depth == 0)
+                return;
+
+            if (this.steadyFrames < 0f)
+            {
+                this.steadyFrames = depth;
+                return;
+            }
+
+            var rate = this.WaveFormat.SampleRate;
+            var backlog = depth - this.steadyFrames;
+            if (backlog > rate * 0.5f)
+            {
+                // The device reads every sixty milliseconds or so; twenty-five reads is a second and a half.
+                if (++this.backlogReads >= 25)
+                {
+                    var skipped = ring.Skip((int)backlog - (rate / 10));
+                    this.CatchUps++;
+                    this.CaughtUpMs += skipped * 1000 / rate;
+                    this.backlogReads = 0;
+                }
+
+                return;
+            }
+
+            this.backlogReads = 0;
+            this.steadyFrames += (depth - this.steadyFrames) * 0.01f;
+        }
 
         public int Read(byte[] buffer, int offset, int count)
         {
@@ -225,6 +275,8 @@ internal sealed class AudioOutput : IDisposable
                     this.started = true;
                 }
             }
+
+            this.CatchUp();
 
             var needed = frames * 2;
             if (this.scratch.Length < needed)

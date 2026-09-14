@@ -437,7 +437,7 @@ internal sealed class StreamSession(
             $"[sync] elapsed {elapsed}ms | audio delivered {deliveredMs}ms " +
             $"(lead {deliveredMs - elapsed:+#;-#;0}ms) | waiting in ring {ringMs}ms " +
             $"| video last at {this.source.LastVideoAtMs}ms, audio last at {this.source.LastAudioAtMs}ms " +
-            $"| pts {this.source.LastAudioPts / 1000}ms | held {this.audio?.HeldMs ?? -1}ms | frames {this.source.Stats.FramesPresented}" +
+            $"| pts {this.source.LastAudioPts / 1000}ms | held {this.audio?.HeldMs ?? -1}ms | caught up {this.audio?.CatchUps.Times ?? 0}x {this.audio?.CatchUps.Ms ?? 0}ms | frames {this.source.Stats.FramesPresented}" +
             (this.source.Audio is { } r ? $" | ring overruns {r.Overruns}, underruns {r.Underruns}" : string.Empty));
     }
 

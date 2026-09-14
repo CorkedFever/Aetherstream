@@ -239,6 +239,16 @@ public sealed class HlsRelay : IDisposable
 
         if (parts.Length >= 4 && parts[2] is "s" or "k" && channel.Resolve(parts[2], parts[3]) is { } upstream)
         {
+            // A segment already fetched ahead of time goes out whole, at loopback speed, with its
+            // length known. That is the point of the prefetch: the upstream round trip is taken off
+            // the decoder's path, so it is fed on time instead of as the origin gets round to it.
+            var ready = await channel.PrefetchedAsync($"{parts[2]}/{parts[3]}", this.http, ct);
+            if (ready is { } bytes)
+            {
+                await WriteAsync(stream, 200, "video/mp2t", bytes, ct);
+                return;
+            }
+
             await this.ProxyAsync(upstream, channel, stream, ct);
             return;
         }
@@ -347,6 +357,105 @@ public sealed class HlsRelay : IDisposable
                 return this.segments.GetValueOrDefault($"{kind}/{name}");
         }
 
+        // Segments fetched ahead of the decoder asking, by key, newest last. A live window is a
+        // handful of segments; keeping the last eight covers a player a little behind the edge.
+        private readonly Dictionary<string, Task<byte[]?>> prefetched = new(StringComparer.Ordinal);
+        private readonly List<string> prefetchOrder = [];
+        private const int PrefetchKeep = 8;
+        private const int PrefetchAhead = 3;
+
+        /// <summary>
+        /// Starts fetching the newest few segments of the playlist just served, if they are not
+        /// already in hand. Fire and forget; the fetch's task is what a later request awaits.
+        /// </summary>
+        private void PrefetchLatest(HttpClient client, Action<string> log)
+        {
+            List<string> latest;
+            lock (this.segments)
+                latest = this.order.Where(k => k.StartsWith("s/", StringComparison.Ordinal)).TakeLast(PrefetchAhead).ToList();
+
+            foreach (var key in latest)
+            {
+                string? upstream;
+                lock (this.segments)
+                    upstream = this.segments.GetValueOrDefault(key);
+
+                if (upstream is not null)
+                    this.StartFetch(key, upstream, client, log);
+            }
+        }
+
+        private Task<byte[]?> StartFetch(string key, string upstream, HttpClient client, Action<string> log)
+        {
+            lock (this.prefetched)
+            {
+                if (this.prefetched.TryGetValue(key, out var existing))
+                    return existing;
+
+                var task = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var (response, _) = await this.SendAsync(client, upstream, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+                        using (response)
+                        {
+                            if (!response.IsSuccessStatusCode)
+                            {
+                                log($"[relay] prefetch {(int)response.StatusCode} for {upstream}");
+                                return null;
+                            }
+
+                            return await response.Content.ReadAsByteArrayAsync();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        log($"[relay] prefetch failed: {ex.Message}");
+                        return null;
+                    }
+                });
+
+                this.prefetched[key] = task;
+                this.prefetchOrder.Add(key);
+                while (this.prefetchOrder.Count > PrefetchKeep)
+                {
+                    this.prefetched.Remove(this.prefetchOrder[0]);
+                    this.prefetchOrder.RemoveAt(0);
+                }
+
+                return task;
+            }
+        }
+
+        /// <summary>
+        /// The segment's bytes if a prefetch has them or is about to, else null — in which case the
+        /// caller streams it the slow way. A request for something not yet started is started now,
+        /// so a player that skips ahead of the prefetch still gets a whole, length-known answer.
+        /// </summary>
+        public async Task<byte[]?> PrefetchedAsync(string key, HttpClient client, CancellationToken ct)
+        {
+            Task<byte[]?>? task;
+            lock (this.prefetched)
+                this.prefetched.TryGetValue(key, out task);
+
+            if (task is null)
+            {
+                if (!key.StartsWith("s/", StringComparison.Ordinal))
+                    return null;
+
+                string? upstream;
+                lock (this.segments)
+                    upstream = this.segments.GetValueOrDefault(key);
+
+                if (upstream is null)
+                    return null;
+
+                task = this.StartFetch(key, upstream, client, msg => { });
+            }
+
+            return await task.WaitAsync(ct);
+        }
+
         public async Task<string?> PlaylistAsync(
             HttpClient client, int id, int port, Action<string> log, CancellationToken ct)
         {
@@ -365,6 +474,8 @@ public sealed class HlsRelay : IDisposable
 
                 this.cached = this.Rewrite(media.Value.Text, media.Value.Base, id, port);
                 this.fetchedAt = DateTime.UtcNow;
+
+                this.PrefetchLatest(client, log);
 
                 return this.cached;
             }

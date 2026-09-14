@@ -99,6 +99,25 @@ public sealed class StereoRingBuffer(int capacityFrames)
         }
     }
 
+    /// <summary>
+    /// Discards up to <paramref name="frames"/> of the oldest waiting audio. Consumer thread
+    /// only. How the sound catches the picture up after a stall: the backlog that arrived late
+    /// is skipped rather than played late forever.
+    /// </summary>
+    public int Skip(int frames)
+    {
+        var count = Math.Min(frames, this.Count);
+        if (count <= 0)
+            return 0;
+
+        var read = this.readFrame + count;
+        if (read >= this.CapacityFrames)
+            read -= this.CapacityFrames;
+
+        Volatile.Write(ref this.readFrame, read);
+        return count;
+    }
+
     public void Clear()
     {
         Volatile.Write(ref this.readFrame, 0);
