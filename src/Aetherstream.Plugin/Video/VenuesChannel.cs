@@ -97,7 +97,7 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         var ty = 72 + BannerHeight + 14;
         foreach (var line in Canvas.Wrap(venue.Name.ToUpperInvariant(), font.Fit(BannerWidth, 2), 1))
         {
-            font.Draw(span, W, line, Left, ty, venue.Sfw ? Canvas.White : Adult, 2, all);
+            font.Draw(span, W, line, Left, ty, !venue.Sfw ? Adult : venue.OpenNow ? Canvas.Good : Canvas.White, 2, all);
             ty += 84;
         }
 
@@ -198,10 +198,7 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         this.DrawFooter(span, snapshot, all);
 
         if (open.Concat(soon).Any(v => !v.Sfw))
-        {
-            const string Key = "PURPLE: 18+";
-            font.Draw(span, W, Key, (W - font.Measure(Key)) / 2, 680, Adult, 1, all);
-        }
+            font.Draw(span, W, "PURPLE: 18+", 24 + font.Measure("AETHERSTREAM VENUES") + 32, 680, Adult, 1, all);
     }
 
     private static string WhenText(DateTime utc, DateTime now)
