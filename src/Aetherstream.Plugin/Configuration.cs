@@ -376,6 +376,11 @@ public sealed class Configuration : IPluginConfiguration
 
     public List<RadioStationRef> RadioFavourites { get; set; } = [];
 
+    /// <summary>The orchestrion rolls ticked as the music, when the source is "rolls".</summary>
+    public List<uint> ChannelMusicRolls { get; set; } = [];
+
+    public bool OrchestrionOnlyMine { get; set; } = true;
+
     public List<PodcastRef> PodcastFeeds { get; set; } = [];
 
     /// <summary>Live channels found dead — no answer, or a black picture — with when to try them again, as unix seconds.</summary>

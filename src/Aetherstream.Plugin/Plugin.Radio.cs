@@ -150,6 +150,8 @@ public sealed partial class Plugin
     /// <summary>A name for a track the jukebox would otherwise call by its file name.</summary>
     private string? MusicTitle(string track)
     {
+        if (this.config.ChannelMusicSource == "rolls")
+            return this.RollTitle(track);
         if (this.config.ChannelMusicSource == "radio" && track == this.config.ChannelMusicRadioUrl)
             return this.config.ChannelMusicRadioName;
         if (this.config.ChannelMusicSource == "podcast" && this.podcastOpen is { } feed)

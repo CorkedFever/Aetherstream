@@ -19,6 +19,8 @@ internal sealed class SoundTab(UiContext ui)
     internal RadioTab Radio { get; } = new(ui);
 
     internal PodcastsTab Podcasts { get; } = new(ui);
+
+    internal OrchestrionTab Rolls { get; } = new(ui);
     private string plexStatus = string.Empty;
 
     public void SetPlexPlaylists(List<Aetherstream.Playback.PlexLibrary.Playlist> value, string status)
@@ -57,7 +59,7 @@ internal sealed class SoundTab(UiContext ui)
         Ui.Tip("Relative to the main volume, so turning the set down turns this down with it.");
 
         var source = ui.Config.ChannelMusicSource;
-        var label = source switch { "folder" => "A folder of my own", "plex" => "A Plex playlist", "radio" => $"Radio: {ui.Config.ChannelMusicRadioName}", "podcast" => "A podcast", _ => "The bundled tracks" };
+        var label = source switch { "folder" => "A folder of my own", "plex" => "A Plex playlist", "radio" => $"Radio: {ui.Config.ChannelMusicRadioName}", "podcast" => "A podcast", "rolls" => "Orchestrion rolls", _ => "The bundled tracks" };
 
         ImGui.SetNextItemWidth(260);
         using (var combo = ImRaii.Combo("##musicsource", label))
@@ -85,6 +87,9 @@ internal sealed class SoundTab(UiContext ui)
                 break;
             case "plex":
                 this.DrawMusicPlex();
+                break;
+            case "rolls":
+                Ui.Hint($"{ui.Config.ChannelMusicRolls.Count} orchestrion rolls, ticked on the Rolls part of this tab.");
                 break;
             case "radio":
                 Ui.Hint("An internet radio station, chosen on the Radio part of this tab.");
@@ -230,11 +235,12 @@ internal sealed class SoundTab(UiContext ui)
     /// <summary>The Music input: the music under the channels, the radio, and the podcasts.</summary>
     public void Draw()
     {
-        Ui.Strip("music", ["MUSIC", "RADIO", "PODCASTS"], ref this.part);
+        Ui.Strip("music", ["MUSIC", "ROLLS", "RADIO", "PODCASTS"], ref this.part);
         switch (this.part)
         {
-            case 1: this.Radio.Draw(); break;
-            case 2: this.Podcasts.Draw(); break;
+            case 1: this.Rolls.Draw(); break;
+            case 2: this.Radio.Draw(); break;
+            case 3: this.Podcasts.Draw(); break;
             default: this.DrawMusic(); break;
         }
     }
