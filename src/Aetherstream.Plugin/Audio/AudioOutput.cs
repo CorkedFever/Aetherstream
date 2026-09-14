@@ -34,7 +34,7 @@ internal sealed class AudioOutput : IDisposable
     /// routing cannot move it, and the default changing later does not move it either — so
     /// "put it on my headset" has to be something the plugin itself offers.
     /// </param>
-    public AudioOutput(StereoRingBuffer ring, int delayFrames = 0, string? deviceId = null)
+    public AudioOutput(StereoRingBuffer ring, int delayFrames = 0, string? deviceId = null, bool autoSync = false)
     {
         // The endpoint is queried and released here rather than held: this runs on the plugin load
         // thread, and holding a COM object across threads invites apartment trouble.
@@ -42,7 +42,7 @@ internal sealed class AudioOutput : IDisposable
         using var endpoint = Resolve(enumerator, deviceId);
 
         this.MixFormat = endpoint.AudioClient.MixFormat;
-        this.provider = new RingProvider(ring, this.MixFormat, delayFrames);
+        this.provider = new RingProvider(ring, this.MixFormat, delayFrames, autoSync);
         // 60ms, not less. The device buffer is latency, but it is also the only cushion against a
         // late callback: too small and the ring underruns, which is heard as crackle rather than as
         // tighter sync. Trading audible artefacts for 30ms is a bad trade.
@@ -52,6 +52,9 @@ internal sealed class AudioOutput : IDisposable
     }
 
     public WaveFormat MixFormat { get; }
+
+    /// <summary>How long the sound was held back before the device started, in ms; -1 until it has.</summary>
+    public int HeldMs => this.provider?.HeldMs ?? -1;
 
     /// <summary>Every active output on the machine, for the Sound tab's picker.</summary>
     public static List<(string Id, string Name)> Devices()
@@ -145,11 +148,15 @@ internal sealed class AudioOutput : IDisposable
     /// IWaveProvider rather than ISampleProvider on purpose: ISampleProvider rejects the
     /// WAVEFORMATEXTENSIBLE that multi-channel endpoints report.
     /// </summary>
-    private sealed class RingProvider(StereoRingBuffer ring, WaveFormat format, int delayFrames)
+    private sealed class RingProvider(StereoRingBuffer ring, WaveFormat format, int delayFrames, bool autoSync)
         : IWaveProvider
     {
         private float[] scratch = [];
         private bool started;
+        private long firstDataTicks = -1;
+        private int measuredLeadFrames = -1;
+
+        public int HeldMs { get; private set; } = -1;
 
         public WaveFormat WaveFormat { get; } = format;
 
@@ -166,18 +173,57 @@ internal sealed class AudioOutput : IDisposable
 
             var bytesRequested = frames * channels * sizeof(float);
 
-            // Hold the device on silence until the buffer has built up the requested delay. Once
-            // reading starts the queue stays at roughly that depth by itself, so the offset
-            // persists without anything being dropped or repeated.
             if (!this.started)
             {
-                if (ring.Count < delayFrames)
+                if (autoSync)
                 {
-                    buffer.AsSpan(offset, bytesRequested).Clear();
-                    return bytesRequested;
-                }
+                    // libvlc hands audio over up to two seconds before it means it to be heard,
+                    // trusting the output to play each block at its stamp. Played as it arrives,
+                    // the sound runs that far ahead of the picture. So: wait for the opening burst,
+                    // measure how much arrived beyond real time, and hold the device back by that.
+                    // The queue then stays at that depth and every block plays when it was meant to.
+                    var now = Environment.TickCount64;
+                    if (ring.Count == 0 && this.firstDataTicks < 0)
+                    {
+                        buffer.AsSpan(offset, bytesRequested).Clear();
+                        return bytesRequested;
+                    }
 
-                this.started = true;
+                    if (this.firstDataTicks < 0)
+                        this.firstDataTicks = now;
+
+                    const int SettleMs = 400;
+                    var rate = this.WaveFormat.SampleRate;
+                    if (this.measuredLeadFrames < 0 && now - this.firstDataTicks >= SettleMs)
+                        this.measuredLeadFrames = Math.Max(0, ring.Count - (SettleMs * rate / 1000));
+
+                    var holdMs = this.measuredLeadFrames < 0
+                        ? long.MaxValue
+                        : (this.measuredLeadFrames * 1000L / rate) + (delayFrames * 1000L / rate);
+
+                    if (now - this.firstDataTicks < holdMs)
+                    {
+                        buffer.AsSpan(offset, bytesRequested).Clear();
+                        return bytesRequested;
+                    }
+
+                    this.HeldMs = (int)(now - this.firstDataTicks);
+                    this.started = true;
+                }
+                else
+                {
+                    // Hold the device on silence until the buffer has built up the requested delay. Once
+                    // reading starts the queue stays at roughly that depth by itself, so the offset
+                    // persists without anything being dropped or repeated.
+                    if (ring.Count < delayFrames)
+                    {
+                        buffer.AsSpan(offset, bytesRequested).Clear();
+                        return bytesRequested;
+                    }
+
+                    this.HeldMs = 0;
+                    this.started = true;
+                }
             }
 
             var needed = frames * 2;

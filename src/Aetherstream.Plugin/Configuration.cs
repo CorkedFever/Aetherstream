@@ -413,6 +413,12 @@ public sealed class Configuration : IPluginConfiguration
     public int AudioOffsetMs { get; set; }
 
     /// <summary>
+    /// Hold the sound back by however much libvlc delivers ahead of time, measured at the start
+    /// of each play. On by default; the per-source offset is applied on top.
+    /// </summary>
+    public bool AutoSync { get; set; } = true;
+
+    /// <summary>
     /// Offsets remembered per source, by the source string. A channel that needed +400 keeps
     /// +400 the next time; the global value above is the default for anything not listed.
     /// </summary>

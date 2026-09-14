@@ -489,8 +489,9 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
         if (this.disposed || this.Audio is null)
             return;
 
-        // count is frames; FL32 stereo means two floats per frame, interleaved.
         this.Stats.CountAudio((int)count);
+        this.LastAudioPts = pts;
+        this.LastAudioAtMs = this.clock.ElapsedMilliseconds;
 
         // count is frames; S16N stereo means two shorts per frame, interleaved.
         var pcm = new ReadOnlySpan<short>((void*)samples, (int)count * 2);

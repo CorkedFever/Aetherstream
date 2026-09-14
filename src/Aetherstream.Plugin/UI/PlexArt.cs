@@ -200,7 +200,15 @@ internal sealed class PlexArt(ITextureProvider textures, HttpClient http, IPlugi
         }
         finally
         {
-            this.fetching.Release();
+            // The plugin may have unloaded while this was in flight. An exception here is on a
+            // thread-pool thread, and one of those takes the game down with it.
+            try
+            {
+                this.fetching.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
     }
 

@@ -264,6 +264,18 @@ internal sealed class SoundTab(UiContext ui)
 
         Ui.Section("Sync");
 
+        var autoSync = ui.Config.AutoSync;
+        if (ImGui.Checkbox("Auto-sync", ref autoSync))
+        {
+            ui.Config.AutoSync = autoSync;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip(
+            "libvlc hands the sound over up to two seconds before it means it to be heard. Auto-sync " +
+            "measures that at the start of each play and holds the sound back by exactly that much, " +
+            "so it lands with the picture. The slider below is applied on top. Takes effect on the next Play.");
+
         // The slider edits the current source's own offset, which is remembered by source; with
         // nothing playing it edits the default that anything unlisted starts from.
         var source = ui.Config.Source;
