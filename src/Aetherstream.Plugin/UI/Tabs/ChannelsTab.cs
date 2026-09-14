@@ -18,6 +18,7 @@ internal sealed class ChannelsTab(UiContext ui)
     [
         ("Info", "Info", "What is on, what is up, what it costs, what is open: drawn from the game and the services it talks to."),
         ("Shows", "Shows", "Programmes with a host, on a clock, so everyone watching sees the same episode."),
+        ("Music", "Music", "The set's own jukebox, on screen. No breaks."),
         ("Ambience", "Ambience", "Nothing to read. Something to leave on."),
     ];
 
