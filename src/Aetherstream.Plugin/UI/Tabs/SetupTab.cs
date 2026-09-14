@@ -182,13 +182,13 @@ internal sealed class SetupTab(UiContext ui)
         Ui.Tip(
             "yt-dlp reads the YouTube sign-in from that browser and uses it, so YouTube sees a " +
             "signed-in person rather than a bot. Nothing leaves this machine except to YouTube.\n\n" +
-            "Firefox works reliably. Brave, Chrome and Edge encrypt their cookies in a way yt-dlp " +
-            "can often only read while that browser is fully closed — close it first, then try.");
+            "Firefox and its forks (Floorp, LibreWolf, Waterfox, Zen) work reliably. Brave, Chrome and " +
+            "Edge encrypt their cookies in a way yt-dlp usually cannot read at all; for those, export a cookies file below.");
 
-        if (current.Length > 0 && current is not "firefox")
+        if (current.Length > 0 && current is not ("firefox" or "floorp" or "librewolf" or "waterfox" or "zen"))
         {
             ImGui.SameLine();
-            ImGui.TextColored(Theme.Warn, "close the browser first");
+            ImGui.TextColored(Theme.Warn, "usually cannot be read; use a cookies file");
         }
 
         // The route that works when the browser one does not — which for Brave, Chrome and Edge

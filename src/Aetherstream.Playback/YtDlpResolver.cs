@@ -15,8 +15,40 @@ namespace Aetherstream.Playback;
 /// </summary>
 public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null, string? cookiesFile = null) : IStreamResolver
 {
-    /// <summary>Browsers yt-dlp can read a signed-in YouTube session from, as it names them.</summary>
-    public static readonly string[] Browsers = ["brave", "chrome", "edge", "firefox", "vivaldi", "opera"];
+    /// <summary>Browsers yt-dlp can read a signed-in YouTube session from, as it names them, plus the Firefox forks it does not know by name.</summary>
+    public static readonly string[] Browsers = ["floorp", "firefox", "librewolf", "waterfox", "zen", "brave", "chrome", "edge", "vivaldi", "opera"];
+
+    /// <summary>
+    /// What to hand yt-dlp for a browser. The Firefox forks keep their profiles under their own
+    /// name in AppData, which yt-dlp does not look in on its own, so they become "firefox:" plus
+    /// the profile folder; the rest are passed by name.
+    /// </summary>
+    public static string CookiesArgument(string browser)
+    {
+        var name = browser.Trim().ToLowerInvariant();
+        var fork = name switch { "floorp" => "Floorp", "librewolf" => "librewolf", "waterfox" => "Waterfox", "zen" => "zen", _ => null };
+        if (fork is null)
+            return name;
+
+        try
+        {
+            var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), fork, "Profiles");
+            if (Directory.Exists(root))
+            {
+                var profiles = Directory.GetDirectories(root);
+                var chosen = profiles.FirstOrDefault(p => p.EndsWith(".default-release", StringComparison.OrdinalIgnoreCase))
+                    ?? profiles.Where(p => File.Exists(Path.Combine(p, "cookies.sqlite"))).OrderByDescending(p => File.GetLastWriteTimeUtc(Path.Combine(p, "cookies.sqlite"))).FirstOrDefault();
+                if (chosen is not null)
+                    return "firefox:" + chosen;
+            }
+        }
+        catch (Exception)
+        {
+            // Fall through to plain firefox, which at least names the right family.
+        }
+
+        return "firefox";
+    }
 
     /// <summary>
     /// The JavaScript runtime yt-dlp would use for YouTube's challenges, or null. Deno is the one
@@ -177,7 +209,7 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
         else if (!string.IsNullOrWhiteSpace(cookiesBrowser))
         {
             start.ArgumentList.Add("--cookies-from-browser");
-            start.ArgumentList.Add(cookiesBrowser.Trim().ToLowerInvariant());
+            start.ArgumentList.Add(CookiesArgument(cookiesBrowser));
         }
 
         start.ArgumentList.Add("--dump-single-json");

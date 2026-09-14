@@ -50,7 +50,7 @@ public sealed class YtDlpBrowser(string executable, string? cookiesBrowser = nul
         else if (!string.IsNullOrWhiteSpace(cookiesBrowser))
         {
             start.ArgumentList.Add("--cookies-from-browser");
-            start.ArgumentList.Add(cookiesBrowser.Trim().ToLowerInvariant());
+            start.ArgumentList.Add(YtDlpResolver.CookiesArgument(cookiesBrowser));
         }
 
         start.ArgumentList.Add("--");
