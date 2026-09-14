@@ -186,21 +186,32 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
         return new Beat(Phase.Outro, 0, t, OutroFor);
     }
 
+    // Where the schedule walk got to last time: episodes have different lengths, so the one on
+    // now is found by walking from a fixed origin — but only once, and then from here on.
+    private long walkedTo = 1_700_000_000;
+    private int walkedEpisode;
+    private int walkedCount = -1;
+
     /// <summary>Which dish is on, which episode number, and how far into it, from the clock.</summary>
-    private static (Dish Dish, int Episode, double Into) Episode(IReadOnlyList<Dish> list, long unix)
+    private (Dish Dish, int Episode, double Into) Episode(IReadOnlyList<Dish> list, long unix)
     {
-        const long Origin = 1_700_000_000;
-        var t = Origin;
-        var episode = 0;
+        // A different list (the recipes loaded, or reloaded) means a different schedule: start over.
+        if (list.Count != this.walkedCount || unix < this.walkedTo)
+        {
+            this.walkedTo = 1_700_000_000;
+            this.walkedEpisode = 0;
+            this.walkedCount = list.Count;
+        }
+
         while (true)
         {
-            var dish = list[Pick(episode, list.Count)];
+            var dish = list[Pick(this.walkedEpisode, list.Count)];
             var length = Length(dish);
-            if (unix < t + length)
-                return (dish, episode, unix - t);
+            if (unix < this.walkedTo + length)
+                return (dish, this.walkedEpisode, unix - this.walkedTo);
 
-            t += (long)length;
-            episode++;
+            this.walkedTo += (long)length;
+            this.walkedEpisode++;
         }
     }
 
