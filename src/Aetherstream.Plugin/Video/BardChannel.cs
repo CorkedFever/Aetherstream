@@ -282,7 +282,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
 
         // The hero: a small figure, walking on the road page, standing otherwise.
         var heroX = page == 2 ? 200 + (int)((seconds * 30.0) % 700) : 300;
-        HostSprites.DrawRanger(span, page == 2 ? HostSprites.Ranger.Run : HostSprites.Ranger.Stand, seconds, heroX, 540 - 182, 7);
+        HostSprites.DrawRanger(span, page == 2 ? HostSprites.Ranger.Run : HostSprites.Ranger.Stand, seconds, heroX, 540 - 200, 5);
 
         // The beast on the pages it is on; the treasure where it is found and where it ends up.
         if (page is 3 or 4)

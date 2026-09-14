@@ -141,33 +141,33 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         switch (phase)
         {
             case Phase.Titles:
-                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 200, Ground - 260, 10);
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 200, Ground - 238, 7);
                 break;
             case Phase.Approach:
             {
                 var x = 120 + (int)(Math.Min(t, 9.0) / 9.0 * 380);
-                HostSprites.DrawRanger(span, t < 9.0 ? HostSprites.Ranger.Creep : HostSprites.Ranger.Point, seconds, x, Ground - 260, 10);
+                HostSprites.DrawRanger(span, t < 9.0 ? HostSprites.Ranger.Creep : HostSprites.Ranger.Point, seconds, x, Ground - 238, 7);
                 break;
             }
 
             case Phase.Close:
-                HostSprites.DrawRanger(span, HostSprites.Ranger.Point, seconds, 500, Ground - 260, 10);
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Point, seconds, 500, Ground - 238, 7);
                 break;
             case Phase.Wrangle:
                 if (t < 6.0)
                 {
                     var x = 500 + (int)(t / 6.0 * 160);
-                    HostSprites.DrawRanger(span, HostSprites.Ranger.Grab, seconds, x, Ground - 260, 10);
+                    HostSprites.DrawRanger(span, HostSprites.Ranger.Grab, seconds, x, Ground - 238, 7);
                 }
                 else
                 {
                     var x = 660 - (int)((t - 6.0) * 220);
-                    HostSprites.DrawRanger(span, HostSprites.Ranger.Run, seconds, x, Ground - 260, 10, flip: true);
+                    HostSprites.DrawRanger(span, HostSprites.Ranger.Run, seconds, x, Ground - 238, 7, flip: true);
                 }
 
                 break;
             default:
-                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 200, Ground - 260, 10);
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 200, Ground - 238, 7);
                 break;
         }
 
@@ -199,7 +199,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             var tw = font.Measure(Title, 2) + 64;
             Canvas.Fill(span, (W - tw) / 2, 160, tw, 112, Khaki);
             font.Draw(span, W, Title, (W - font.Measure(Title, 2)) / 2, 176, Ink, 2, all);
-            const string With = "WITH STEVO IRWYN, THE WIVRE WRANGLER";
+            const string With = "WITH STEPPE IRWYN, THE WIVRE WRANGLER";
             font.Draw(span, W, With, (W - font.Measure(With)) / 2, 300, Cream, 1, all);
             if (t > 2.5)
             {
@@ -226,7 +226,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         if (line.Length > 0)
         {
             line = line.Replace("{name}", Canvas.Plain(creature.Name)).Replace("{zone}", creature.Zone);
-            this.DrawLowerThird(span, phase == Phase.Wrangle && t > 6.0 ? "DANGER" : "STEVO", line, phase == Phase.Wrangle && t > 6.0, all);
+            this.DrawLowerThird(span, phase == Phase.Wrangle && t > 6.0 ? "DANGER" : "STEPPE", line, phase == Phase.Wrangle && t > 6.0, all);
         }
 
         if (phase != Phase.Titles)
