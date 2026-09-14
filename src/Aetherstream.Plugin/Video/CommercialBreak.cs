@@ -4,7 +4,7 @@ namespace Aetherstream.Plugin.Video;
 internal sealed record AdItem(uint Id, string Name, string Category);
 
 /// <summary>
-/// The commercial breaks. Every five minutes a show stops for thirty-six seconds of adverts:
+/// The commercial breaks. Every five minutes a show stops for forty-eight seconds of adverts:
 /// a promo for another show, an item off the market board with a slogan written for it, a
 /// trailer for a film that does not exist, a sponsor's card from one of the hosts' side
 /// businesses, and a bumper each side. Wraps a show; the info and ambience channels are left
@@ -17,7 +17,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
     private BitmapFont Font => font;
     private const int H = Canvas.Height;
     private const long Cycle = 300;
-    private const long BreakFor = 36;
+    private const long BreakFor = 48;
     private const double SpotFor = 12.0;
 
     private static readonly uint Cream = Canvas.Rgb(0xF6, 0xEC, 0xD8);
@@ -130,11 +130,11 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
         {
             // Four in a row, 44 seconds a set: the trailer takes its twenty, the rest eight each.
             var clock = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
-            const double Set = 44.0;
+            const double Set = 54.0;
             var set = (int)(clock / Set);
             var at = clock % Set;
-            var kind = at < 8 ? 0 : at < 16 ? 1 : at < 36 ? 2 : 3;
-            var t = kind switch { 0 => at, 1 => at - 8, 2 => at - 16, _ => at - 36 };
+            var kind = at < 8 ? 0 : at < 16 ? 1 : at < 46 ? 2 : 3;
+            var t = kind switch { 0 => at, 1 => at - 8, 2 => at - 16, _ => at - 46 };
             var index = (set * 4) + kind;
             var span = target.AsSpan();
             switch (kind)
@@ -145,7 +145,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
                 default: breaks.Sponsor(span, index, t, seconds); break;
             }
 
-            var length = kind == 2 ? 20 : 8;
+            var length = kind == 2 ? 30 : 8;
             var label = $"AD REEL  #{index % 10000}  {kind switch { 0 => "PROMO", 1 => "ITEM", 2 => "TRAILER", _ => "SPONSOR" }}  {(int)t + 1}/{length}";
             var all = new BitmapFont.Clip(0, 0, W, H);
             Canvas.Fill(span, 0, 0, breaks.Font.Measure(label) + 24, 36, Ink);
@@ -167,7 +167,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
 
         var plan = new (int, double)[3];
         for (var i = 0; i < 3; i++)
-            plan[i] = (kinds[i], trailerAt < 0 ? BreakFor / 3.0 : i == trailerAt ? 20.0 : (BreakFor - 20.0) / 2.0);
+            plan[i] = (kinds[i], trailerAt < 0 ? BreakFor / 3.0 : i == trailerAt ? 30.0 : (BreakFor - 30.0) / 2.0);
         return plan;
     }
 
@@ -316,7 +316,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
     private static readonly string[] Studios = ["FROM THE STUDIO THAT BROUGHT YOU", "FROM THE MAKERS OF", "FROM A PRODUCER WHO ONCE SAW"];
 
     /// <summary>
-    /// A trailer in five shots, twenty seconds: an actor walking into a wide country as the tagline
+    /// A trailer in five shots, thirty seconds: an actor walking into a wide country as the tagline
     /// arrives, a close-up in the dusk with a line, the two of them at night by a fire with
     /// lightning, the title, and the card. Hard cuts, letterbox, and the cast drawn from the hosts.
     /// </summary>
@@ -339,7 +339,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
         var titleW = font.Measure(title, titleScale);
 
         // Shot boundaries, and a beat of black at each cut.
-        var cuts = new[] { 0.0, 5.0, 8.5, 12.0, 15.0 };
+        var cuts = new[] { 0.0, 8.0, 13.0, 18.5, 23.0 };
         var shot = 0;
         for (var i = 1; i < cuts.Length; i++)
         {
@@ -360,13 +360,13 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
             {
                 // Wide: the lead walks in from the left as the words arrive.
                 Scenery.Paint(span, W, 0, 380, H, biomeA, 0.85f, seed, into * 40);
-                var x = -80 + (int)(into * 70);
+                var x = -80 + (int)(into * 45);
                 HostSprites.DrawCast(span, lead, walk: true, seconds, x, 330, 7);
                 if (rains)
                     Rain(span, seconds);
                 var lines = Canvas.Wrap(tagline, font.Fit(W - 200), 3);
                 var total = lines.Sum(l => l.Split(' ').Length);
-                var shown = Math.Min(total, (int)(into / 4.5 * (total + 1)));
+                var shown = Math.Min(total, (int)(into / 7.0 * (total + 1)));
                 var y = 140;
                 foreach (var line in lines)
                 {
@@ -423,7 +423,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
                 }
 
                 Shadowed(span, title, (W - titleW) / 2, 300, Gold, titleScale, all);
-                if (into > 1.5)
+                if (into > 2.2)
                     Shadowed(span, star, (W - font.Measure(star)) / 2, 300 + (titleScale * 44) + 20, Cream, 1, all);
                 break;
             }
