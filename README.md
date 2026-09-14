@@ -77,6 +77,7 @@ a plugin that fetches executables is not something to ask people to trust.
 | Source | What | Notes |
 | --- | --- | --- |
 | [iptv-org](https://github.com/iptv-org/iptv) | The default live TV playlist (`index.m3u`) | Volunteer-maintained index of publicly available streams. Cached locally for 12 hours; any other extended M3U can be used instead or alongside it. |
+| Twitch | The library's Twitch shelf | Who is live at the top, in a game, or by a search, through the same GraphQL endpoint the resolver uses for playback tokens; who you follow through the session borrowed from the browser set for YouTube, read once through yt-dlp's cookie handling and kept in memory for half an hour. |
 | YouTube, through yt-dlp | The library's YouTube shelf | Search, a playlist or channel link, and with a signed-in browser's cookies set under Setup, Sources, your own feeds: recommended, subscriptions, watch later, history. Listed flat by yt-dlp with thumbnails; a pick plays and the rest of the list follows it. |
 | Local files | The library's Local shelf | Your Videos folder and any folders you add, scanned for the usual formats; a picture with the file's name, or a poster.jpg in its folder, is the tile. Played as a file URI. |
 | The orchestrion | The Music tab's Rolls part: the game's own music | The Orchestrion tables for the rolls and their files; the Ogg Vorbis stream is pulled out of each roll's SCD once and kept beside the config, then plays like any track. Which rolls the character has comes from the player state. |

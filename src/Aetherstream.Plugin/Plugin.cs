@@ -218,6 +218,7 @@ public sealed partial class Plugin : IDalamudPlugin
         this.window.Library.Archive.Open = this.OpenArchiveFilm;
         this.window.Library.Local.Scan = this.ScanLocal;
         this.window.Library.YouTube.Browse = this.BrowseYouTube;
+        this.window.Library.Twitch.Browse = this.BrowseTwitch;
         this.broadcast.Log = message => log.Information(message);
         this.window.Share.Session = () => this.broadcast;
         this.window.Share.StartBroadcast = this.StartBroadcast;
