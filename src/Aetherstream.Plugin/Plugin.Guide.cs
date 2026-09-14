@@ -33,9 +33,8 @@ public sealed partial class Plugin
         var currentChannel = dial.Find(source);
         if (currentChannel is { } tuned && this.session.IsPlaying)
         {
-            var group = tuned.Group.Length > 0 ? tuned.Group : "Live";
             var number = dial.NumberOf(source);
-            rows.Add(new GuideRow(number > 0 ? number.ToString() : "NOW", tuned.Name, group, Current: true, Offline: dial.IsOffline(tuned.Url), Slots: this.ListingsFor(tuned, utc)));
+            rows.Add(new GuideRow(number > 0 ? number.ToString() : "NOW", tuned.Name, string.Empty, Current: true, Offline: dial.IsOffline(tuned.Url), Slots: this.ListingsFor(tuned, utc)));
         }
 
         if (this.session.Current is { } playing && this.session.IsPlaying && currentChannel is null)
@@ -77,14 +76,11 @@ public sealed partial class Plugin
             if (string.Equals(channel.Url, source, StringComparison.OrdinalIgnoreCase) && rows.Count > 0)
                 continue;
 
-            var detail = channel.Group.Length > 0
-                ? channel.Country.Length > 0 ? $"{channel.Group} · {channel.Country}" : channel.Group
-                : channel.Country.Length > 0 ? channel.Country : "Live";
-
+            // The time cells hold listings or nothing; a channel's group is not a programme.
             rows.Add(new GuideRow(
                 number.ToString(),
                 channel.Name,
-                detail,
+                string.Empty,
                 Current: string.Equals(channel.Url, source, StringComparison.OrdinalIgnoreCase),
                 Offline: dial.IsOffline(channel.Url),
                 Slots: listed++ < 40 ? this.ListingsFor(channel, utc) : null));
