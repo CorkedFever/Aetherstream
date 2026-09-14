@@ -44,6 +44,9 @@ they would change the experience.
 - **A channel from your own library.** Your Plex shows lined up as a 24-hour schedule, so there
   is always something on. Ours, rather than a third-party tool.
 - **Karaoke or music mode.** Audio-only sources with a visualiser, for venues.
+- **Channel music sources.** *Built: bundled tracks, a folder, or a Plex playlist.* Spotify and the
+  other DRM services cannot hand over audio; a "Spotify remote" that starts and pauses the desktop
+  app with a channel is the most that is possible there. Jellyfin and Navidrome would be easy adds.
 
 ## Guide
 
@@ -79,8 +82,8 @@ they would change the experience.
 - **Startup thunk**, a brief warm-up glow when the set switches on.
 - **Remote control rattle**, a tiny animation on button press.
 - **Channel idents.** A short bumper card with the channel name on switch.
-- **Weather channel.** *Built (the cloud button on the remote); music still to do.* Eorzea weather
-  and time for the current zone on a Weather-Channel-style card.
+- **Weather channel.** *Built, with music.* Eorzea weather and time for the current zone on a
+  Weather-Channel-style card, the forecast, and a crawl of every zone.
 
 ## Reach
 
@@ -134,8 +137,8 @@ they would change the experience.
 ## Odd but cheap
 
 - **Teletext page.** A 1980s teletext page of Eorzea news, weather and market prices on channel 100.
-- **Prevue-style guide channel.** *Built (the guide button on the remote); music, EPG cells and
-  a promo loop still to do.* The 90s TV Guide Channel: a grid of channels and half-hour
+- **Prevue-style guide channel.** *Built, with music when nothing is on; EPG cells and a promo loop
+  still to do.* The 90s TV Guide Channel: a grid of channels and half-hour
   slots scrolling up slowly on the bottom two thirds, the current channel or a promo loop in the
   top third, a weather and party ticker along the bottom, smooth jazz throughout. Rows come from
   the Live TV playlist and the party schedule; cells fill from EPG data where a playlist has it.
@@ -144,6 +147,57 @@ they would change the experience.
 - **Test card variations** by time of day, or a sign-off at midnight.
 - **Remote batteries.** After a thousand presses the remote gets slow until you "change the
   batteries". A joke, behind a toggle.
+
+## More drawn channels
+
+Everything here is data plus the bitmap font, drawn into the frame the way the guide and the
+weather are. A new one is one class implementing `IFrameChannel` and a button.
+
+From the game, no network:
+
+- **Eorzea clock.** A full-screen flip clock in Eorzea time, sunrise and sunset, moon phase.
+- **Hunt and FATE board.** What is up in the zone from the object table, like a departures board.
+- **Duty roulette board.** Daily and weekly reset countdowns, which roulettes are done today.
+- **Retainer and venture timers.** Who is back when.
+- **Zone map.** The current map texture with you and the party as blips.
+
+From the party server:
+
+- **"ON AIR" card.** Title, host, viewer count, and the join code, big.
+- **Announcements ticker.** A line the host types, crawling under whatever is playing.
+- **Countdown channel.** "Movie night starts in 12:04" with the poster, then it tunes in by itself.
+
+From Plex:
+
+- **Recently added.** A rotating poster wall of the last twenty additions.
+- **Continue watching.** The resume list as a channel, with progress bars.
+- **Album art channel.** Cover art big while music plays, with a slow colour wash behind.
+
+From the web, cached:
+
+- **Lodestone news.** Headlines and patch notes, one every ten seconds.
+- **Market watch.** Universalis prices for a watch list, rolling like a stock channel.
+- **Twitch chat** beside the picture for Twitch sources.
+- **RSS reader.** Any feed pasted in, as a news channel with a ticker.
+
+Pure atmosphere:
+
+- **Aquarium.** Pixel-art Eorzean fish drifting across, the odd Namazu. The one people screenshot.
+- **Fireplace, rain on a window.** Procedural.
+- **Starfield, Pipes, Mystify, Flying Toasters.** The screensavers.
+- **Colour bars with a tone**, the sign-off, "PLEASE STAND BY".
+- **Demoscene channel.** Plasma, a rotozoomer, a scrolling greeting.
+- **Fake ad breaks.** Bumpers for in-game things: "Visit the Gold Saucer".
+
+Interactive, with the remote:
+
+- **Teletext**, with a page dial on the remote.
+- **Trivia.** A question card with a countdown; questions from a file; answers in chat.
+- **Jukebox channel.** The music list on screen, next and previous on the remote, cover art from Plex.
+
+A page dial on the remote is shared by teletext, trivia and the jukebox, so it is the piece to
+build first. Picks: the aquarium for delight, the Eorzea clock for utility, the "ON AIR" card
+because it finishes watch-together.
 
 ## Picks
 
