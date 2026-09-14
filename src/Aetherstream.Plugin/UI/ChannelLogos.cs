@@ -126,6 +126,19 @@ internal static class ChannelLogos
                 d.AddLine(P(-8f, 14f), P(12f, 14f), Theme.U32(Theme.WithAlpha(Sky, 0.5f)), 1.2f * u);
                 break;
 
+            case "scrambled":
+                // A picture torn into bands, each slid a different way, with a sync line through it.
+                for (var row = 0; row < 5; row++)
+                {
+                    var y = -13f + (row * 5.4f);
+                    var slide = (row % 2 == 0 ? -1f : 1f) * (2f + row);
+                    var colour = row switch { 1 => Rose, 3 => Sky, _ => Theme.TextFaint };
+                    d.AddRectFilled(P(-12f + slide, y), P(12f + slide, y + 4f), Theme.U32(colour), 1f);
+                }
+
+                d.AddLine(P(-14f, 1f), P(14f, 1f), Theme.U32(Paper), 1.4f * u);
+                break;
+
             case "almanac":
                 // A calendar page with its rings, and a marked day.
                 d.AddRectFilled(P(-13f, -10f), P(13f, 13f), Theme.U32(Paper), 2f * u);
