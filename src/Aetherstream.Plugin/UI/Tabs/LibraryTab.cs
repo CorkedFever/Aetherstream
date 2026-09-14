@@ -353,7 +353,7 @@ internal sealed class LibraryTab(UiContext ui)
                     {
                         var at = shown.IndexOf(item);
                         foreach (var later in shown.Skip(at + 1).Where(e => e.IsEpisode))
-                            ui.NextUp.Add((PlexResolver.SourceFor(later.RatingKey), FullName(later), later.Thumb));
+                            ui.NextUp.Add((PlexResolver.SourceFor(later.RatingKey), FullName(later), later.Thumb, later.DurationMs));
                     }
                 }
             }

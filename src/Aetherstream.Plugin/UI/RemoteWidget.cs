@@ -201,14 +201,6 @@ internal sealed class RemoteWidget(UiContext ui, ChannelDial dial)
             ImGui.TextColored(colour, text);
         }
 
-        // The live thumbnail on the right of the strip, when there is one.
-        if (session.Uploader is { HasFrame: true } uploader)
-        {
-            var thumb = new Vector2((size.Y - 6f) * 16f / 9f, size.Y - 6f);
-            var at = origin + new Vector2(size.X - thumb.X - 3f, 3f);
-            drawList.AddImage(uploader.Handle, at, at + thumb);
-        }
-
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(size);
     }

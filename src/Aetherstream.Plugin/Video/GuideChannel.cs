@@ -1,13 +1,20 @@
 namespace Aetherstream.Plugin.Video;
 
-/// <summary>One line of the guide: a channel, a party, or something on demand.</summary>
+/// <summary>A programme on a row's timeline, in UTC.</summary>
+internal readonly record struct GuideSlot(DateTime StartUtc, DateTime StopUtc, string Title, bool Now);
+
+/// <summary>
+/// One line of the guide: a channel, a party, or something on demand. With <paramref name="Slots"/>
+/// the time columns become a timeline; without, they carry <paramref name="Detail"/> as text.
+/// </summary>
 internal sealed record GuideRow(
     string Number,
     string Name,
     string Detail,
     bool Current = false,
     bool Offline = false,
-    bool Live = false);
+    bool Live = false,
+    IReadOnlyList<GuideSlot>? Slots = null);
 
 /// <summary>Everything the guide shows this second, gathered by the plugin from what it knows.</summary>
 internal sealed record GuideSnapshot(
@@ -149,6 +156,7 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
         font.Draw(span, Width, "CHANNEL", ColName + 8, GridTop, Amber, 1, header);
 
         // Half-hour slots from the current one, as a real grid does.
+        this.windowStartUtc = WindowStart(now);
         var slot = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute >= 30 ? 30 : 0, 0);
         for (var i = 0; i < 3; i++)
         {
@@ -185,6 +193,10 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
             }
         }
 
+        // The present moment, as a line down the timeline.
+        var nowX = this.XOf(DateTime.UtcNow);
+        Fill(span, nowX - 1, RowsTop, 3, RowsBottom - RowsTop, Accent);
+
         // Column rules over everything, so they never scroll. Two wide, so a squashed surface keeps them.
         for (var y = RowsTop; y < RowsBottom; y++)
         {
@@ -214,10 +226,58 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
         var name = Ellipsis(row.Name.ToUpperInvariant(), font.Fit(ColSlots - ColName - 16));
         font.Draw(span, Width, name, ColName + 8, textY, row.Offline ? Bad : White, 1, clip);
 
+        if (row.Slots is { Count: > 0 } slots && !row.Offline)
+        {
+            this.DrawSlots(span, slots, y, top, bottom, row.Current);
+            return;
+        }
+
         var detail = row.Offline ? "OFF AIR" : row.Detail.ToUpperInvariant();
         detail = Ellipsis(detail, font.Fit(Width - ColSlots - 16));
         var detailColour = row.Offline ? Bad : row.Current ? White : row.Live ? Good : Dim;
         font.Draw(span, Width, detail, ColSlots + 8, textY, detailColour, 1, clip);
+    }
+
+    private DateTime windowStartUtc;
+
+    /// <summary>The window's left edge in UTC: the current half-hour, ninety minutes wide.</summary>
+    private static DateTime WindowStart(DateTime now)
+    {
+        var local = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute >= 30 ? 30 : 0, 0, DateTimeKind.Local);
+        return local.ToUniversalTime();
+    }
+
+    private int XOf(DateTime utc)
+    {
+        var minutes = (utc - this.windowStartUtc).TotalMinutes;
+        return ColSlots + (int)(minutes / 90.0 * (Width - ColSlots));
+    }
+
+    /// <summary>
+    /// Programmes as boxes across the time columns, each from its start to its stop, the one on
+    /// now lit. Boxes are clipped to the window and never narrower than a few characters.
+    /// </summary>
+    private void DrawSlots(Span<uint> span, IReadOnlyList<GuideSlot> slots, int y, int top, int bottom, bool currentRow)
+    {
+        var windowEnd = this.windowStartUtc.AddMinutes(90);
+        foreach (var slot in slots)
+        {
+            if (slot.StopUtc <= this.windowStartUtc || slot.StartUtc >= windowEnd)
+                continue;
+
+            var x0 = Math.Max(ColSlots, this.XOf(slot.StartUtc));
+            var x1 = Math.Min(Width, this.XOf(slot.StopUtc));
+            if (x1 - x0 < 6)
+                continue;
+
+            var fill = slot.Now ? AccentDeep : currentRow ? GlassLit : RowB;
+            Fill(span, x0 + 2, top + 3, x1 - x0 - 4, bottom - top - 6, fill);
+            Fill(span, x0 + 2, top + 3, 3, bottom - top - 6, slot.Now ? Accent : Edge);
+
+            var clip = new BitmapFont.Clip(x0 + 8, top, x1 - 4, bottom);
+            var title = Ellipsis(slot.Title.ToUpperInvariant(), font.Fit(x1 - x0 - 12));
+            font.Draw(span, Width, title, x0 + 10, y, slot.Now ? White : Dim, 1, clip);
+        }
     }
 
     private void DrawTicker(Span<uint> span, GuideSnapshot data, double seconds)

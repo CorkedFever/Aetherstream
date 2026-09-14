@@ -25,6 +25,39 @@ public sealed partial class Plugin
         var rows = new List<GuideRow>();
         var source = this.config.Source;
         var dial = this.window.Dial;
+        var utc = DateTime.UtcNow;
+
+        // What is on right now, first, wherever it came from: its remaining run, then whatever is
+        // queued after it, laid end to end from each one's length. A schedule computed, not looked up.
+        if (this.session.Current is { } playing && this.session.IsPlaying && dial.Find(source) is null)
+        {
+            var slots = new List<GuideSlot>();
+            var duration = this.session.DurationMs;
+            var position = this.session.PositionMs;
+            var cursor = utc;
+
+            if (duration > 0 && position >= 0)
+            {
+                var ends = utc.AddMilliseconds(duration - position);
+                slots.Add(new GuideSlot(utc.AddMilliseconds(-position), ends, playing.DisplayName, true));
+                cursor = ends;
+
+                foreach (var (_, label, _, length) in this.uiContext.NextUp)
+                {
+                    var span = length > 0 ? TimeSpan.FromMilliseconds(length) : TimeSpan.FromMinutes(30);
+                    slots.Add(new GuideSlot(cursor, cursor + span, label, false));
+                    cursor += span;
+                    if (cursor > utc.AddHours(2))
+                        break;
+                }
+            }
+            else
+            {
+                slots.Add(new GuideSlot(utc.AddHours(-1), utc.AddHours(3), playing.DisplayName, true));
+            }
+
+            rows.Add(new GuideRow("NOW", playing.DisplayName, "playing", Current: true, Slots: slots));
+        }
 
         // Pinned channels, by their number on the dial.
         foreach (var (number, channel) in dial.Pinned())
@@ -38,7 +71,8 @@ public sealed partial class Plugin
                 channel.Name,
                 detail,
                 Current: string.Equals(channel.Url, source, StringComparison.OrdinalIgnoreCase),
-                Offline: dial.IsOffline(channel.Url)));
+                Offline: dial.IsOffline(channel.Url),
+                Slots: this.ListingsFor(channel, utc)));
         }
 
         // Parties that are on the air right now.
@@ -67,10 +101,13 @@ public sealed partial class Plugin
                 continue;
 
             var label = recent.Label.Length > 0 ? recent.Label : UI.Ui.Pretty(recent.Source);
+            var detail = this.config.ResumePositions.TryGetValue(recent.Source, out var resumeMs) && resumeMs > 0
+                ? $"On demand, resume at {UI.Ui.Clock(resumeMs)}"
+                : "On demand";
             rows.Add(new GuideRow(
                 "VOD",
                 label,
-                "On demand",
+                detail,
                 Current: string.Equals(recent.Source, source, StringComparison.OrdinalIgnoreCase)));
             listed++;
         }
@@ -78,7 +115,7 @@ public sealed partial class Plugin
         if (rows.Count == 0)
             rows.Add(new GuideRow("--", "Nothing listed", "Pin channels in Live TV and they appear here"));
 
-        var nowPlaying = this.session.Current?.DisplayName is { Length: > 0 } playing ? playing : "Nothing on";
+        var nowPlaying = this.session.Current?.DisplayName is { Length: > 0 } onNow ? onNow : "Nothing on";
 
         var pinned = this.config.LiveTvFavourites.Count;
         var live = this.window.Share.Parties.Count(g => g.Live);

@@ -115,6 +115,9 @@ public sealed class Playlist
     public string Name { get; set; } = string.Empty;
 
     public string Url { get; set; } = string.Empty;
+
+    /// <summary>An XMLTV guide for this list, when the list's own header does not point at a usable one.</summary>
+    public string EpgUrl { get; set; } = string.Empty;
 }
 
 /// <summary>An item the market channel watches. The id is the game's; the name is for the list.</summary>

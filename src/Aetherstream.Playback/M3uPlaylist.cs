@@ -24,7 +24,8 @@ public static class M3uPlaylist
         string Group,
         string Country,
         string UserAgent,
-        string Referrer)
+        string Referrer,
+        string TvgId = "")
     {
         /// <summary>
         /// Carries the per-channel headers through as libvlc options. Only the two libvlc 3 actually
@@ -56,7 +57,7 @@ public static class M3uPlaylist
             return channels;
 
         string name = string.Empty, logo = string.Empty, group = string.Empty;
-        string country = string.Empty, agent = string.Empty, referrer = string.Empty;
+        string country = string.Empty, agent = string.Empty, referrer = string.Empty, tvgId = string.Empty;
         var pending = false;
 
         foreach (var raw in text.Split('\n'))
@@ -73,7 +74,8 @@ public static class M3uPlaylist
 
                 logo = Attribute(line, "tvg-logo");
                 group = Attribute(line, "group-title");
-                country = CountryOf(Attribute(line, "tvg-id"));
+                tvgId = Attribute(line, "tvg-id");
+                country = CountryOf(tvgId);
 
                 // Some lists put the user agent on the EXTINF line as well as in an EXTVLCOPT.
                 agent = Attribute(line, "http-user-agent");
@@ -113,10 +115,11 @@ public static class M3uPlaylist
                     group,
                     country,
                     agent,
-                    referrer));
+                    referrer,
+                    tvgId));
             }
 
-            name = logo = group = country = agent = referrer = string.Empty;
+            name = logo = group = country = agent = referrer = tvgId = string.Empty;
             pending = false;
         }
 
@@ -171,6 +174,26 @@ public static class M3uPlaylist
         start += needle.Length;
         var end = line.IndexOf('"', start);
         return end > start ? line[start..end] : string.Empty;
+    }
+
+    /// <summary>The guide the playlist points at, from its header's x-tvg-url, or empty.</summary>
+    public static string GuideUrlOf(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
+
+        var end = text.IndexOf('\n');
+        var header = end < 0 ? text : text[..end];
+        if (!header.StartsWith("#EXTM3U", StringComparison.OrdinalIgnoreCase))
+            return string.Empty;
+
+        var url = Attribute(header, "x-tvg-url");
+        if (url.Length == 0)
+            url = Attribute(header, "url-tvg");
+
+        // Some lists carry several, comma-separated; the first is the one meant.
+        var comma = url.IndexOf(',');
+        return (comma > 0 ? url[..comma] : url).Trim();
     }
 
     /// <summary>The distinct groups present, ordered by how many channels each holds.</summary>

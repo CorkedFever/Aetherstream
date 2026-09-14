@@ -90,6 +90,10 @@ public sealed partial class Plugin
                 $"({(force || !fresh ? "downloaded" : "from cache")})");
 
             this.window.LiveTv.SetChannels(channels, string.Empty);
+
+            // The list's own listings, if it names any; the guide picks this up on its next look.
+            this.playlistGuideUrl = M3uPlaylist.GuideUrlOf(text);
+            this.guideKey = string.Empty;
         }
         catch (OperationCanceledException)
         {

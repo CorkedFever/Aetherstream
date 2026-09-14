@@ -35,6 +35,12 @@ internal sealed class LiveTvTab(UiContext ui, ChannelDial dial)
     private List<string> groups = [];
     private List<string> countries = [];
     private string status = string.Empty;
+    private string guideStatus = string.Empty;
+    private string guideUrlBuffer = string.Empty;
+    private bool guideUrlLoaded;
+    private bool showGuideBox;
+
+    public void SetGuideStatus(string message) => this.guideStatus = message;
     private bool loading;
 
     /// <summary>Set by the plugin — fetching and parsing three megabytes is not frame work.</summary>
@@ -67,6 +73,7 @@ internal sealed class LiveTvTab(UiContext ui, ChannelDial dial)
         }
 
         this.DrawMyChannels();
+        this.DrawGuideLine();
         this.DrawFilters();
 
         var shown = this.Filtered();
@@ -84,6 +91,45 @@ internal sealed class LiveTvTab(UiContext ui, ChannelDial dial)
         }
 
         this.DrawRows(shown);
+    }
+
+    /// <summary>
+    /// Where the listings come from. A playlist usually says in its header; a public list's may
+    /// be empty or stale, so a guide of your own can be set per playlist here.
+    /// </summary>
+    private void DrawGuideLine()
+    {
+        var current = ui.Config.LiveTvPlaylists.FirstOrDefault(p => p.Url == ui.Config.LiveTvPlaylistUrl);
+        if (current is null)
+            return;
+
+        ImGui.TextColored(Theme.TextFaint, this.guideStatus.Length > 0 ? $"Listings: {this.guideStatus}" : "Listings: none yet");
+        ImGui.SameLine();
+        if (ImGui.SmallButton(this.showGuideBox ? "Hide" : "Guide URL…"))
+            this.showGuideBox = !this.showGuideBox;
+
+        Ui.Tip("Programme listings for the guide channel, in XMLTV. The playlist's own guide is used unless one is set here.");
+
+        if (!this.showGuideBox)
+            return;
+
+        if (!this.guideUrlLoaded)
+        {
+            this.guideUrlBuffer = current.EpgUrl;
+            this.guideUrlLoaded = true;
+        }
+
+        ImGui.SetNextItemWidth(-90);
+        var entered = ImGui.InputTextWithHint("##epgurl", "https://…/guide.xml.gz (leave empty for the playlist's own)", ref this.guideUrlBuffer, 512, ImGuiInputTextFlags.EnterReturnsTrue);
+        ImGui.SameLine();
+        if (ImGui.Button("Use") || entered)
+        {
+            current.EpgUrl = this.guideUrlBuffer.Trim();
+            ui.SaveConfig();
+            this.guideStatus = current.EpgUrl.Length > 0 ? "loading…" : "using the playlist's own";
+        }
+
+        Ui.Hint("ErsatzTV and Tunarr publish a matching guide for their channels. For public lists, community XMLTV files per country work, matched by channel name.");
     }
 
     // -- empty -------------------------------------------------------------------------------------

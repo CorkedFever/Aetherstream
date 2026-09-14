@@ -72,7 +72,7 @@ internal sealed class UiContext
     public ScreenPreset? OfferedScreen { get; private set; }
 
     /// <summary>What plays after the current thing ends, in order. Set when an episode is picked from a list.</summary>
-    public List<(string Source, string Label, string Thumb)> NextUp { get; } = [];
+    public List<(string Source, string Label, string Thumb, long DurationMs)> NextUp { get; } = [];
 
     /// <summary>Plays the next queued item, if any. Called when playback reaches its end.</summary>
     public bool PlayNext()
@@ -80,7 +80,7 @@ internal sealed class UiContext
         if (this.NextUp.Count == 0)
             return false;
 
-        var (source, label, thumb) = this.NextUp[0];
+        var (source, label, thumb, _) = this.NextUp[0];
         this.NextUp.RemoveAt(0);
 
         this.Config.Source = source;

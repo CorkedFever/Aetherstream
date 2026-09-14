@@ -739,6 +739,28 @@ public sealed partial class Plugin : IDalamudPlugin
         this.PlayAsync(source);
     }
 
+    /// <summary>
+    /// A recent is remembered before resolution, under the best name known then — often just
+    /// the host. Once the resolver has the real title, the entry takes it, so the history and the
+    /// guide say "Frieren" rather than "youtube.com".
+    /// </summary>
+    private void RememberTitle(string source, string title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return;
+
+        var recent = this.config.Recents.FirstOrDefault(r => string.Equals(r.Source, source, StringComparison.OrdinalIgnoreCase));
+        if (recent is null || recent.Label == title)
+            return;
+
+        // Only a placeholder is replaced; a name the library gave is kept.
+        if (recent.Label.Length == 0 || recent.Label == Ui.Pretty(source) || recent.Label.Contains('.') && !recent.Label.Contains(' '))
+        {
+            recent.Label = title;
+            this.configDirty = true;
+        }
+    }
+
     private void PlaceInFrontOfPlayer()
     {
         if (this.objects.LocalPlayer is not { } player)
@@ -792,6 +814,7 @@ public sealed partial class Plugin : IDalamudPlugin
                         return;
 
                     this.log.Information($"Resolved '{source}' via {via}.");
+                    this.RememberTitle(source, stream.DisplayName);
                     this.session.RequestStart(stream, this.ResumePointFor(source));
                 }
                 catch (OperationCanceledException)
