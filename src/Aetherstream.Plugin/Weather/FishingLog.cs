@@ -23,8 +23,8 @@ internal sealed class FishingLog
         string Zone,
         EorzeaWeather.Zone WeatherZone,
         uint TerritoryId,
-        int StartHour,
-        int EndHour,
+        double StartHour,
+        double EndHour,
         uint[] Weathers,
         string[] WeatherNames,
         uint[] Previous,
@@ -164,7 +164,7 @@ internal sealed class FishingLog
 
             // The period covers eight Eorzean hours from a multiple of eight. The fish's hours
             // may wrap midnight, so both the plain and the wrapped range are tried.
-            var periodHour = (int)(start / Hour % 24);
+            var periodHour = (double)(start / Hour % 24);
             foreach (var (h0, h1) in Ranges(f.StartHour, f.EndHour))
             {
                 var a = Math.Max(h0, periodHour);
@@ -172,8 +172,8 @@ internal sealed class FishingLog
                 if (a >= b)
                     continue;
 
-                var from = start + ((a - periodHour) * Hour);
-                var to = start + ((b - periodHour) * Hour);
+                var from = start + (long)Math.Round((a - periodHour) * Hour);
+                var to = start + (long)Math.Round((b - periodHour) * Hour);
                 if (windows.Count > 0 && windows[^1].To == from)
                     windows[^1] = windows[^1] with { To = to };
                 else
@@ -184,7 +184,7 @@ internal sealed class FishingLog
         return windows;
     }
 
-    private static IEnumerable<(int, int)> Ranges(int start, int end)
+    private static IEnumerable<(double, double)> Ranges(double start, double end)
     {
         if (start == end || (start == 0 && end == 24))
         {
@@ -205,8 +205,8 @@ internal sealed class FishingLog
     {
         [System.Text.Json.Serialization.JsonPropertyName("n")] public string Name { get; set; } = string.Empty;
         [System.Text.Json.Serialization.JsonPropertyName("l")] public string Location { get; set; } = string.Empty;
-        [System.Text.Json.Serialization.JsonPropertyName("s")] public int Start { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("e")] public int End { get; set; } = 24;
+        [System.Text.Json.Serialization.JsonPropertyName("s")] public double Start { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("e")] public double End { get; set; } = 24;
         [System.Text.Json.Serialization.JsonPropertyName("w")] public string[] Weathers { get; set; } = [];
         [System.Text.Json.Serialization.JsonPropertyName("p")] public string[] Previous { get; set; } = [];
         [System.Text.Json.Serialization.JsonPropertyName("b")] public string[] Bait { get; set; } = [];

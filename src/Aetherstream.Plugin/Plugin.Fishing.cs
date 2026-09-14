@@ -63,7 +63,7 @@ public sealed partial class Plugin
             {
                 f.PreviousNames.Length > 0 ? $"AFTER {string.Join("/", f.PreviousNames)}" : string.Empty,
                 f.WeatherNames.Length > 0 ? string.Join("/", f.WeatherNames) : string.Empty,
-                f.StartHour == 0 && f.EndHour == 24 ? string.Empty : $"{f.StartHour:00}-{f.EndHour:00} ET",
+                f.StartHour == 0 && f.EndHour == 24 ? string.Empty : $"{Clock(f.StartHour)}-{Clock(f.EndHour)} ET",
             }.Where(s => s.Length > 0));
 
             var bait = f.Bait.Length > 0 ? string.Join(" > ", f.Bait) : string.Empty;
@@ -78,8 +78,8 @@ public sealed partial class Plugin
                 bait,
                 up,
                 left,
-                (int)((window.From / 175) % 24),
-                (int)((window.To / 175) % 24),
+                (int)(window.From * 24 / 70 % 1440),
+                (int)(window.To * 24 / 70 % 1440),
                 f.Folklore,
                 caught,
                 f.TerritoryId == here));
@@ -107,6 +107,8 @@ public sealed partial class Plugin
         this.fishingSnapshotAtMs = ticks;
         return this.fishingSnapshot;
     }
+
+    private static string Clock(double hour) => $"{(int)hour:00}:{(int)Math.Round((hour % 1) * 60):00}";
 
     private unsafe bool IsCaught(uint fishParameterId)
     {

@@ -11,8 +11,8 @@ internal sealed record FishingRow(
     string Bait,
     bool Up,
     int SecondsLeft,
-    int WindowStartHour,
-    int WindowEndHour,
+    int WindowStartMinute,
+    int WindowEndMinute,
     bool Folklore,
     bool Caught,
     bool Here);
@@ -136,7 +136,7 @@ internal sealed class FishingChannel(BitmapFont font, Func<FishingSnapshot?> dat
                 detail = Canvas.Cut(Canvas.Plain(detail).ToUpperInvariant(), font.Fit(ColRight - ColName - 16));
                 font.Draw(span, W, detail, ColName, line2, Canvas.Faint, 1, clip);
 
-                var window = $"{r.WindowStartHour:00}:00-{r.WindowEndHour:00}:00";
+                var window = $"{r.WindowStartMinute / 60:00}:{r.WindowStartMinute % 60:00}-{r.WindowEndMinute / 60:00}:{r.WindowEndMinute % 60:00}";
                 font.Draw(span, W, window, ColRight, line2, Canvas.Faint, 1, clip);
 
                 // The spot you are standing in gets a mark in the margin.
