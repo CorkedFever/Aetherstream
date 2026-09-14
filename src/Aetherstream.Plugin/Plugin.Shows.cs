@@ -1,3 +1,6 @@
+using System.IO.Compression;
+using System.Text.Json;
+
 using Aetherstream.Plugin.Video;
 
 using Lumina.Excel.Sheets;
@@ -11,6 +14,7 @@ namespace Aetherstream.Plugin;
 public sealed partial class Plugin
 {
     private List<Creature>? creatures;
+    private List<DeitySprite>? twelve;
 
     private IReadOnlyList<Creature> Creatures()
     {
@@ -50,6 +54,42 @@ public sealed partial class Plugin
         }
 
         this.creatures = list;
+        return list;
+    }
+
+    /// <summary>The Twelve's sprites, from data/twelve.json.gz beside the fish; none if the file is missing.</summary>
+    private IReadOnlyList<DeitySprite> Twelve()
+    {
+        if (this.twelve is not null)
+            return this.twelve;
+
+        var list = new List<DeitySprite>();
+        try
+        {
+            var path = Path.Combine(Path.GetDirectoryName(this.fishDataPath)!, "twelve.json.gz");
+            if (File.Exists(path))
+            {
+                using var file = File.OpenRead(path);
+                using var gz = new GZipStream(file, CompressionMode.Decompress);
+                using var doc = JsonDocument.Parse(gz);
+                foreach (var e in doc.RootElement.EnumerateArray())
+                {
+                    var w = e.GetProperty("w").GetInt32();
+                    var h = e.GetProperty("h").GetInt32();
+                    var px = e.GetProperty("p").EnumerateArray().Select(v => (uint)v.GetInt64()).ToArray();
+                    if (px.Length == w * h)
+                        list.Add(new DeitySprite(e.GetProperty("d").GetInt32(), e.GetProperty("n").GetString() ?? string.Empty, w, h, px));
+                }
+            }
+
+            this.log.Information($"[stories] {list.Count} of the Twelve drawn from their renders");
+        }
+        catch (Exception ex)
+        {
+            this.log.Warning($"[stories] the Twelve could not be read: {ex.Message}");
+        }
+
+        this.twelve = list;
         return list;
     }
 

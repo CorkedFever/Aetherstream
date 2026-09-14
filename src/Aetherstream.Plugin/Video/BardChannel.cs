@@ -4,11 +4,15 @@ namespace Aetherstream.Plugin.Video;
 /// The story hour: the tales of the Twelve, one a time, told from a chair by the fire. The
 /// teller is a silhouette against the firelight with the book on his knee and a lantern in the
 /// other hand. Each tale is six pages; each page is read from the chair and then shown as a
-/// plate in a shadow play: a backlit paper screen with the god's symbol cut into the sky over
-/// the country the tale is set in, and the mortals of the tale as small cutouts below. On a
+/// plate in a shadow play: a backlit paper screen with the god in the sky, as the game draws
+/// them, in colour and in glory, over the country the tale is set in in cut paper, and the
+/// mortals of the tale as small cutouts below. Only the god is in colour; that is the point. On a
 /// schedule from the clock, so everyone hears the same tale at the same time.
 /// </summary>
-internal sealed class BardChannel(BitmapFont font) : IFrameChannel
+/// <summary>One of the Twelve as a sprite made from their render: frame-format pixels, alpha in the top byte. The Traders have two.</summary>
+internal sealed record DeitySprite(int Deity, string Name, int Width, int Height, uint[] Pixels);
+
+internal sealed class BardChannel(BitmapFont font, Func<IReadOnlyList<DeitySprite>> deities) : IFrameChannel
 {
     private const int W = Canvas.Width;
     private const int H = Canvas.Height;
@@ -143,14 +147,30 @@ internal sealed class BardChannel(BitmapFont font) : IFrameChannel
         if (tale.Where == Biome.Night)
             Dim(span, 0.2f);
 
-        // The god's symbol, large in the sky, with a brighter paper halo behind it.
+        // The god in the sky, from the render, with a brighter paper halo behind; the symbol cut
+        // into the paper when the render is not to hand. The Traders stand side by side.
         var ink = Canvas.Rgb(0x14, 0x10, 0x0C);
         var (name, _, _) = TwelveTales.Of(tale.Deity);
-        var symbolX = 900;
-        var symbolY = 230;
         var breathe = (int)(Math.Sin(seconds * 0.8) * 4);
-        Canvas.Disc(span, symbolX, symbolY + breathe, 150, Canvas.Lerp(paper, Canvas.White, 0.35f));
-        TwelveTales.DrawSymbol(span, W, tale.Deity, symbolX, symbolY + breathe, 200, ink, seconds);
+        var gods = deities().Where(d => d.Deity == tale.Deity).ToList();
+        if (gods.Count > 0)
+        {
+            const int Scale = 3;
+            var totalW = gods.Sum(g => g.Width * Scale) + ((gods.Count - 1) * 24);
+            var gx = 940 - (totalW / 2);
+            var gy = 84 + breathe;
+            Canvas.Disc(span, 940, 84 + (gods.Max(g => g.Height) * Scale / 2) + breathe, (gods.Max(g => g.Height) * Scale / 2) + 30, Canvas.Lerp(paper, Canvas.White, 0.4f));
+            foreach (var g in gods)
+            {
+                DrawSprite(span, g, gx, gy + ((gods.Max(h => h.Height) - g.Height) * Scale), Scale);
+                gx += (g.Width * Scale) + 24;
+            }
+        }
+        else
+        {
+            Canvas.Disc(span, 900, 230 + breathe, 150, Canvas.Lerp(paper, Canvas.White, 0.35f));
+            TwelveTales.DrawSymbol(span, W, tale.Deity, 900, 230 + breathe, 200, ink, seconds);
+        }
 
         // The country, in cut paper.
         var pan = seconds * 3.0;
@@ -176,6 +196,22 @@ internal sealed class BardChannel(BitmapFont font) : IFrameChannel
         font.Draw(span, W, caption, W - 30 - font.Measure(caption), 10, Cream, 1, all);
         var plate = $"PLATE {page + 1}";
         font.Draw(span, W, plate, 30, 10, Cream, 1, all);
+    }
+
+    /// <summary>A sprite scaled up whole, its transparent cells left alone.</summary>
+    private static void DrawSprite(Span<uint> span, DeitySprite sprite, int x, int y, int scale)
+    {
+        for (var sy = 0; sy < sprite.Height; sy++)
+        {
+            for (var sx = 0; sx < sprite.Width; sx++)
+            {
+                var p = sprite.Pixels[(sy * sprite.Width) + sx];
+                if (p >> 24 == 0)
+                    continue;
+
+                Canvas.Fill(span, x + (sx * scale), y + (sy * scale), scale, scale, p | 0xFF000000u);
+            }
+        }
     }
 
     /// <summary>A mortal as a cutout: a hooded head, a cloak to the ground, a staff or a raised hand.</summary>
