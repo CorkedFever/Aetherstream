@@ -13,6 +13,8 @@ internal sealed record AdItem(uint Id, string Name, string Category);
 internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(string Name, string Blurb)>> shows, Func<IReadOnlyList<AdItem>> items, Func<uint, IconPixels?> itemIcon)
 {
     private const int W = Canvas.Width;
+
+    private BitmapFont Font => font;
     private const int H = Canvas.Height;
     private const long Cycle = 300;
     private const long BreakFor = 36;
@@ -118,7 +120,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
 
     private sealed class ReelChannel(CommercialBreak breaks) : IFrameChannel
     {
-        public bool Available => breaks.font.Available;
+        public bool Available => breaks.Font.Available;
 
         public bool WantsPicture => false;
 
@@ -141,8 +143,8 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
 
             var label = $"AD REEL  #{index % 10000}  {kind switch { 0 => "PROMO", 1 => "ITEM", 2 => "TRAILER", _ => "SPONSOR" }}  {(int)t + 1}/12";
             var all = new BitmapFont.Clip(0, 0, W, H);
-            Canvas.Fill(span, 0, 0, breaks.font.Measure(label) + 24, 36, Ink);
-            breaks.font.Draw(span, W, label, 12, -2, Gold, 1, all);
+            Canvas.Fill(span, 0, 0, breaks.Font.Measure(label) + 24, 36, Ink);
+            breaks.Font.Draw(span, W, label, 12, -2, Gold, 1, all);
         }
     }
 
