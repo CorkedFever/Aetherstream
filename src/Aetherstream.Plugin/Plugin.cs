@@ -201,6 +201,11 @@ public sealed partial class Plugin : IDalamudPlugin
                 + "\"/aether stop\" ends it, \"/aether here\" moves the screen in front of you.",
         });
 
+        // Scroll Lock hides the game's UI, and Dalamud then stops calling Draw — which would freeze
+        // the picture on the furnishing, since the frame uploads ride on that callback. Keep it
+        // coming; the plugin's own window is hidden by hand below when the game's UI is.
+        pluginInterface.UiBuilder.DisableUserUiHide = true;
+        pluginInterface.UiBuilder.DisableCutsceneUiHide = true;
         pluginInterface.UiBuilder.Draw += this.OnDraw;
         pluginInterface.UiBuilder.OpenMainUi += this.OpenMainUi;
         pluginInterface.UiBuilder.OpenConfigUi += this.OpenMainUi;
@@ -293,7 +298,10 @@ public sealed partial class Plugin : IDalamudPlugin
         }
 
         this.DrawWorldScreen();
-        this.windows.Draw();
+
+        // The set keeps playing with the UI hidden; the remote does not need to be on screen for that.
+        if (!this.gameGuiRef.GameUiHidden)
+            this.windows.Draw();
 
         // Drawn outside the window system so an open dialog survives the window being closed.
         this.fileDialogs.Draw();
