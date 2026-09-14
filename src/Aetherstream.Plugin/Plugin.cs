@@ -149,6 +149,9 @@ public sealed partial class Plugin : IDalamudPlugin
             ("Radio", "Aether FM: the set's own jukebox on screen, with a spectrum that moves to it.", "Shows", new MusicChannel(face, () => new MusicState(this.session.MusicPlaying, this.session.MusicNowPlaying, this.session.MusicUpNext, this.session.MusicPosition.Index, this.session.MusicPosition.Count), buf => this.session.MusicTap(buf))),
             ("Housing", "Loporrit Estates: the open plots on your world, one at a time, shown by a Loporrit who has read a great deal about houses.", "Info", new HousingChannel(face, this.HousingSnapshot)),
             ("Painting", "The Kupo of Painting: Pom Ross paints a vista from the Sightseeing Log, sky first, one calm stroke at a time.", "Shows", new PaintingChannel(face, this.Vistas, this.Icon, this.VistaFound)),
+            ("Forecast", "The Forecast with Nimbly: every zone, the sky now and for the next three bells, and a rare-weather watch.", "Shows", new ForecastChannel(face, this.ForecastSnapshot)),
+            ("Saucer", "Saucer Tonight with Ko Bi: your MGP, the cactpot, the next GATE, Fashion Report, and a card you do not have yet.", "Shows", new SaucerChannel(face, this.SaucerSnapshot, this.Icon)),
+            ("Sea News", "Sea News with Wavv: the ocean fishing boats, where they are bound, and the conditions on the coasts.", "Shows", new CruiseChannel(face, this.CruiseSnapshot)),
             ("Scrambled", "Channel 99. You did not subscribe. Nothing to see, and you keep looking.", "Ambience", new ScrambledChannel(face)),
         ];
         this.screen = new WorldScreen(gameGui);

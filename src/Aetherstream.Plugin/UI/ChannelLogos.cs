@@ -220,6 +220,37 @@ internal static class ChannelLogos
                 d.AddLine(P(9f, -9f), P(13f, -13f), Theme.U32(Rose), 3f * u);
                 break;
 
+            case "forecast":
+                // A sun behind a cloud, and a drop under it.
+                d.AddCircleFilled(P(-4f, -5f), 7f * u, Theme.U32(Coin), 16);
+                d.AddCircleFilled(P(2f, 1f), 6f * u, Theme.U32(Paper), 16);
+                d.AddCircleFilled(P(8f, 3f), 5f * u, Theme.U32(Paper), 16);
+                d.AddCircleFilled(P(-4f, 3f), 5f * u, Theme.U32(Paper), 16);
+                d.AddRectFilled(P(-4f, 3f), P(8f, 8f), Theme.U32(Paper), 1f);
+                d.AddCircleFilled(P(2f, 12f), 2f * u, Theme.U32(Sky), 10);
+                break;
+
+            case "saucer":
+                // A marquee star with a coin in it.
+                for (var s = 0; s < 8; s++)
+                {
+                    var a = s * MathF.PI / 4f;
+                    d.AddCircleFilled(P(MathF.Cos(a) * 12f, MathF.Sin(a) * 12f), 1.6f * u, Theme.U32(Coin), 8);
+                }
+
+                d.AddCircleFilled(P(0f, 0f), 7f * u, Theme.U32(Coin), 20);
+                d.AddCircle(P(0f, 0f), 4.5f * u, Theme.U32(Theme.Text), 16, 1.2f * u);
+                break;
+
+            case "sea news":
+                // A sail on a wave.
+                d.AddTriangleFilled(P(-1f, -13f), P(-1f, 2f), P(10f, 2f), Theme.U32(Paper));
+                d.AddRectFilled(P(-2f, -13f), P(0f, 4f), Theme.U32(Theme.Text), 1f);
+                d.AddRectFilled(P(-11f, 4f), P(11f, 8f), Theme.U32(Coin), 1f);
+                for (var wv = 0; wv < 3; wv++)
+                    d.AddCircle(P(-8f + (wv * 8f), 13f), 3.5f * u, Theme.U32(Sky), 10, 1.4f * u);
+                break;
+
             case "scrambled":
                 // A picture torn into bands, each slid a different way, with a sync line through it.
                 for (var row = 0; row < 5; row++)
