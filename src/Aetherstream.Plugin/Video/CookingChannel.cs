@@ -14,26 +14,51 @@ internal sealed record Dish(
 internal sealed record IconPixels(uint[] Pixels, int Width, int Height);
 
 /// <summary>
-/// The cooking show. Every episode is a real Culinarian recipe: the dish is introduced, each
-/// ingredient gets its card with the amount and a line of patter, the method is talked through,
-/// and the plate goes out with the item's own description. Ninety seconds an episode, one after
-/// another, seeded by the clock so the schedule is the same for everyone.
+/// The cooking show, staged. A kitchen set: tiled wall, a window on the real sky, shelves, a
+/// counter with a board, a stove and a plate stand. The chef stays on set and walks between
+/// stations. Every episode is a real Culinarian recipe: the opening titles, the mise en place
+/// laid out along the counter, each ingredient chopped in close-up and tossed in the pot, the
+/// pot stirred while the method is talked through, the dish plated, and a hand-off to the next
+/// episode. Cuts between the wide shot and close-ups, lower-thirds for the patter, and an
+/// audience that reacts. Ninety-odd seconds an episode, on a schedule from the clock.
 /// </summary>
 internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> dishes, Func<uint, IconPixels?> icon) : IFrameChannel
 {
     private const int W = Canvas.Width;
     private const int H = Canvas.Height;
 
-    private const double TitleFor = 9.0;
-    private const double IngredientFor = 7.0;
-    private const double MethodFor = 11.0;
-    private const double PlateFor = 13.0;
+    // The running order, in seconds.
+    private const double TitlesFor = 7.0;
+    private const double MiseFor = 6.0;
+    private const double IngredientFor = 6.5;
+    private const double CookFor = 12.0;
+    private const double PlateFor = 11.0;
+    private const double OutroFor = 6.0;
+
+    // The set.
+    private const int CounterTop = 430;
+    private const int CounterFront = 500;
+    private const int Floor = 676;
+    private const int BoardX = 380, BoardW = 220;
+    private const int StoveX = 780, StoveW = 220;
+    private const int PlateX = 120, PlateW = 180;
 
     private static readonly uint Cream = Canvas.Rgb(0xF6, 0xEC, 0xD8);
-    private static readonly uint Warm = Canvas.Rgb(0x3A, 0x22, 0x14);
-    private static readonly uint WarmLit = Canvas.Rgb(0x5A, 0x36, 0x1E);
+    private static readonly uint Tile = Canvas.Rgb(0xE4, 0xD6, 0xBC);
+    private static readonly uint TileDark = Canvas.Rgb(0xCF, 0xBE, 0xA0);
+    private static readonly uint Grout = Canvas.Rgb(0xB8, 0xA6, 0x88);
+    private static readonly uint Wood = Canvas.Rgb(0x8A, 0x5A, 0x2A);
+    private static readonly uint WoodLit = Canvas.Rgb(0xA8, 0x72, 0x3A);
+    private static readonly uint WoodDark = Canvas.Rgb(0x5E, 0x3C, 0x1A);
+    private static readonly uint Board = Canvas.Rgb(0xC8, 0x98, 0x5A);
+    private static readonly uint Steel = Canvas.Rgb(0x8A, 0x90, 0x98);
+    private static readonly uint SteelDark = Canvas.Rgb(0x50, 0x54, 0x5C);
     private static readonly uint Tomato = Canvas.Rgb(0xD9, 0x4F, 0x3D);
     private static readonly uint Sage = Canvas.Rgb(0x8F, 0xB5, 0x7A);
+    private static readonly uint Ink = Canvas.Rgb(0x2A, 0x1C, 0x12);
+    private static readonly uint Flame = Canvas.Rgb(0xFF, 0x9A, 0x2E);
+    private static readonly uint FlameHot = Canvas.Rgb(0xFF, 0xD8, 0x6A);
+    private static readonly uint Steam = Canvas.Rgb(0xF0, 0xF0, 0xF0);
 
     private static readonly string[] IngredientPatter =
     [
@@ -54,7 +79,7 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
     private static readonly string[] Method =
     [
         "Combine everything in the order we went through it, and do not rush the first stir.",
-        "Work it until the progress bar in your head says done, then stop. Overcooking is quality lost.",
+        "Work it until it feels done, then stop. Overcooking is quality lost.",
         "Keep the heat steady. If the pan hisses at you, it is telling you something.",
         "Taste as you go. A Culinarian who does not taste is a blacksmith with a spoon.",
         "Give it time. The Keeper turns the glass; the dish decides when it is ready.",
@@ -73,6 +98,20 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
         "Done. Put it on the table and let them fight over it.",
     ];
 
+    private static readonly string[] Reactions = ["OOOH", "AAAH", "MMM", "CLAP CLAP CLAP", "YES CHEF"];
+
+    private enum Phase
+    {
+        Titles,
+        Mise,
+        Ingredient,
+        Cook,
+        Plate,
+        Outro,
+    }
+
+    private readonly record struct Beat(Phase Phase, int Index, double Into, double Length);
+
     public bool Available => font.Available;
 
     public bool WantsPicture => false;
@@ -85,49 +124,78 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
         var all = new BitmapFont.Clip(0, 0, W, H);
         var list = dishes();
 
-        Canvas.Fill(span, 0, 0, W, H, Warm);
-        this.DrawHeader(span, now, all);
-
         if (list.Count == 0)
         {
+            Canvas.Fill(span, 0, 0, W, H, Ink);
             const string None = "THE KITCHEN IS CLOSED: NO RECIPES FOUND";
             font.Draw(span, W, None, (W - font.Measure(None, 2)) / 2, 330, Cream, 2, all);
-            this.DrawFooter(span, all, "AETHERSTREAM KITCHEN");
             return;
         }
 
-        // The schedule runs on the wall clock, so everyone watching sees the same episode.
         var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var (dish, episode, into) = Episode(list, unix);
-        var ingredientsFor = dish.Ingredients.Count * IngredientFor;
+        var next = list[Pick(episode + 1, list.Count)];
+        var beat = BeatAt(dish, into);
+        var length = Length(dish);
 
-        if (into < TitleFor)
-            this.DrawTitle(span, dish, episode, seconds, all);
-        else if (into < TitleFor + ingredientsFor)
-            this.DrawIngredient(span, dish, (int)((into - TitleFor) / IngredientFor), episode, seconds, all);
-        else if (into < TitleFor + ingredientsFor + MethodFor)
-            this.DrawMethod(span, dish, episode, seconds, all);
-        else
-            this.DrawPlate(span, dish, episode, seconds, all);
+        switch (beat.Phase)
+        {
+            case Phase.Titles:
+                this.DrawTitles(span, dish, beat, seconds, now, all);
+                break;
+            case Phase.Outro:
+                this.DrawOutro(span, dish, next, beat, seconds, now, all);
+                break;
+            default:
+                this.DrawShow(span, dish, episode, beat, seconds, now, all);
+                break;
+        }
 
-        // Progress along the bottom edge: how far through the episode.
-        var length = TitleFor + ingredientsFor + MethodFor + PlateFor;
-        Canvas.Fill(span, 0, 676, (int)(W * (into / length)), 4, Tomato);
-        this.DrawFooter(span, all, $"EPISODE {episode % 10000}  /  {dish.Ingredients.Count} INGREDIENTS  /  LEVEL {dish.Level}");
+        // The episode's progress along the bottom, and the footer.
+        Canvas.Fill(span, 0, Floor, W, 4, Ink);
+        Canvas.Fill(span, 0, Floor, (int)(W * (into / length)), 4, Tomato);
+        Canvas.Fill(span, 0, 680, W, 40, Ink);
+        font.Draw(span, W, "AETHERSTREAM KITCHEN", 24, 680, Cream, 1, all);
+        var right = Canvas.Cut($"EP {episode % 10000}  /  {Canvas.Plain(dish.Name).ToUpperInvariant()}  /  LV {dish.Level}", 54);
+        font.Draw(span, W, right, W - 24 - font.Measure(right), 680, Canvas.Rgb(0xC8, 0xB0, 0x90), 1, all);
+    }
+
+    // -- the running order ----------------------------------------------------------------------------
+
+    private static double Length(Dish d) => TitlesFor + MiseFor + (d.Ingredients.Count * IngredientFor) + CookFor + PlateFor + OutroFor;
+
+    private static Beat BeatAt(Dish d, double into)
+    {
+        var t = into;
+        if (t < TitlesFor)
+            return new Beat(Phase.Titles, 0, t, TitlesFor);
+        t -= TitlesFor;
+        if (t < MiseFor)
+            return new Beat(Phase.Mise, 0, t, MiseFor);
+        t -= MiseFor;
+        var ingredients = d.Ingredients.Count * IngredientFor;
+        if (t < ingredients)
+            return new Beat(Phase.Ingredient, (int)(t / IngredientFor), t % IngredientFor, IngredientFor);
+        t -= ingredients;
+        if (t < CookFor)
+            return new Beat(Phase.Cook, 0, t, CookFor);
+        t -= CookFor;
+        if (t < PlateFor)
+            return new Beat(Phase.Plate, 0, t, PlateFor);
+        t -= PlateFor;
+        return new Beat(Phase.Outro, 0, t, OutroFor);
     }
 
     /// <summary>Which dish is on, which episode number, and how far into it, from the clock.</summary>
     private static (Dish Dish, int Episode, double Into) Episode(IReadOnlyList<Dish> list, long unix)
     {
-        // Episodes have different lengths, so the schedule is walked from a fixed origin: cheap,
-        // since a day is under a thousand episodes and this runs once a frame at most.
         const long Origin = 1_700_000_000;
         var t = Origin;
         var episode = 0;
         while (true)
         {
             var dish = list[Pick(episode, list.Count)];
-            var length = TitleFor + (dish.Ingredients.Count * IngredientFor) + MethodFor + PlateFor;
+            var length = Length(dish);
             if (unix < t + length)
                 return (dish, episode, unix - t);
 
@@ -136,195 +204,446 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
         }
     }
 
-    private void DrawHeader(Span<uint> span, DateTime now, in BitmapFont.Clip all)
+    // -- the titles and the outro -----------------------------------------------------------------------
+
+    private void DrawTitles(Span<uint> span, Dish dish, Beat beat, double seconds, DateTime now, in BitmapFont.Clip all)
     {
-        // A striped awning, as every kitchen set had.
-        for (var x = 0; x < W; x += 64)
-            Canvas.Fill(span, x, 0, 32, 56, Tomato);
-        for (var x = 32; x < W; x += 64)
-            Canvas.Fill(span, x, 0, 32, 56, Cream);
-        Canvas.Fill(span, 0, 56, W, 4, Warm);
+        // The set behind, dimmed, and the logo over it: the show's opening.
+        this.DrawSet(span, now, seconds, 0f);
+        Dim(span, 0.55f);
+
+        var t = beat.Into;
+        var rise = Math.Clamp(t / 0.8, 0.0, 1.0);
+        var y = 160 + (int)((1.0 - rise) * 120);
 
         const string Title = "THE EORZEAN KITCHEN";
-        var tw = font.Measure(Title) + 32;
-        Canvas.Fill(span, (W - tw) / 2, 4, tw, 48, Warm);
-        font.Draw(span, W, Title, (W - font.Measure(Title)) / 2, 8, Cream, 1, all);
+        var tw = font.Measure(Title, 2) + 64;
+        Canvas.Fill(span, (W - tw) / 2, y - 16, tw, 112, Tomato);
+        Canvas.Fill(span, (W - tw) / 2, y - 16, tw, 6, Cream);
+        Canvas.Fill(span, (W - tw) / 2, y + 90, tw, 6, Cream);
+        font.Draw(span, W, Title, (W - font.Measure(Title, 2)) / 2, y, Cream, 2, all);
 
-        var local = now.ToString("h:mm tt").ToUpperInvariant();
-        var lw = font.Measure(local) + 24;
-        Canvas.Fill(span, W - 24 - lw, 4, lw, 48, Warm);
-        font.Draw(span, W, local, W - 24 - lw + 12, 8, Cream, 1, all);
-    }
-
-    private void DrawTitle(Span<uint> span, Dish dish, int episode, double seconds, in BitmapFont.Clip all)
-    {
-        ChefSprite.Draw(span, ChefSprite.Action.Wave, seconds, 960, 190, 7);
-        const string Today = "TODAY WE ARE MAKING";
-        font.Draw(span, W, Today, (W - font.Measure(Today)) / 2, 120, Sage, 1, all);
-
-        this.DrawIcon(span, dish.Icon, (W - 240) / 2, 176, 3);
-
-        var name = Canvas.Cut(Canvas.Plain(dish.Name).ToUpperInvariant(), font.Fit(W - 48, 2));
-        font.Draw(span, W, name, (W - font.Measure(name, 2)) / 2, 440, Cream, 2, all);
-
-        var sub = $"A LEVEL {dish.Level} CULINARIAN RECIPE" + (dish.Book ? "  /  FROM A MASTER'S TOME" : string.Empty) + (dish.Serves > 1 ? $"  /  MAKES {dish.Serves}" : string.Empty);
-        font.Draw(span, W, sub, (W - font.Measure(sub)) / 2, 540, Canvas.Rgb(0xC8, 0xB0, 0x90), 1, all);
-
-        var eps = $"EPISODE {episode % 10000}";
-        font.Draw(span, W, eps, (W - font.Measure(eps)) / 2, 600, Sage, 1, all);
-    }
-
-    private void DrawIngredient(Span<uint> span, Dish dish, int index, int episode, double seconds, in BitmapFont.Clip all)
-    {
-        ChefSprite.Draw(span, ChefSprite.Action.Chop, seconds, 1000, 452, 7);
-        index = Math.Clamp(index, 0, dish.Ingredients.Count - 1);
-        var (name, amount, iconId) = dish.Ingredients[index];
-
-        var head = $"YOU WILL NEED  /  {index + 1} OF {dish.Ingredients.Count}";
-        font.Draw(span, W, head, 40, 84, Sage, 1, all);
-
-        // The card: the icon on a cream plate, the name and amount beside it.
-        Canvas.Fill(span, 40, 136, 300, 300, Cream);
-        Canvas.Rect(span, 40, 136, 300, 300, WarmLit);
-        this.DrawIcon(span, iconId, 70, 166, 3);
-
-        var amountText = $"{amount}X";
-        font.Draw(span, W, amountText, 380, 150, Tomato, 2, all);
-        var nameText = Canvas.Plain(name).ToUpperInvariant();
-        var y = 246;
-        foreach (var line in Canvas.Wrap(nameText, font.Fit(W - 380 - 40, 2), 2))
+        if (t > 1.6)
         {
-            font.Draw(span, W, line, 380, y, Cream, 2, all);
-            y += 88;
+            const string With = "WITH CHEF NAMAZU";
+            font.Draw(span, W, With, (W - font.Measure(With)) / 2, y + 130, Cream, 1, all);
         }
 
-        // The patter, seeded by the episode and the ingredient so a repeat reads the same.
-        var line0 = IngredientPatter[Pick(episode * 31 + index, IngredientPatter.Length)]
-            .Replace("{name}", Canvas.Plain(name).ToLowerInvariant())
-            .Replace("{amount}", Amount(amount));
-        y = 470;
-        foreach (var line in Canvas.Wrap(line0.ToUpperInvariant(), font.Fit(920), 3))
+        if (t > 3.0)
         {
-            font.Draw(span, W, line, 40, y, Cream, 1, all);
-            y += 40;
+            var today = $"TODAY: {Canvas.Plain(dish.Name).ToUpperInvariant()}";
+            today = Canvas.Cut(today, font.Fit(W - 200));
+            font.Draw(span, W, today, (W - font.Measure(today)) / 2, y + 200, Sage, 1, all);
+            this.DrawIcon(span, dish.Icon, (W - 96) / 2, y + 250, 96);
         }
 
-        // The list so far, small, along the right: what is already in.
-        var lx = 900;
-        var ly = 150;
-        for (var i = 0; i < dish.Ingredients.Count && ly < 440; i++)
+        // The chef walks on from the left during the titles.
+        var walk = Math.Clamp((t - 2.0) / 3.0, 0.0, 1.0);
+        var chefX = -200 + (int)(walk * (BoardX + 20 + 200));
+        ChefSprite.Draw(span, walk < 1.0 ? ChefSprite.Action.Wave : ChefSprite.Action.Present, seconds, chefX, CounterTop - 150, 7);
+    }
+
+    private void DrawOutro(Span<uint> span, Dish dish, Dish next, Beat beat, double seconds, DateTime now, in BitmapFont.Clip all)
+    {
+        this.DrawSet(span, now, seconds, 1f);
+        this.DrawPlateOnStand(span, dish, 1f);
+        ChefSprite.Draw(span, ChefSprite.Action.Wave, seconds, PlateX + PlateW + 30, CounterTop - 150, 7);
+        Dim(span, 0.4f);
+
+        const string Head = "NEXT TIME ON THE EORZEAN KITCHEN";
+        font.Draw(span, W, Head, (W - font.Measure(Head)) / 2, 80, Sage, 1, all);
+
+        this.DrawIcon(span, next.Icon, (W - 160) / 2, 130, 160);
+        var name = Canvas.Cut(Canvas.Plain(next.Name).ToUpperInvariant(), font.Fit(W - 120, 2));
+        font.Draw(span, W, name, (W - font.Measure(name, 2)) / 2, 310, Cream, 2, all);
+
+        var count = $"{next.Ingredients.Count} INGREDIENTS  /  LEVEL {next.Level}" + (next.Book ? "  /  FROM A MASTER'S TOME" : string.Empty);
+        font.Draw(span, W, count, (W - font.Measure(count)) / 2, 410, Canvas.Rgb(0xC8, 0xB0, 0x90), 1, all);
+
+        // Credits crawl up the right.
+        var credits = new[] { "CHEF: NAMAZU", "RECIPES: THE CULINARIANS' GUILD", "SET: THE MIST, WARD 1", "PRODUCED BY AETHERSTREAM", "THANK YOU FOR WATCHING" };
+        var cy = H - (int)(beat.Into * 40);
+        foreach (var line in credits)
         {
-            var (n, a, _) = dish.Ingredients[i];
-            var mark = i < index ? "+" : i == index ? ">" : " ";
-            var text = Canvas.Cut($"{mark} {a}X {Canvas.Plain(n)}".ToUpperInvariant(), font.Fit(W - lx - 24));
-            font.Draw(span, W, text, lx, ly, i <= index ? Cream : Canvas.Rgb(0x8A, 0x70, 0x58), 1, all);
-            ly += 36;
+            if (cy > 460 && cy < 660)
+                font.Draw(span, W, line, W - 40 - font.Measure(line), cy, Cream, 1, all);
+            cy += 40;
         }
     }
 
-    private void DrawMethod(Span<uint> span, Dish dish, int episode, double seconds, in BitmapFont.Clip all)
-    {
-        ChefSprite.Draw(span, ChefSprite.Action.Stir, seconds, 870, 430, 7);
-        font.Draw(span, W, "THE METHOD", 40, 84, Sage, 1, all);
+    // -- the show itself ----------------------------------------------------------------------------------
 
-        var y = 150;
-        var steps = 3;
-        for (var i = 0; i < steps; i++)
+    private void DrawShow(Span<uint> span, Dish dish, int episode, Beat beat, double seconds, DateTime now, in BitmapFont.Clip all)
+    {
+        var ingredients = dish.Ingredients;
+        var n = ingredients.Count;
+
+        // How many are on the counter, how many are in the pot.
+        var laidOut = beat.Phase == Phase.Mise ? (int)Math.Min(n, Math.Floor(beat.Into / (MiseFor / (n + 1)))) : n;
+        var inPot = beat.Phase switch
         {
-            var line = Method[Pick((episode * 7) + i, Method.Length)];
-            var head = $"{i + 1}.";
-            font.Draw(span, W, head, 40, y, Tomato, 1, all);
-            foreach (var wrapped in Canvas.Wrap(line.ToUpperInvariant(), font.Fit(760), 3))
+            Phase.Ingredient => beat.Index + (beat.Into > IngredientFor - 1.2 ? 1 : 0),
+            Phase.Cook or Phase.Plate => n,
+            _ => 0,
+        };
+        var pot = (float)inPot / Math.Max(1, n);
+
+        // A close-up on the board for the middle of each ingredient beat, on the pot in the
+        // middle of the cook, on the plate at the end; otherwise the wide shot. A hard cut, as it should be.
+        var closeUp = beat.Phase switch
+        {
+            Phase.Ingredient => beat.Into is > 1.2 and < 4.6,
+            Phase.Cook => beat.Into is > 3.0 and < 8.0,
+            Phase.Plate => beat.Into > 6.0,
+            _ => false,
+        };
+
+        if (closeUp)
+        {
+            this.DrawCloseUp(span, dish, beat, inPot, seconds, all);
+        }
+        else
+        {
+            this.DrawSet(span, now, seconds, pot);
+            this.DrawCounterItems(span, dish, laidOut, inPot, beat, seconds);
+            if (beat.Phase == Phase.Plate)
+                this.DrawPlateOnStand(span, dish, (float)Math.Clamp(beat.Into / 3.0, 0.0, 1.0));
+
+            // The chef at his station.
+            var (station, action) = beat.Phase switch
             {
-                font.Draw(span, W, wrapped, 100, y, Cream, 1, all);
-                y += 40;
+                Phase.Mise => (BoardX + 20, ChefSprite.Action.Present),
+                Phase.Ingredient => (BoardX + 20, ChefSprite.Action.Chop),
+                Phase.Cook => (StoveX - 150, ChefSprite.Action.Stir),
+                _ => (PlateX + PlateW + 30, ChefSprite.Action.Present),
+            };
+            ChefSprite.Draw(span, action, seconds, station, CounterTop - 150, 7);
+        }
+
+        // The lower third: who and what.
+        var (tab, line) = beat.Phase switch
+        {
+            Phase.Mise => ("MISE EN PLACE", $"Today: {Canvas.Plain(dish.Name)}. {n} ingredients, level {dish.Level}."),
+            Phase.Ingredient => ($"{beat.Index + 1} OF {n}", IngredientPatter[Pick((episode * 31) + beat.Index, IngredientPatter.Length)]
+                .Replace("{name}", Canvas.Plain(ingredients[beat.Index].Name).ToLowerInvariant())
+                .Replace("{amount}", Amount(ingredients[beat.Index].Amount))),
+            Phase.Cook => ("THE METHOD", Method[Pick((episode * 7) + (int)(beat.Into / 4.0), Method.Length)]),
+            _ => ("PLATING", PlatePatter[Pick(episode * 13, PlatePatter.Length)]),
+        };
+        this.DrawLowerThird(span, tab, line, all);
+
+        // The audience, at the moments that earn it.
+        var react = beat.Phase switch
+        {
+            Phase.Ingredient => beat.Into > IngredientFor - 1.2,
+            Phase.Plate => beat.Into is > 2.5 and < 5.0,
+            _ => false,
+        };
+        if (react)
+        {
+            var word = Reactions[Pick((episode * 17) + beat.Index + (beat.Phase == Phase.Plate ? 99 : 0), Reactions.Length)];
+            var ry = 300 - (int)((beat.Into % 1.2) * 30);
+            font.Draw(span, W, word, W - 60 - font.Measure(word), ry, Canvas.Rgb(0xFF, 0xD8, 0x6A), 1, all);
+        }
+
+        // The "LIVE" bug, because every show had one and none of them were.
+        Canvas.Fill(span, W - 100, 70, 76, 32, Tomato);
+        font.Draw(span, W, "LIVE", W - 100 + 6, 66, Cream, 1, all);
+    }
+
+    // -- the set ------------------------------------------------------------------------------------------
+
+    private void DrawSet(Span<uint> span, DateTime now, double seconds, float pot)
+    {
+        // The tiled wall.
+        for (var y = 0; y < CounterTop; y += 40)
+        {
+            for (var x = 0; x < W; x += 40)
+            {
+                var dark = ((x / 40) + (y / 40)) % 2 == 0;
+                Canvas.Fill(span, x, y, 40, 40, dark ? TileDark : Tile);
+                Canvas.Fill(span, x, y, 40, 2, Grout);
+                Canvas.Fill(span, x, y, 2, 40, Grout);
+            }
+        }
+
+        // A window on the real sky, by the local hour.
+        var hour = now.Hour + (now.Minute / 60f);
+        var day = Math.Clamp(1f - (Math.Abs(hour - 13f) / 7f), 0f, 1f);
+        var sky = Canvas.Lerp(Canvas.Rgb(0x14, 0x1C, 0x3A), Canvas.Rgb(0x8F, 0xD6, 0xFF), day);
+        Canvas.Fill(span, 1000, 60, 220, 200, Wood);
+        Canvas.Fill(span, 1012, 72, 196, 176, sky);
+        if (day < 0.3f)
+        {
+            Canvas.Disc(span, 1160, 110, 14, Canvas.Rgb(0xF0, 0xF0, 0xE0));
+            Canvas.Disc(span, 1040, 200, 1, Cream);
+            Canvas.Disc(span, 1070, 100, 1, Cream);
+        }
+        else
+        {
+            Canvas.Disc(span, 1160, 110, 16, Canvas.Rgb(0xFF, 0xD1, 0x5C));
+        }
+
+        Canvas.Fill(span, 1108, 72, 4, 176, Wood);
+        Canvas.Fill(span, 1012, 158, 196, 4, Wood);
+
+        // A shelf with jars and a pan.
+        Canvas.Fill(span, 60, 150, 560, 12, WoodDark);
+        Canvas.Fill(span, 60, 150, 560, 4, WoodLit);
+        var jars = new[] { Canvas.Rgb(0xC8, 0x5A, 0x3A), Sage, Canvas.Rgb(0xE0, 0xB8, 0x4A), Canvas.Rgb(0x8A, 0x5A, 0x2A), Canvas.Rgb(0xA0, 0x40, 0x60), Sage };
+        for (var i = 0; i < jars.Length; i++)
+        {
+            var jx = 90 + (i * 70);
+            Canvas.Fill(span, jx, 96, 40, 54, jars[i]);
+            Canvas.Fill(span, jx + 6, 88, 28, 10, WoodDark);
+            Canvas.Fill(span, jx + 4, 110, 32, 14, Cream);
+        }
+
+        Canvas.Fill(span, 520, 100, 70, 50, SteelDark);
+        Canvas.Fill(span, 590, 118, 40, 8, WoodDark);
+
+        // The counter: a worktop, a front, and the floor.
+        Canvas.Fill(span, 0, CounterTop, W, CounterFront - CounterTop, WoodLit);
+        Canvas.Fill(span, 0, CounterTop, W, 6, Cream);
+        Canvas.Fill(span, 0, CounterFront, W, Floor - CounterFront, Wood);
+        for (var x = 0; x < W; x += 160)
+            Canvas.Fill(span, x, CounterFront + 20, 4, Floor - CounterFront - 40, WoodDark);
+        Canvas.Fill(span, 0, Floor - 30, W, 30, Canvas.Rgb(0x3A, 0x2A, 0x20));
+
+        // The plate stand, the board, the stove.
+        Canvas.Fill(span, PlateX, CounterTop - 8, PlateW, 10, Steel);
+        Canvas.Disc(span, PlateX + (PlateW / 2), CounterTop - 12, 80, Cream);
+        Canvas.Disc(span, PlateX + (PlateW / 2), CounterTop - 12, 66, Canvas.Rgb(0xE8, 0xDC, 0xC4));
+
+        Canvas.Fill(span, BoardX, CounterTop - 14, BoardW, 16, Board);
+        Canvas.Fill(span, BoardX, CounterTop - 14, BoardW, 3, Canvas.Rgb(0xE0, 0xB0, 0x70));
+
+        Canvas.Fill(span, StoveX - 20, CounterTop - 10, StoveW + 40, 12, SteelDark);
+        this.DrawPot(span, StoveX + 30, CounterTop - 110, 160, pot, seconds, false);
+    }
+
+    private void DrawPot(Span<uint> span, int x, int y, int size, float full, double seconds, bool big)
+    {
+        var h = size * 5 / 8;
+        Canvas.Fill(span, x, y + (size - h), size, h, SteelDark);
+        Canvas.Fill(span, x + 6, y + (size - h) + 6, size - 12, h - 12, Steel);
+        Canvas.Fill(span, x - 14, y + (size - h) + 10, 14, 12, SteelDark);
+        Canvas.Fill(span, x + size, y + (size - h) + 10, 14, 12, SteelDark);
+
+        // What is in it rises as ingredients go in, and bubbles once it is cooking.
+        if (full > 0f)
+        {
+            var depth = (int)((h - 20) * (0.3f + (0.7f * full)));
+            var stew = Canvas.Lerp(Canvas.Rgb(0xC8, 0x8A, 0x3A), Canvas.Rgb(0x9A, 0x4A, 0x1E), full);
+            Canvas.Fill(span, x + 10, y + size - 10 - depth, size - 20, depth, stew);
+            for (var b = 0; b < 5; b++)
+            {
+                var phase = (seconds * 1.7) + (b * 1.3);
+                var bx = x + 20 + (int)((size - 40) * (((b * 0.23) + 0.1) % 1.0));
+                var by = y + size - 12 - depth + (int)(Math.Abs(Math.Sin(phase)) * 8);
+                Canvas.Disc(span, bx, by, big ? 6 : 3, Canvas.Rgb(0xE0, 0xB0, 0x60));
+            }
+        }
+
+        // Steam, when there is anything to steam.
+        if (full > 0.3f)
+        {
+            for (var s = 0; s < 4; s++)
+            {
+                var t = ((seconds * 0.6) + (s * 0.25)) % 1.0;
+                var sx = x + 24 + (s * ((size - 48) / 3)) + (int)(Math.Sin((seconds * 2.0) + s) * 8);
+                var sy = y + (size - h) - (int)(t * 110);
+                var r = (int)((big ? 10 : 5) + (t * (big ? 12 : 6)));
+                Canvas.Disc(span, sx, sy, r, Canvas.Lerp(Steam, Tile, (float)t));
+            }
+        }
+
+        // The flame under it, always lit.
+        var flick = (int)(Math.Sin(seconds * 9.0) * 4);
+        for (var f = 0; f < 3; f++)
+        {
+            var fx = x + (size / 4) + (f * (size / 4));
+            Canvas.Disc(span, fx, y + size + 8, (big ? 14 : 8) + (f == 1 ? flick : -flick), Flame);
+            Canvas.Disc(span, fx, y + size + 8, big ? 7 : 4, FlameHot);
+        }
+    }
+
+    private void DrawCounterItems(Span<uint> span, Dish dish, int laidOut, int inPot, Beat beat, double seconds)
+    {
+        // The mise en place: bowls along the back of the counter, one per ingredient, the ones
+        // already in the pot emptied. The one in hand sits on the board, and at the end of its
+        // beat it hops into the pot.
+        var n = dish.Ingredients.Count;
+        var slot = Math.Min(96, (W - 80) / Math.Max(1, n));
+        var size = Math.Min(64, slot - 12);
+        var startX = (W - (slot * n)) / 2;
+
+        for (var i = 0; i < laidOut; i++)
+        {
+            var (_, amount, iconId) = dish.Ingredients[i];
+            var bx = startX + (i * slot);
+            var by = CounterTop - 28;
+            Canvas.Fill(span, bx + 4, by, slot - 8, 26, Cream);
+            Canvas.Fill(span, bx + 8, by + 4, slot - 16, 18, Canvas.Rgb(0xE8, 0xDC, 0xC4));
+            if (i >= inPot && !(beat.Phase == Phase.Ingredient && i == beat.Index))
+            {
+                this.DrawIcon(span, iconId, bx + ((slot - size) / 2), by - size + 8, size);
+                if (amount > 1)
+                    font.Draw(span, W, $"{amount}", bx + slot - 26, by - 40, Ink, 1, new BitmapFont.Clip(0, 0, W, H));
+            }
+        }
+
+        if (beat.Phase == Phase.Ingredient && beat.Index < n)
+        {
+            var (_, _, iconId) = dish.Ingredients[beat.Index];
+            var hop = beat.Into - (IngredientFor - 1.2);
+            if (hop < 0)
+            {
+                // On the board, jiggling under the knife.
+                var jig = (int)(Math.Sin(seconds * 12.0) * 2);
+                this.DrawIcon(span, iconId, BoardX + (BoardW / 2) - 40 + jig, CounterTop - 14 - 80, 80);
+            }
+            else
+            {
+                // Into the pot, in an arc.
+                var t = Math.Clamp(hop / 1.0, 0.0, 1.0);
+                var fromX = BoardX + (BoardW / 2) - 30;
+                var toX = StoveX + 30 + 50;
+                var x = fromX + (int)((toX - fromX) * t);
+                var y = CounterTop - 14 - 60 - (int)(Math.Sin(t * Math.PI) * 180) + (int)(t * 20);
+                this.DrawIcon(span, iconId, x, y, 60);
+            }
+        }
+    }
+
+    private void DrawPlateOnStand(Span<uint> span, Dish dish, float rise)
+    {
+        // The finished dish rising onto the plate, then a sparkle.
+        var cx = PlateX + (PlateW / 2);
+        var y = CounterTop - 12 - 60 - (int)(rise * 40);
+        this.DrawIcon(span, dish.Icon, cx - 50, y, 100);
+        if (rise >= 1f)
+        {
+            Canvas.Fill(span, cx + 60, y - 30, 4, 16, Cream);
+            Canvas.Fill(span, cx + 54, y - 24, 16, 4, Cream);
+            Canvas.Fill(span, cx - 70, y + 10, 3, 12, Cream);
+            Canvas.Fill(span, cx - 74, y + 14, 12, 3, Cream);
+        }
+    }
+
+    private void DrawCloseUp(Span<uint> span, Dish dish, Beat beat, int inPot, double seconds, in BitmapFont.Clip all)
+    {
+        // A tighter frame: the tiled wall behind, the station big, the chef big beside it.
+        for (var y = 0; y < H; y += 80)
+        {
+            for (var x = 0; x < W; x += 80)
+            {
+                var dark = ((x / 80) + (y / 80)) % 2 == 0;
+                Canvas.Fill(span, x, y, 80, 80, dark ? TileDark : Tile);
+                Canvas.Fill(span, x, y, 80, 4, Grout);
+                Canvas.Fill(span, x, y, 4, 80, Grout);
+            }
+        }
+
+        Canvas.Fill(span, 0, 560, W, Floor - 560, WoodLit);
+        Canvas.Fill(span, 0, 560, W, 10, Cream);
+
+        switch (beat.Phase)
+        {
+            case Phase.Ingredient:
+            {
+                var (name, amount, iconId) = dish.Ingredients[Math.Min(beat.Index, dish.Ingredients.Count - 1)];
+                Canvas.Fill(span, 340, 520, 620, 44, Board);
+                Canvas.Fill(span, 340, 520, 620, 8, Canvas.Rgb(0xE0, 0xB0, 0x70));
+                var jig = (int)(Math.Sin(seconds * 12.0) * 4);
+                this.DrawIcon(span, iconId, 520 + jig, 300, 220);
+                ChefSprite.Draw(span, ChefSprite.Action.Chop, seconds, 60, 560 - 288, 12);
+
+                var label = $"{amount}X  {Canvas.Plain(name).ToUpperInvariant()}";
+                label = Canvas.Cut(label, font.Fit(W - 80));
+                var lw = font.Measure(label) + 32;
+                Canvas.Fill(span, W - 40 - lw, 100, lw, 48, Ink);
+                font.Draw(span, W, label, W - 40 - lw + 16, 104, Cream, 1, all);
+                break;
             }
 
-            y += 24;
-        }
+            case Phase.Cook:
+                this.DrawPot(span, 560, 200, 360, (float)inPot / Math.Max(1, dish.Ingredients.Count), seconds, true);
+                ChefSprite.Draw(span, ChefSprite.Action.Stir, seconds, 120, 560 - 288, 12);
+                break;
 
-        // The dish, small, in the corner, so you remember what all this is for.
-        this.DrawIcon(span, dish.Icon, W - 40 - 160, 470, 2);
-        var name = Canvas.Cut(Canvas.Plain(dish.Name).ToUpperInvariant(), 24);
-        font.Draw(span, W, name, W - 40 - font.Measure(name), 640, Canvas.Rgb(0xC8, 0xB0, 0x90), 1, all);
+            default:
+            {
+                Canvas.Disc(span, 700, 520, 190, Cream);
+                Canvas.Disc(span, 700, 520, 160, Canvas.Rgb(0xE8, 0xDC, 0xC4));
+                this.DrawIcon(span, dish.Icon, 700 - 120, 520 - 150, 240);
+                ChefSprite.Draw(span, ChefSprite.Action.Present, seconds, 60, 560 - 288, 12);
+
+                var name = Canvas.Cut(Canvas.Plain(dish.Name).ToUpperInvariant(), font.Fit(W - 80));
+                var lw = font.Measure(name) + 32;
+                Canvas.Fill(span, W - 40 - lw, 100, lw, 48, Ink);
+                font.Draw(span, W, name, W - 40 - lw + 16, 104, Cream, 1, all);
+                break;
+            }
+        }
     }
 
-    private void DrawPlate(Span<uint> span, Dish dish, int episode, double seconds, in BitmapFont.Clip all)
+    private void DrawLowerThird(Span<uint> span, string tab, string line, in BitmapFont.Clip all)
     {
-        ChefSprite.Draw(span, ChefSprite.Action.Present, seconds, 1040, 490, 6);
-        font.Draw(span, W, "PLATING", 40, 84, Sage, 1, all);
+        const int Top = 560;
+        var lines = Canvas.Wrap(line.ToUpperInvariant(), font.Fit(W - 80 - 40 - font.Measure(tab) - 48), 2);
+        var height = 16 + (lines.Count * 40);
 
-        // The plate: a big cream disc with the dish on it.
-        Canvas.Disc(span, 220, 360, 170, Cream);
-        Canvas.Disc(span, 220, 360, 150, Canvas.Rgb(0xE8, 0xDC, 0xC4));
-        this.DrawIcon(span, dish.Icon, 220 - 120, 360 - 120, 3);
+        Canvas.Fill(span, 40, Top, W - 80, height, Ink);
+        Canvas.Fill(span, 40, Top, W - 80, 4, Tomato);
+        var tabW = font.Measure(tab) + 32;
+        Canvas.Fill(span, 40, Top + 4, tabW, height - 4, Tomato);
+        font.Draw(span, W, tab, 56, Top + 8, Cream, 1, all);
 
-        var name = Canvas.Plain(dish.Name).ToUpperInvariant();
-        var y = 140;
-        foreach (var line in Canvas.Wrap(name, font.Fit(W - 440 - 40, 2), 2))
+        var y = Top + 8;
+        foreach (var l in lines)
         {
-            font.Draw(span, W, line, 440, y, Cream, 2, all);
-            y += 88;
-        }
-
-        y += 8;
-        foreach (var line in Canvas.Wrap(Canvas.Plain(dish.Description).ToUpperInvariant(), font.Fit(W - 440 - 40), 5))
-        {
-            font.Draw(span, W, line, 440, y, Canvas.Rgb(0xD8, 0xC4, 0xA8), 1, all);
+            font.Draw(span, W, l, 40 + tabW + 16, y, Cream, 1, all);
             y += 40;
         }
-
-        var patter = PlatePatter[Pick(episode * 13, PlatePatter.Length)];
-        y = Math.Max(y + 24, 520);
-        foreach (var line in Canvas.Wrap(patter.ToUpperInvariant(), font.Fit(580), 3))
-        {
-            font.Draw(span, W, line, 440, y, Sage, 1, all);
-            y += 40;
-        }
     }
 
-    private void DrawFooter(Span<uint> span, in BitmapFont.Clip all, string right)
+    private static void Dim(Span<uint> span, float amount)
     {
-        Canvas.Fill(span, 0, 680, W, 40, WarmLit);
-        font.Draw(span, W, "AETHERSTREAM KITCHEN", 24, 680, Cream, 1, all);
-        right = Canvas.Cut(right, font.Fit(W - 48 - font.Measure("AETHERSTREAM KITCHEN") - 24));
-        font.Draw(span, W, right, W - 24 - font.Measure(right), 680, Canvas.Rgb(0xC8, 0xB0, 0x90), 1, all);
+        for (var i = 0; i < span.Length; i++)
+            span[i] = Canvas.Lerp(span[i], 0xFF000000u, amount);
     }
 
-    /// <summary>An item icon, scaled up, blended over what is already there.</summary>
-    private void DrawIcon(Span<uint> span, uint iconId, int x, int y, int scale)
+    /// <summary>An item icon resampled to <paramref name="size"/> square, blended over what is there.</summary>
+    private void DrawIcon(Span<uint> span, uint iconId, int x, int y, int size)
     {
         if (icon(iconId) is not { } px)
         {
-            Canvas.Rect(span, x, y, 80 * scale, 80 * scale, WarmLit);
+            Canvas.Rect(span, x, y, size, size, Ink);
             return;
         }
 
-        for (var sy = 0; sy < px.Height; sy++)
+        for (var ty = 0; ty < size; ty++)
         {
-            for (var sx = 0; sx < px.Width; sx++)
+            var yy = y + ty;
+            if (yy < 0 || yy >= H)
+                continue;
+
+            var sy = ty * px.Height / size;
+            for (var tx = 0; tx < size; tx++)
             {
+                var xx = x + tx;
+                if (xx < 0 || xx >= W)
+                    continue;
+
+                var sx = tx * px.Width / size;
                 var p = px.Pixels[(sy * px.Width) + sx];
                 var a = (int)(p >> 24);
                 if (a == 0)
                     continue;
 
-                for (var dy = 0; dy < scale; dy++)
-                {
-                    var ty = y + (sy * scale) + dy;
-                    if (ty < 0 || ty >= H)
-                        continue;
-
-                    for (var dx = 0; dx < scale; dx++)
-                    {
-                        var tx = x + (sx * scale) + dx;
-                        if (tx < 0 || tx >= W)
-                            continue;
-
-                        var i = (ty * W) + tx;
-                        span[i] = a >= 250 ? p | 0xFF000000u : Canvas.Lerp(span[i], p | 0xFF000000u, a / 255f);
-                    }
-                }
+                var i = (yy * W) + xx;
+                span[i] = a >= 250 ? p | 0xFF000000u : Canvas.Lerp(span[i], p | 0xFF000000u, a / 255f);
             }
         }
     }
