@@ -59,6 +59,7 @@ public sealed partial class Plugin : IDalamudPlugin
     private readonly EorzeaWeather weather;
     private readonly GuideChannel guideChannel;
     private readonly WeatherChannel weatherChannel;
+    private readonly (string Name, string Blurb, IFrameChannel Channel)[] channels;
     private PlexAccount plex = null!;
 
     public Plugin(
@@ -115,6 +116,19 @@ public sealed partial class Plugin : IDalamudPlugin
         this.weather = new EorzeaWeather(data, log);
         this.guideChannel = new GuideChannel(face, this.GuideSnapshot);
         this.weatherChannel = new WeatherChannel(face, this.WeatherSnapshot);
+        this.channels =
+        [
+            ("Guide", "What's on, scrolling. The picture stays in the corner.", this.guideChannel),
+            ("Weather", "Local on the 8s, for the zone you are in.", this.weatherChannel),
+            ("Clock", "Eorzea time, the date, the moon, the sun.", new ClockChannel(face)),
+            ("News", "Lodestone headlines, one story at a time.", new NewsChannel(face, this.NewsSnapshot)),
+            ("Market", "Your watch list, priced by Universalis.", new MarketChannel(face, this.MarketSnapshot)),
+            ("Aquarium", "Fish. The odd Namazu. Nothing to read.", new AquariumChannel(face)),
+            ("Fireplace", "A fire in a hearth, for the winter.", new FireplaceChannel(face)),
+            ("Starfield", "The screensaver everyone had.", new StarfieldChannel(face)),
+            ("Plasma", "The demoscene's favourite, in the set's colours.", new PlasmaChannel(face)),
+            ("Mystify", "Two polygons and their ghosts.", new MystifyChannel(face)),
+        ];
         this.screen = new WorldScreen(gameGui);
         this.gameGuiRef = gameGui;
         this.binding = new SurfaceBinding(log);
@@ -151,6 +165,7 @@ public sealed partial class Plugin : IDalamudPlugin
             FileDialogs = this.fileDialogs,
             Guide = this.guideChannel,
             Weather = this.weatherChannel,
+            Channels = this.channels,
         };
 
         // The display face is loaded before the window so the first frame is drawn in it.
@@ -174,6 +189,8 @@ public sealed partial class Plugin : IDalamudPlugin
         this.WireParty();
         this.WireLiveTv();
         this.WireMusic();
+        this.window.Channels.FindItem = this.FindMarketItem;
+        this.window.Channels.WatchListChanged = this.WatchListChanged;
 
         this.windows.AddWindow(this.window);
 

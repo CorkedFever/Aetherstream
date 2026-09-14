@@ -12,7 +12,9 @@ internal sealed record WeatherSnapshot(
     string Region,
     WeatherPeriod Now,
     IReadOnlyList<WeatherPeriod> Next,
-    IReadOnlyList<WeatherElsewhere> Around);
+    IReadOnlyList<WeatherElsewhere> Around,
+    IReadOnlyList<string> Alerts,
+    string LiveAlert);
 
 /// <summary>
 /// The weather channel: Local on the 8s, for Eorzea.
@@ -59,7 +61,7 @@ internal sealed class WeatherChannel(BitmapFont font, Func<WeatherSnapshot?> dat
         var snapshot = data();
         var unix = DateTimeOffset.Now.ToUnixTimeSeconds();
 
-        this.DrawHeader(span, now, unix, all);
+        this.DrawHeader(span, now, unix, all, snapshot?.LiveAlert ?? string.Empty, seconds);
 
         if (snapshot is null)
         {
@@ -70,13 +72,24 @@ internal sealed class WeatherChannel(BitmapFont font, Func<WeatherSnapshot?> dat
         }
 
         this.DrawCurrent(span, snapshot, unix, all);
-        this.DrawForecast(span, snapshot, unix, all);
+        this.DrawForecast(span, snapshot, unix, all, seconds);
         this.DrawAround(span, snapshot, seconds);
         this.DrawFooter(span, all);
     }
 
-    private void DrawHeader(Span<uint> span, DateTime now, long unix, in BitmapFont.Clip clip)
+    private void DrawHeader(Span<uint> span, DateTime now, long unix, in BitmapFont.Clip clip, string liveAlert, double seconds)
     {
+        if (liveAlert.Length > 0)
+        {
+            // A special alert: the band turns red and pulses, and says what is happening.
+            var pulse = (int)(seconds * 2) % 2 == 0;
+            Fill(span, 0, 0, Width, 56, pulse ? Canvas.Rgb(0xA3, 0x2D, 0x2D) : Canvas.Rgb(0x79, 0x1F, 0x1F));
+            Fill(span, 0, 56, Width, 2, Canvas.Bad);
+            var text = Canvas.Cut($"SPECIAL ALERT   {liveAlert.ToUpperInvariant()}", font.Fit(Width - 48));
+            font.Draw(span, Width, text, 24, 8, White, 1, clip);
+            return;
+        }
+
         Fill(span, 0, 0, Width, 56, Band);
         Fill(span, 0, 56, Width, 2, Edge);
 
@@ -109,11 +122,19 @@ internal sealed class WeatherChannel(BitmapFont font, Func<WeatherSnapshot?> dat
         font.Draw(span, Width, $"{since}   {change}", Left, 296, Dim, 1, clip);
     }
 
-    private void DrawForecast(Span<uint> span, WeatherSnapshot s, long unix, in BitmapFont.Clip clip)
+    private void DrawForecast(Span<uint> span, WeatherSnapshot s, long unix, in BitmapFont.Clip clip, double seconds)
     {
         const int Top = 352;
         Fill(span, 0, Top, Width, 2, Edge);
         font.Draw(span, Width, "COMING UP", 24, Top + 10, Amber, 1, clip);
+
+        // Rare weather anywhere in the world, one at a time, five seconds each.
+        if (s.Alerts.Count > 0)
+        {
+            var alert = "RARE  " + Canvas.Plain(s.Alerts[(int)(seconds / 5) % s.Alerts.Count]).ToUpperInvariant();
+            alert = Canvas.Cut(alert, font.Fit(Width - 24 - 200));
+            font.Draw(span, Width, alert, Width - 24 - font.Measure(alert), Top + 10, Canvas.Rgb(0xFF, 0xD6, 0x4F), 1, clip);
+        }
 
         var count = Math.Min(5, s.Next.Count);
         if (count == 0)

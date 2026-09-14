@@ -82,8 +82,8 @@ they would change the experience.
 - **Startup thunk**, a brief warm-up glow when the set switches on.
 - **Remote control rattle**, a tiny animation on button press.
 - **Channel idents.** A short bumper card with the channel name on switch.
-- **Weather channel.** *Built, with music.* Eorzea weather and time for the current zone on a
-  Weather-Channel-style card, the forecast, and a crawl of every zone.
+- **Weather channel.** *Built, with music, rare-weather alerts across all zones, and a special
+  alert when the live sky is forced by a FATE boss (Odin, Coeurlregina, Ixion, Proto Ultima).*
 
 ## Reach
 
@@ -155,7 +155,7 @@ weather are. A new one is one class implementing `IFrameChannel` and a button.
 
 From the game, no network:
 
-- **Eorzea clock.** A full-screen flip clock in Eorzea time, sunrise and sunset, moon phase.
+- **Eorzea clock.** *Built.* Eorzea time, the calendar date, the moon, the sun's arc.
 - **Hunt and FATE board.** What is up in the zone from the object table, like a departures board.
   *Weak in practice: the set lives in a housing ward, where the client sees no FATEs and no marks.
   Only worth it fed from outside — Sonar's IPC if the viewer has it, or a train route a conductor
@@ -178,18 +178,18 @@ From Plex:
 
 From the web, cached:
 
-- **Lodestone news.** Headlines and patch notes, one every ten seconds.
-- **Market watch.** Universalis prices for a watch list, rolling like a stock channel.
+- **Lodestone news.** *Built.* Headlines and patch notes, one every ten seconds.
+- **Market watch.** *Built.* Universalis prices for a watch list, with a chart and a ticker.
 - **Twitch chat** beside the picture for Twitch sources.
 - **RSS reader.** Any feed pasted in, as a news channel with a ticker.
 
 Pure atmosphere:
 
-- **Aquarium.** Pixel-art Eorzean fish drifting across, the odd Namazu. The one people screenshot.
-- **Fireplace, rain on a window.** Procedural.
-- **Starfield, Pipes, Mystify, Flying Toasters.** The screensavers.
+- **Aquarium.** *Built.* Pixel-art fish drifting across, the odd Namazu.
+- **Fireplace** *(built)*, **rain on a window.** Procedural.
+- **Starfield, Mystify** *(built)*, **Pipes, Flying Toasters.** The screensavers.
 - **Colour bars with a tone**, the sign-off, "PLEASE STAND BY".
-- **Demoscene channel.** Plasma, a rotozoomer, a scrolling greeting.
+- **Demoscene channel.** *Plasma built*; a rotozoomer and a scrolling greeting to come.
 - **Fake ad breaks.** Bumpers for in-game things: "Visit the Gold Saucer".
 
 Interactive, with the remote:

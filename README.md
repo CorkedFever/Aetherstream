@@ -270,6 +270,29 @@ the tables and the zone list are read from the game's own data through Dalamud, 
 expansion's zones appear on their own. The maths lives in `Weather/EorzeaWeather.cs`; the icons
 are 16x16 pixel art in `Video/WeatherChannel.cs`.
 
+## The other channels
+
+The Channels tab is a dial of everything the set can draw for itself. Each is one class
+implementing `IFrameChannel` in `Video\`, handed a snapshot by the plugin when it needs data:
+
+| Channel | What it shows | Where the data comes from |
+| --- | --- | --- |
+| Guide | The listings grid, picture in the corner | Pins, parties, recents |
+| Weather | Local on the 8s, with rare-weather and special alerts | The game's weather tables; the live sky via ClientStructs |
+| Clock | Eorzea time, the calendar date, the moon, the sun's arc | The clock |
+| News | Lodestone headlines, one story at a time, with a ticker | lodestonenews.com, every fifteen minutes, cached in the config folder |
+| Market | The watch list priced, a chart of the featured item, a ticker | Universalis, every ten minutes, for the world you are on |
+| Aquarium, Fireplace, Starfield, Plasma, Mystify | Something on, nothing to read | Procedural; the heavy ones draw at a quarter size and scale up |
+
+The weather channel's alerts come in two kinds. Rare weather — a one-in-ten chance or less for
+that zone — is scanned across every outdoor zone for the next six periods and shown on the
+"Coming up" line, which is what fishers wait on. A special alert turns the header red when the
+sky where you stand differs from what the tables say it should be: that only happens when the
+game forces it, which is a FATE boss bringing its own weather — Tension over the Shroud is Odin,
+Royal Levin in the Forelands is Coeurlregina, Quicklevin in the Lochs is Ixion, Hyperelectricity
+in Azys Lla is Proto Ultima. It has to be seen from that zone; a set in a housing ward cannot
+know what the Shroud's sky is doing.
+
 ## Channel music
 
 The guide and the weather play music underneath, the way the real ones did. The Sound tab's

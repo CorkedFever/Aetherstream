@@ -117,6 +117,15 @@ public sealed class Playlist
     public string Url { get; set; } = string.Empty;
 }
 
+/// <summary>An item the market channel watches. The id is the game's; the name is for the list.</summary>
+[Serializable]
+public sealed class MarketItem
+{
+    public uint Id { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+}
+
 /// <summary>Something played before, so it can be started again without being typed again.</summary>
 [Serializable]
 public sealed class Recent
@@ -135,7 +144,7 @@ public sealed class Recent
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 8;
 
     public int Version { get; set; } = CurrentVersion;
 
@@ -326,6 +335,9 @@ public sealed class Configuration : IPluginConfiguration
     public string ChannelMusicPlexPlaylist { get; set; } = string.Empty;
 
     public string ChannelMusicPlexPlaylistName { get; set; } = string.Empty;
+
+    /// <summary>What the market channel lists. Seeded with the crystals, which every crafter watches.</summary>
+    public List<MarketItem> MarketWatch { get; set; } = [];
 
     public float Opacity { get; set; } = 1f;
 
@@ -542,6 +554,13 @@ public sealed class Configuration : IPluginConfiguration
 
         if (this.Version < 7 && string.IsNullOrWhiteSpace(this.ClientId))
             this.ClientId = Guid.NewGuid().ToString();
+
+        // 8: the market channel's first watch list: the six crystals, whose ids never change.
+        if (this.Version < 8 && this.MarketWatch.Count == 0)
+        {
+            foreach (var (id, name) in (ReadOnlySpan<(uint, string)>)[(8u, "Fire Crystal"), (9u, "Ice Crystal"), (10u, "Wind Crystal"), (11u, "Earth Crystal"), (12u, "Lightning Crystal"), (13u, "Water Crystal")])
+                this.MarketWatch.Add(new MarketItem { Id = id, Name = name });
+        }
 
         this.Version = CurrentVersion;
         return true;

@@ -24,6 +24,7 @@ internal sealed class EorzeaWeather
 
     private readonly Dictionary<uint, string> weatherNames = [];
     private readonly Dictionary<uint, (uint WeatherId, int Cumulative)[]> rates = [];
+    private readonly Dictionary<uint, Dictionary<uint, int>> chances = [];
     private readonly Dictionary<uint, Zone> zonesByTerritory = [];
     private readonly Dictionary<string, Zone> zonesByPlace = new(StringComparer.Ordinal);
     private readonly List<Zone> around = [];
@@ -59,7 +60,20 @@ internal sealed class EorzeaWeather
                 }
 
                 if (table.Count > 0)
+                {
                     this.rates[r.RowId] = [.. table];
+
+                    // The same table as odds per weather, for spotting the rare ones.
+                    var odds = new Dictionary<uint, int>();
+                    var previous = 0;
+                    foreach (var (weatherId, cumulative) in table)
+                    {
+                        odds[weatherId] = odds.GetValueOrDefault(weatherId) + (cumulative - previous);
+                        previous = cumulative;
+                    }
+
+                    this.chances[r.RowId] = odds;
+                }
             }
 
             // Every territory with a weather table gets a forecast. The "around Eorzea" crawl
@@ -111,6 +125,13 @@ internal sealed class EorzeaWeather
 
     public string NameOf(uint weatherId) =>
         this.weatherNames.TryGetValue(weatherId, out var name) ? name : "Unknown";
+
+    /// <summary>How likely a weather is in a zone, 0 to 100. Zero when the zone never has it.</summary>
+    public int ChanceOf(Zone zone, uint weatherId) =>
+        this.chances.TryGetValue(zone.RateId, out var odds) && odds.TryGetValue(weatherId, out var chance) ? chance : 0;
+
+    /// <summary>Whether a territory has a weather table of its own, so the live sky can be checked against it.</summary>
+    public bool HasOwnWeather(uint territoryId) => this.zonesByTerritory.ContainsKey(territoryId);
 
     /// <summary>The start of the period a real unix time falls in.</summary>
     public static long PeriodStart(long unix) => unix - (unix % PeriodSeconds);

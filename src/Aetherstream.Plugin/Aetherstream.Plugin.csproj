@@ -7,6 +7,8 @@
     <AssemblyName>Aetherstream</AssemblyName>
     <RootNamespace>Aetherstream.Plugin</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- For the one place the plugin reads game memory: the live weather, through ClientStructs. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
