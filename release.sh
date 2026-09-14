@@ -171,14 +171,9 @@ rm -rf "$ZIP_DIR"
 
 # -- mirrors -------------------------------------------------------------------------------------
 
+# The manifest lives on GitHub only (raw main and Pages). Luna is the business box and holds
+# nothing of the plugin's; the Aetherstream server is meteor, and it serves streams, not manifests.
 say "mirrors"
-if [ -f "$HOME/.ssh/luna" ]; then
-    scp -q -i "$HOME/.ssh/luna" -o BatchMode=yes repo.json root@165.227.89.5:/opt/tsukino/site/aetherstream-repo.json \
-        && echo "   luna: updated" || echo "   luna: unreachable (skipped)"
-else
-    echo "   luna: no key here (skipped)"
-fi
-
 # Pages does not reliably build on its own after a run of pushes. Ask, then wait for proof.
 gh api -X POST "repos/$REPO/pages/builds" -q '"   pages: build \(.status)"'
 for _ in $(seq 1 60); do
