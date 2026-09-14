@@ -49,12 +49,13 @@ internal static class Canvas
             target.Slice((row * Width) + x0, x1 - x0).Fill(colour);
     }
 
-    public static void Rect(Span<uint> target, int x, int y, int w, int h, uint colour)
+    /// <summary>An outline. Two pixels thick by default: a one-pixel line vanishes when a surface squashes the picture.</summary>
+    public static void Rect(Span<uint> target, int x, int y, int w, int h, uint colour, int thickness = 2)
     {
-        Fill(target, x, y, w, 1, colour);
-        Fill(target, x, y + h - 1, w, 1, colour);
-        Fill(target, x, y, 1, h, colour);
-        Fill(target, x + w - 1, y, 1, h, colour);
+        Fill(target, x, y, w, thickness, colour);
+        Fill(target, x, y + h - thickness, w, thickness, colour);
+        Fill(target, x, y, thickness, h, colour);
+        Fill(target, x + w - thickness, y, thickness, h, colour);
     }
 
     public static void Plot(Span<uint> target, int x, int y, uint colour)

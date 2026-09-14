@@ -185,14 +185,15 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
             }
         }
 
-        // Column rules over everything, so they never scroll.
+        // Column rules over everything, so they never scroll. Two wide, so a squashed surface keeps them.
         for (var y = RowsTop; y < RowsBottom; y++)
         {
             var line = span.Slice(y * Width, Width);
-            line[ColName - 1] = Edge;
-            line[ColSlots - 1] = Edge;
-            line[ColSlots + SlotWidth - 1] = Edge;
-            line[ColSlots + (2 * SlotWidth) - 1] = Edge;
+            foreach (var x in (ReadOnlySpan<int>)[ColName - 1, ColSlots - 1, ColSlots + SlotWidth - 1, ColSlots + (2 * SlotWidth) - 1])
+            {
+                line[x] = Edge;
+                line[x - 1] = Edge;
+            }
         }
     }
 

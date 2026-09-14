@@ -109,7 +109,7 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
 
                 var rule = y + RowHeight - 6;
                 if (rule >= RowTop && rule < RowsBottom)
-                    Canvas.Fill(span, Left, rule, Split - Left - 24, 1, Canvas.Edge);
+                    Canvas.Fill(span, Left, rule, Split - Left - 24, 2, Canvas.Edge);
             }
         }
 
@@ -146,9 +146,9 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
                 break;
 
             // A box, ticked when done; the value dim beside or under the name.
-            Canvas.Rect(span, Split + 16, ry + 10, 20, 20, done ? Canvas.Good : Canvas.Dim);
+            Canvas.Rect(span, Split + 16, ry + 9, 22, 22, done ? Canvas.Good : Canvas.Dim);
             if (done)
-                Canvas.Fill(span, Split + 20, ry + 14, 12, 12, Canvas.Good);
+                Canvas.Fill(span, Split + 21, ry + 14, 12, 12, Canvas.Good);
 
             var label = Canvas.Cut(name.ToUpperInvariant(), font.Fit(W - Split - 72));
             font.Draw(span, W, label, Split + 48, ry, done ? Canvas.Faint : Canvas.White, 1, all);
