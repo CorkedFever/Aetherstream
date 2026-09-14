@@ -121,44 +121,50 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         Canvas.Fill(span, ListLeft - 16, 72, 2, 560, Canvas.Edge);
         var region = new BitmapFont.Clip(ListLeft, 72, W, 636);
 
-        var entries = new List<(string Text, string Time, uint Colour, bool Featured)>();
-        entries.Add(("OPEN NOW", string.Empty, Canvas.Amber, false));
+        // Two lines a venue: the name and its time, then where it is.
+        var entries = new List<(string Text, string Detail, string Time, uint Colour, bool Featured, bool Heading)>();
+        entries.Add(("OPEN NOW", string.Empty, string.Empty, Canvas.Amber, false, true));
         if (open.Count == 0)
-            entries.Add(("nobody yet", string.Empty, Canvas.Faint, false));
+            entries.Add(("nobody yet", string.Empty, string.Empty, Canvas.Faint, false, true));
         foreach (var v in open)
-            entries.Add((v.Name, v.ClosesUtc is { } closes ? $"til {closes.ToLocalTime():h:mm tt}" : string.Empty, Canvas.Good, ReferenceEquals(v, venue)));
+            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.ClosesUtc is { } closes ? $"til {closes.ToLocalTime():h:mm tt}" : string.Empty, Canvas.Good, ReferenceEquals(v, venue), false));
 
-        entries.Add((string.Empty, string.Empty, 0, false));
-        entries.Add(("COMING UP", string.Empty, Canvas.Amber, false));
+        entries.Add(("COMING UP", string.Empty, string.Empty, Canvas.Amber, false, true));
         if (soon.Count == 0)
-            entries.Add(("nothing in the next day", string.Empty, Canvas.Faint, false));
+            entries.Add(("nothing in the next day", string.Empty, string.Empty, Canvas.Faint, false, true));
         foreach (var v in soon)
-            entries.Add((v.Name, v.OpensUtc is { } opens ? WhenText(opens, now) : string.Empty, Canvas.White, ReferenceEquals(v, venue)));
+            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.OpensUtc is { } opens ? WhenText(opens, now) : string.Empty, Canvas.White, ReferenceEquals(v, venue), false));
 
-        const int RowHeight = 44;
-        var visible = (636 - 72) / RowHeight;
-        var total = entries.Count * RowHeight;
-        var offset = entries.Count <= visible ? 0 : (int)((seconds * 18.0) % total);
+        // Headings take one line, venues two; the list climbs when it does not fit.
+        var heights = entries.Select(e => e.Heading ? 44 : 76).ToList();
+        var total = heights.Sum();
+        var fits = total <= 636 - 72;
+        var offset = fits ? 0 : (int)((seconds * 18.0) % total);
 
-        for (var pass = 0; pass < (entries.Count <= visible ? 1 : 2); pass++)
+        for (var pass = 0; pass < (fits ? 1 : 2); pass++)
         {
+            var y = 72 - offset + (pass * total);
             for (var i = 0; i < entries.Count; i++)
             {
-                var y = 72 - offset + (pass * total) + (i * RowHeight);
-                if (y + RowHeight <= 72 || y >= 636)
+                var height = heights[i];
+                var top = y;
+                y += height;
+                if (top + height <= 72 || top >= 636)
                     continue;
 
-                var (text, time, colour, isFeatured) = entries[i];
-                if (text.Length == 0)
-                    continue;
+                var (text, detail, time, colour, isFeatured, heading) = entries[i];
 
                 if (isFeatured)
-                    Canvas.Fill(span, ListLeft - 8, Math.Max(72, y), 4, Math.Min(636, y + RowHeight) - Math.Max(72, y), Canvas.Rgb(0xED, 0x93, 0xB1));
+                    Canvas.Fill(span, ListLeft - 8, Math.Max(72, top), 4, Math.Min(636, top + height - 8) - Math.Max(72, top), Canvas.Rgb(0xED, 0x93, 0xB1));
 
-                var timeWidth = time.Length > 0 ? font.Measure(time.ToUpperInvariant()) + 16 : 0;
-                font.Draw(span, W, Canvas.Cut(text.ToUpperInvariant(), font.Fit(W - ListLeft - 40 - timeWidth)), ListLeft, y, colour, 1, region);
-                if (time.Length > 0)
-                    font.Draw(span, W, time.ToUpperInvariant(), W - 40 - font.Measure(time.ToUpperInvariant()), y, Canvas.Dim, 1, region);
+                var timeText = time.ToUpperInvariant();
+                var timeWidth = timeText.Length > 0 ? font.Measure(timeText) + 16 : 0;
+                font.Draw(span, W, Canvas.Cut(text.ToUpperInvariant(), font.Fit(W - ListLeft - 40 - timeWidth)), ListLeft, top, colour, 1, region);
+                if (timeText.Length > 0)
+                    font.Draw(span, W, timeText, W - 40 - font.Measure(timeText), top, Canvas.Dim, 1, region);
+
+                if (!heading && detail.Length > 0)
+                    font.Draw(span, W, Canvas.Cut(detail.ToUpperInvariant(), font.Fit(W - ListLeft - 40)), ListLeft, top + 34, Canvas.Faint, 1, region);
             }
         }
 
