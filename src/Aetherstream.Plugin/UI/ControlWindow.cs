@@ -27,6 +27,9 @@ internal sealed class ControlWindow : Window
     private readonly (string Label, Action Draw)[] inputs;
     private int input;
     private Vector2 unfoldedSize = new(560f, 720f);
+
+    /// <summary>The folded widget's content width. Fixed, or auto-resize would keep whatever width the window had.</summary>
+    private const float FoldedWidth = 400f;
     private Vector2? sizeToRestore;
     private bool loggedDrawFailure;
 
@@ -86,7 +89,7 @@ internal sealed class ControlWindow : Window
             | (folded ? ImGuiWindowFlags.AlwaysAutoResize : ImGuiWindowFlags.None);
 
         this.SizeConstraints = folded
-            ? new WindowSizeConstraints { MinimumSize = new Vector2(430f, TitleBarHeight + 24f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) }
+            ? new WindowSizeConstraints { MinimumSize = new Vector2(FoldedWidth + 16f, TitleBarHeight + 24f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) }
             : new WindowSizeConstraints { MinimumSize = new Vector2(440f, 460f), MaximumSize = new Vector2(1400f, 1600f) };
 
         if (this.sizeToRestore is { } restore)
@@ -162,7 +165,7 @@ internal sealed class ControlWindow : Window
     {
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var width = this.ui.Config.WindowMinimised ? FoldedWidth : ImGui.GetContentRegionAvail().X;
 
         drawList.AddRectFilled(origin, origin + new Vector2(width, TitleBarHeight), Theme.U32(Theme.TitleBarFill), 6f);
 
@@ -189,7 +192,7 @@ internal sealed class ControlWindow : Window
             // What is on, right-aligned against the buttons — the folded bar's whole reason to exist.
             if (this.ui.Session.IsPlaying)
             {
-                var title = Ui.Ellipsis(this.Screen.Title(), 34).ToUpperInvariant();
+                var title = Ui.Ellipsis(this.Screen.Title(), this.ui.Config.WindowMinimised ? 16 : 34).ToUpperInvariant();
                 var titleSize = ImGui.CalcTextSize(title);
                 ImGui.SetCursorScreenPos(origin + new Vector2(width - titleSize.X - buttonsWidth - 8f, (TitleBarHeight - titleSize.Y) / 2f));
                 ImGui.TextColored(Theme.TextDim, title);
@@ -237,7 +240,7 @@ internal sealed class ControlWindow : Window
         var session = this.ui.Session;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var width = FoldedWidth;
 
         const float StatusHeight = 20f;
         const float RemoteHeight = 30f;
