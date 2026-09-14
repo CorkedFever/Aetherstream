@@ -414,9 +414,10 @@ public sealed class Configuration : IPluginConfiguration
 
     /// <summary>
     /// Hold the sound back by however much libvlc delivers ahead of time, measured at the start
-    /// of each play. On by default; the per-source offset is applied on top.
+    /// of each play. Off by default: on a live channel the opening burst is the buffer catching
+    /// up rather than a steady lead, and the hold overshoots. The per-source offset applies on top.
     /// </summary>
-    public bool AutoSync { get; set; } = true;
+    public bool AutoSync { get; set; }
 
     /// <summary>
     /// Offsets remembered per source, by the source string. A channel that needed +400 keeps
