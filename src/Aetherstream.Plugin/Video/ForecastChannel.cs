@@ -146,8 +146,8 @@ internal sealed class ForecastChannel(BitmapFont font, Func<ForecastSnapshot?> d
         {
             var z = page.Zones[highlight];
             var word = $"{z.Name.ToUpperInvariant()}: {z.Periods[0].ToUpperInvariant()} NOW" + (z.Chance > 0 && z.Chance <= 15 ? $" ({z.Chance}% CHANCE, RARE)" : string.Empty)
-                + (z.Periods[1] != z.Periods[0] ? $", THEN {z.Periods[1].ToUpperInvariant()}" : ", AND STAYING");
-            font.Draw(span, W, Canvas.Cut(word, font.Fit(BW - 40)), BX + 20, BY + bh + 8, Mint, 1, all);
+                + (z.Periods[1] != z.Periods[0] ? $", THEN {z.Periods[1].ToUpperInvariant()}" : ", HOLDING");
+            font.Draw(span, W, Canvas.Cut(word, font.Fit(BW - 40)), BX + 20, BY + bh + 6, Mint, 1, all);
         }
 
         // The pixie, fluttering by the board, pointing at the row.
