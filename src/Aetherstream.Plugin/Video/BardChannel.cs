@@ -112,6 +112,10 @@ internal sealed class BardChannel(BitmapFont font, Func<IReadOnlyList<DeitySprit
     /// <summary>The tale for an episode: a shuffle of all of them per round, seeded by the round.</summary>
     private static TwelveTales.Tale TaleFor(int episode)
     {
+        // About once in a hundred, the one he is not supposed to tell.
+        if (episode % 97 == 42)
+            return TwelveTales.Egg;
+
         var all = TwelveTales.All;
         var round = episode / all.Length;
         var slot = episode % all.Length;
