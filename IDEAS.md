@@ -160,9 +160,9 @@ From the game, no network:
   *Weak in practice: the set lives in a housing ward, where the client sees no FATEs and no marks.
   Only worth it fed from outside — Sonar's IPC if the viewer has it, or a train route a conductor
   pastes into the party — so it sits low on the list.*
-- **Duty roulette board.** Daily and weekly reset countdowns, which roulettes are done today.
+- **Timers board.** *Built.* Resets, the ocean fishing boat, the cactpot draw, retainers on
+  ventures, and today's roulettes ticked off.
 - **Gathering log.** *Built.* Timed nodes as a departures board, with countdowns to each.
-- **Retainer and venture timers.** Who is back when.
 - **Zone map.** The current map texture with you and the party as blips.
 
 From the party server:
