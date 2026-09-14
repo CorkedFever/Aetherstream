@@ -290,7 +290,11 @@ internal sealed class ShareTab(UiContext ui)
         {
             if (ImGui.Button("Use what I'm watching") && ui.Session.Current is { } current)
             {
-                ui.Config.PartyInput = current.PlaylistUrl;
+                // A local file plays as a file URI; ffmpeg wants the path back.
+                var playing = current.Origin ?? current.PlaylistUrl;
+                if (playing.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                    playing = new Uri(playing).LocalPath;
+                ui.Config.PartyInput = playing;
                 ui.SaveConfig();
             }
         }
