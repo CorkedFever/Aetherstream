@@ -139,8 +139,8 @@ they would change the experience.
 ## Odd but cheap
 
 - **Teletext page.** A 1980s teletext page of Eorzea news, weather and market prices on channel 100.
-- **Prevue-style guide channel.** *Built, with music when nothing is on; EPG cells and a promo loop
-  still to do.* The 90s TV Guide Channel: a grid of channels and half-hour
+- **Prevue-style guide channel.** *Built, with music when nothing is on, timelines for what is
+  playing and queued, and XMLTV listings for live channels; a promo loop still to do.* The 90s TV Guide Channel: a grid of channels and half-hour
   slots scrolling up slowly on the bottom two thirds, the current channel or a promo loop in the
   top third, a weather and party ticker along the bottom, smooth jazz throughout. Rows come from
   the Live TV playlist and the party schedule; cells fill from EPG data where a playlist has it.

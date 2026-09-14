@@ -166,6 +166,11 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
 
         // -- rows ----------------------------------------------------------------------------
         Fill(span, 0, RowsTop, Width, RowsBottom - RowsTop, Glass);
+
+        // The present moment, as a line down the timeline. Under the rows, so text is not cut by
+        // it and a lit programme box sits over it; the empty columns still show where now is.
+        var nowX = this.XOf(DateTime.UtcNow);
+        Fill(span, nowX - 1, RowsTop, 3, RowsBottom - RowsTop, AccentDeep);
         var rows = data.Rows;
         if (rows.Count == 0)
             return;
@@ -193,10 +198,6 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
             }
         }
 
-        // The present moment, as a line down the timeline.
-        var nowX = this.XOf(DateTime.UtcNow);
-        Fill(span, nowX - 1, RowsTop, 3, RowsBottom - RowsTop, Accent);
-
         // Column rules over everything, so they never scroll. Two wide, so a squashed surface keeps them.
         for (var y = RowsTop; y < RowsBottom; y++)
         {
@@ -216,6 +217,10 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
 
         var bg = row.Current ? AccentDeep : (index % 2 == 0 ? RowA : RowB);
         Fill(span, 0, top, Width, bottom - top, bg);
+
+        // The now line shows through every row, under its text.
+        var nowX = this.XOf(DateTime.UtcNow);
+        Fill(span, nowX - 1, top, 3, bottom - top, Accent);
 
         var textY = y;
         var clip = new BitmapFont.Clip(0, top, Width, bottom);
