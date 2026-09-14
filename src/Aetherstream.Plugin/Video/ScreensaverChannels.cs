@@ -18,6 +18,16 @@ internal sealed class MazeChannel(BitmapFont font) : AmbienceChannel(font)
     private readonly byte[] maze = new byte[Cells * Cells];
     private readonly uint[] brick = BuildBrick();
 
+    private readonly float[] depth = new float[SW];
+    private readonly uint[] rolled = new uint[SW * SH];
+    private readonly List<(int X, int Y)> smileys = [];
+    private float roll, rollTarget;
+
+    // The rat: a second walker, quicker, keeping to the right-hand wall so it takes other turns.
+    private float ratX, ratY;
+    private int ratTargetX, ratTargetY, ratFacing;
+    private bool ratLeft;
+
     private float px, py, angle;
     private int targetX, targetY;
     private float targetAngle;
@@ -25,6 +35,46 @@ internal sealed class MazeChannel(BitmapFont font) : AmbienceChannel(font)
     private int facing;
 
     private static readonly (int Dx, int Dy)[] Dirs = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+
+    private static readonly string[] Smiley =
+    [
+        ".....yyyyyy.....",
+        "...yyyyyyyyyy...",
+        "..yyyyyyyyyyyy..",
+        ".yyyyyyyyyyyyyy.",
+        ".yyykkyyyykkyyy.",
+        "yyyykkyyyykkyyyy",
+        "yyyyyyyyyyyyyyyy",
+        "yyyyyyyyyyyyyyyy",
+        "yyyyyyyyyyyyyyyy",
+        "yykyyyyyyyyyykyy",
+        ".yykkyyyyyykkyy.",
+        ".yyyykkkkkkyyyy.",
+        "..yyyyyyyyyyyy..",
+        "...yyyyyyyyyy...",
+        ".....yyyyyy.....",
+        "................",
+    ];
+
+    private static readonly string[] Rat =
+    [
+        "................",
+        "................",
+        "................",
+        "................",
+        "..........gg....",
+        ".......ggggggg..",
+        "......gggggggggp",
+        "t....ggggggggkg.",
+        ".tt.gggggggggg..",
+        "..ttgggggggggg..",
+        "....gggggggggg..",
+        ".....gg....gg...",
+        "................",
+        "................",
+        "................",
+        "................",
+    ];
 
     private static uint[] BuildBrick()
     {
@@ -87,6 +137,59 @@ internal sealed class MazeChannel(BitmapFont font) : AmbienceChannel(font)
         this.targetX = 1;
         this.targetY = 1;
         this.PickNext();
+
+        this.smileys.Clear();
+        for (var i = 0; i < 14; i++)
+            this.PlaceSmiley();
+
+        // The rat starts a few cells along, ahead of the walker.
+        this.ratTargetX = 1;
+        this.ratTargetY = 1;
+        this.ratX = 1.5f;
+        this.ratY = 1.5f;
+        this.ratFacing = 0;
+        this.PickRatNext();
+        for (var i = 0; i < 6; i++)
+        {
+            this.ratX = this.ratTargetX + 0.5f;
+            this.ratY = this.ratTargetY + 0.5f;
+            this.PickRatNext();
+        }
+    }
+
+    /// <summary>Puts a smiley in a random open cell that is not where the walker is.</summary>
+    private void PlaceSmiley()
+    {
+        for (var tries = 0; tries < 200; tries++)
+        {
+            var x = this.Rng.Next(1, Cells - 1);
+            var y = this.Rng.Next(1, Cells - 1);
+            if (!this.Open(x, y) || (x == (int)this.px && y == (int)this.py) || this.smileys.Contains((x, y)))
+                continue;
+
+            this.smileys.Add((x, y));
+            return;
+        }
+    }
+
+    /// <summary>Right-hand rule for the rat, so it and the walker part ways at junctions.</summary>
+    private void PickRatNext()
+    {
+        var cx = this.ratTargetX;
+        var cy = this.ratTargetY;
+        foreach (var turn in new[] { 1, 0, -1, 2 })
+        {
+            var f = ((this.ratFacing + turn) % 4 + 4) % 4;
+            var (dx, dy) = Dirs[f];
+            if (this.Open(cx + dx, cy + dy))
+            {
+                this.ratFacing = f;
+                this.ratTargetX = cx + dx;
+                this.ratTargetY = cy + dy;
+                this.ratLeft = dx < 0;
+                return;
+            }
+        }
     }
 
     private bool Open(int x, int y) => x >= 0 && y >= 0 && x < Cells && y < Cells && this.maze[(y * Cells) + x] == 0;
@@ -141,6 +244,15 @@ internal sealed class MazeChannel(BitmapFont font) : AmbienceChannel(font)
             {
                 this.px = gx;
                 this.py = gy;
+
+                // Walking into a smiley turns the world over — as it did — and the smiley moves on.
+                var here = (this.targetX, this.targetY);
+                if (this.smileys.Remove(here))
+                {
+                    this.rollTarget = this.rollTarget < 0.5f ? MathF.PI : 0f;
+                    this.PlaceSmiley();
+                }
+
                 this.PickNext();
             }
             else
@@ -150,9 +262,139 @@ internal sealed class MazeChannel(BitmapFont font) : AmbienceChannel(font)
             }
         }
 
+        // The rat scurries: straight to the next cell, no turning animation, quicker than us.
+        {
+            var gx = this.ratTargetX + 0.5f;
+            var gy = this.ratTargetY + 0.5f;
+            var dx = gx - this.ratX;
+            var dy = gy - this.ratY;
+            var dist = MathF.Sqrt((dx * dx) + (dy * dy));
+            var step = 2.6f * dt;
+            if (dist <= step)
+            {
+                this.ratX = gx;
+                this.ratY = gy;
+                this.PickRatNext();
+            }
+            else
+            {
+                this.ratX += dx / dist * step;
+                this.ratY += dy / dist * step;
+            }
+        }
+
+        // The roll eases toward its target over about a second and a half.
+        var rollDiff = this.rollTarget - this.roll;
+        if (MathF.Abs(rollDiff) > 0.005f)
+            this.roll += MathF.Sign(rollDiff) * MathF.Min(MathF.Abs(rollDiff), 2.1f * dt);
+        else
+            this.roll = this.rollTarget;
+
         this.Raycast();
-        Canvas.Upscale(this.small, SW, SH, Scale, span);
+        this.DrawSprites();
+
+        if (this.roll == 0f)
+        {
+            Canvas.Upscale(this.small, SW, SH, Scale, span);
+        }
+        else
+        {
+            this.Rotate(this.roll);
+            Canvas.Upscale(this.rolled, SW, SH, Scale, span);
+        }
+
         this.Font.Draw(span, W, "3D MAZE", 24, 8, Canvas.Faint, 1, new BitmapFont.Clip(0, 0, W, H));
+    }
+
+    /// <summary>
+    /// Sprites, drawn after the walls and only where they are nearer than the wall in that
+    /// column. Farthest first, so a near one covers a far one.
+    /// </summary>
+    private void DrawSprites()
+    {
+        var dirX = MathF.Cos(this.angle);
+        var dirY = MathF.Sin(this.angle);
+        var planeX = -dirY * 0.66f;
+        var planeY = dirX * 0.66f;
+        var inv = 1f / ((planeX * dirY) - (dirX * planeY));
+
+        var yellow = Canvas.Rgb(0xFF, 0xD6, 0x4F);
+        var black = Canvas.Rgb(0x1A, 0x14, 0x08);
+        var grey = Canvas.Rgb(0x8A, 0x86, 0x80);
+        var pink = Canvas.Rgb(0xE0, 0x90, 0x90);
+
+        var sprites = new List<(float X, float Y, string[] Art, Func<char, uint> Palette, float Height, float Lift, bool Flip)>();
+        foreach (var (cx, cy) in this.smileys)
+            sprites.Add((cx + 0.5f, cy + 0.5f, Smiley, c => c == 'y' ? yellow : c == 'k' ? black : 0u, 0.6f, 0.15f, false));
+
+        sprites.Add((this.ratX, this.ratY, Rat, c => c switch { 'g' => grey, 'p' => pink, 't' => pink, 'k' => black, _ => 0u }, 0.5f, 0.42f, this.ratLeft));
+
+        foreach (var sprite in sprites.OrderByDescending(m => ((m.X - this.px) * (m.X - this.px)) + ((m.Y - this.py) * (m.Y - this.py))))
+        {
+            var sx = sprite.X - this.px;
+            var sy = sprite.Y - this.py;
+            var tx = inv * ((dirY * sx) - (dirX * sy));
+            var ty = inv * ((-planeY * sx) + (planeX * sy));
+            if (ty <= 0.1f)
+                continue;
+
+            var screenX = (int)((SW / 2f) * (1f + (tx / ty)));
+            var size = (int)(SH / ty * sprite.Height);
+            if (size < 2)
+                continue;
+
+            var left = screenX - (size / 2);
+            var top = (SH / 2) - (size / 2) + (int)(SH / ty * sprite.Lift);
+            var shade = Math.Clamp(1.1f - (ty / 9f), 0.15f, 1f);
+            this.Blit(sprite.Art, sprite.Palette, left, top, size, ty, shade, sprite.Flip);
+        }
+    }
+
+    private void Blit(string[] art, Func<char, uint> palette, int left, int top, int size, float ty, float shade, bool flip)
+    {
+        var s = this.small.AsSpan();
+        for (var x = Math.Max(0, left); x < Math.Min(SW, left + size); x++)
+        {
+            if (ty >= this.depth[x])
+                continue;
+
+            var ax = (x - left) * 16 / size;
+            if (flip)
+                ax = 15 - ax;
+
+            for (var y = Math.Max(0, top); y < Math.Min(SH, top + size); y++)
+            {
+                var ay = (y - top) * 16 / size;
+                var colour = palette(art[ay][ax]);
+                if (colour == 0)
+                    continue;
+
+                s[(y * SW) + x] = Canvas.Lerp(Canvas.Black, colour, shade);
+            }
+        }
+    }
+
+    /// <summary>Rotates the small picture about its centre into the rolled buffer, black where nothing lands.</summary>
+    private void Rotate(float angle)
+    {
+        var src = this.small.AsSpan();
+        var dst = this.rolled.AsSpan();
+        var c = MathF.Cos(angle);
+        var sn = MathF.Sin(angle);
+        var cx = SW / 2f;
+        var cy = SH / 2f;
+
+        for (var y = 0; y < SH; y++)
+        {
+            var dy = y - cy;
+            for (var x = 0; x < SW; x++)
+            {
+                var dx = x - cx;
+                var ux = (int)(cx + (dx * c) - (dy * sn));
+                var uy = (int)(cy + (dx * sn) + (dy * c));
+                dst[(y * SW) + x] = (uint)ux < SW && (uint)uy < SH ? src[(uy * SW) + ux] : Canvas.Black;
+            }
+        }
     }
 
     private void Raycast()
@@ -221,6 +463,8 @@ internal sealed class MazeChannel(BitmapFont font) : AmbienceChannel(font)
             if (perp < 0.05f)
                 perp = 0.05f;
 
+            this.depth[x] = perp;
+
             var lineH = (int)(SH / perp);
             var drawStart = Math.Max(0, (-lineH / 2) + (SH / 2));
             var drawEnd = Math.Min(SH - 1, (lineH / 2) + (SH / 2));
@@ -255,7 +499,24 @@ internal sealed class PipesChannel(BitmapFont font) : AmbienceChannel(font)
     private const float Focal = 900f;
     private const float Distance = 31f;
 
-    private readonly record struct Segment(int X0, int Y0, int Z0, int X1, int Y1, int Z1, uint Colour, bool Joint);
+    private readonly record struct Segment(int X0, int Y0, int Z0, int X1, int Y1, int Z1, uint Colour, bool Joint, bool Teapot = false);
+
+    // The Utah teapot, as the original hid at the odd joint. Sixteen by twelve, sideways.
+    private static readonly string[] Teapot =
+    [
+        "......cccc......",
+        ".......cc.......",
+        "....cccccccc....",
+        "c..cccccccccc.c.",
+        "cc.cccccccccc.cc",
+        ".c.ccccccccccccc",
+        ".c.cccccccccccc.",
+        ".cccccccccccccc.",
+        "..cccccccccccc..",
+        "...cccccccccc...",
+        "....cccccccc....",
+        "................",
+    ];
 
     private readonly bool[] occupied = new bool[GX * GY * GZ];
     private readonly List<Segment> segments = [];
@@ -356,8 +617,9 @@ internal sealed class PipesChannel(BitmapFont font) : AmbienceChannel(font)
         var ny = this.headY + my;
         var nz = this.headZ + mz;
 
+        // One turn in twenty-five gets a teapot instead of a ball. Everyone who knows, knows.
         if (turned)
-            this.segments.Add(new Segment(this.headX, this.headY, this.headZ, this.headX, this.headY, this.headZ, this.colour, true));
+            this.segments.Add(new Segment(this.headX, this.headY, this.headZ, this.headX, this.headY, this.headZ, this.colour, true, Teapot: this.Rng.Next(25) == 0));
 
         this.segments.Add(new Segment(this.headX, this.headY, this.headZ, nx, ny, nz, this.colour, false));
         this.occupied[(nz * GY * GX) + (ny * GX) + nx] = true;
@@ -442,6 +704,14 @@ internal sealed class PipesChannel(BitmapFont font) : AmbienceChannel(font)
             var fade = Math.Clamp(1.3f - (depth / (Distance * 1.6f)), 0.25f, 1f);
             var body = Canvas.Lerp(Canvas.Black, sgm.Colour, fade);
             var shine = Canvas.Lerp(body, Canvas.White, 0.45f);
+
+            if (sgm.Teapot)
+            {
+                var scale = Math.Max(1, (radius * 3) / 8);
+                Canvas.Sprite(span, Teapot, c => c == 'c' ? body : 0u, (int)ax - (8 * scale), (int)ay - (6 * scale), scale);
+                Canvas.Fill(span, (int)ax - (4 * scale), (int)ay - (3 * scale), 3 * scale, scale, shine);
+                continue;
+            }
 
             if (sgm.Joint)
             {

@@ -283,7 +283,7 @@ implementing `IFrameChannel` in `Video\`, handed a snapshot by the plugin when i
 | News | Lodestone headlines, one story at a time, maintenance windows in local time with a countdown | lodestonenews.com, every fifteen minutes, cached in the config folder |
 | Market | The watch list priced, a chart of the featured item, a ticker | Universalis, every ten minutes, for the world you are on |
 | Gathering | Timed nodes as a departures board: up now, then soonest, with real-time countdowns | The game's gathering tables and the clock |
-| Aquarium, Fireplace, Starfield, Plasma, Mystify, 3D Maze, Pipes | Something on, nothing to read | Procedural; the heavy ones draw at a quarter size and scale up. The maze is a raycaster; Pipes is a 3D grid drawn back to front |
+| Aquarium, Fireplace, Starfield, Plasma, Mystify, 3D Maze, Pipes | Something on, nothing to read | Procedural; the heavy ones draw at a quarter size and scale up. The maze is a raycaster with the smileys that flip the world and the rat; Pipes is a 3D grid drawn back to front, teapot included |
 
 The weather channel's alerts come in two kinds. Rare weather — a one-in-ten chance or less for
 that zone — is scanned across every outdoor zone for the next six periods and shown on the
