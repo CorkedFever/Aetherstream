@@ -97,6 +97,47 @@ they would change the experience.
   hosts more than friends.
 - **Tests** around the relay and the resolvers, the parts that break when a service changes.
 
+## Accessibility
+
+- **Subtitle styling.** Size, outline, position, a dyslexia-friendly font. libvlc exposes these,
+  and they matter on a small painted surface.
+- **Audio description tracks** treated as a first-class pick in the audio menu.
+- **Colourblind-safe OSD colours**, or a high-contrast toggle for the remote.
+
+## Venues and events
+
+- **Venue mode.** Locks the remote to a host, hides the window for guests, shows a schedule card
+  between showings. Nightclubs and cafés in housing are a real scene.
+- **Announcements.** A text ticker across the bottom of the picture, editable by the host.
+- **Intermission card** with a countdown to when the film resumes.
+- **Guest join code.** A short code in a macro or the venue's Discord that joins in one command.
+
+## Persistence
+
+- **Continue watching row** at the top of the library, from the resume table.
+- **Per-house screen layouts** that remember which furnishing in which house.
+- **Cloud config**, optional, through the party server, so friends can share a setup.
+
+## Sound
+
+- **Reverb by room size.** A hall gets a little echo, a bedroom none. Cheap to fake.
+- **Occlusion.** Muffle when a wall is between you and the screen; a raycast, or just
+  "different room, duck 6 dB".
+- **Audio-only mode** for a screen that's out of view: sound follows, picture doesn't render.
+
+## Cross-plugin
+
+- **Memoria bridge.** The Phase 2 note in the README: one decoder shared by both plugins.
+- **Discord Rich Presence**: "watching X with N people", optional.
+- **IPC** so other plugins can ask what's playing or change the channel.
+
+## Odd but cheap
+
+- **Teletext page.** A 1980s teletext page of Eorzea news, weather and market prices on channel 100.
+- **Test card variations** by time of day, or a sign-off at midnight.
+- **Remote batteries.** After a thousand presses the remote gets slow until you "change the
+  batteries". A joke, behind a toggle.
+
 ## Picks
 
 If choosing for the next stretch: the sync anchor (watch-together is what gets others to
