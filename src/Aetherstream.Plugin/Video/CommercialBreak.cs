@@ -318,41 +318,42 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
         var star = "STARRING " + Starring[Pick(seed + 5, Starring.Length)].ToUpperInvariant();
         var rating = Ratings[Pick(seed + 6, Ratings.Length)];
 
+        // One size for the title, chosen once, so nothing grows or shrinks while you read it.
+        var titleScale = font.Measure(title, 2) <= W - 120 ? 2 : 1;
+        var titleW = font.Measure(title, titleScale);
+
         if (t < 8.0)
         {
-            // The words come one at a time, the way trailers do.
-            var words = tagline.Split(' ');
-            var shown = Math.Min(words.Length, (int)(t / 7.0 * (words.Length + 1)));
-            var text = string.Join(' ', words.Take(shown));
+            // The words come one at a time, the way trailers do, into lines laid out up front
+            // so the ones already there never move.
+            var lines = Canvas.Wrap(tagline, font.Fit(W - 200), 3);
+            var total = lines.Sum(l => l.Split(' ').Length);
+            var shown = Math.Min(total, (int)(t / 7.0 * (total + 1)));
             var y = 300;
-            foreach (var line in Canvas.Wrap(text, font.Fit(W - 200), 3))
+            foreach (var line in lines)
             {
-                Shadowed(span, line, (W - font.Measure(line)) / 2, y, Cream, 1, all);
+                var words = line.Split(' ');
+                var take = Math.Clamp(shown, 0, words.Length);
+                shown -= take;
+                if (take > 0)
+                    Shadowed(span, string.Join(' ', words.Take(take)), (W - font.Measure(line)) / 2, y, Cream, 1, all);
                 y += 40;
             }
         }
         else if (t < 14.5)
         {
-            var scale = t < 10.0 ? 1 : 2;
-            var w = font.Measure(title, scale);
-            if (w > W - 80)
-            {
-                scale = 1;
-                w = font.Measure(title);
-            }
-
-            Shadowed(span, title, (W - w) / 2, 300, Gold, scale, all);
+            Shadowed(span, title, (W - titleW) / 2, 300, Gold, titleScale, all);
             if (t > 11.5)
-                Shadowed(span, star, (W - font.Measure(star)) / 2, 400, Cream, 1, all);
+                Shadowed(span, star, (W - font.Measure(star)) / 2, 300 + (titleScale * 44) + 20, Cream, 1, all);
         }
         else
         {
             Canvas.Fill(span, 0, bar, W, H - (2 * bar), Ink);
-            Shadowed(span, title, (W - font.Measure(title)) / 2, 260, Gold, 1, all);
-            Shadowed(span, "COMING THIS STARLIGHT", (W - font.Measure("COMING THIS STARLIGHT")) / 2, 330, Cream, 1, all);
-            Shadowed(span, "TO A CHANNEL THAT DOES NOT EXIST", (W - font.Measure("TO A CHANNEL THAT DOES NOT EXIST")) / 2, 370, Faint, 1, all);
-            Canvas.Rect(span, (W / 2) - 260, 440, 520, 48, Cream, 2);
-            font.Draw(span, W, rating, (W - font.Measure(rating)) / 2, 444, Cream, 1, all);
+            Shadowed(span, title, (W - titleW) / 2, 220, Gold, titleScale, all);
+            Shadowed(span, "COMING THIS STARLIGHT", (W - font.Measure("COMING THIS STARLIGHT")) / 2, 340, Cream, 1, all);
+            Shadowed(span, "TO A CHANNEL THAT DOES NOT EXIST", (W - font.Measure("TO A CHANNEL THAT DOES NOT EXIST")) / 2, 380, Faint, 1, all);
+            Canvas.Rect(span, (W / 2) - 260, 450, 520, 48, Cream, 2);
+            font.Draw(span, W, rating, (W - font.Measure(rating)) / 2, 454, Cream, 1, all);
         }
     }
 
