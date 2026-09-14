@@ -110,13 +110,12 @@ internal sealed class BardChannel(BitmapFont font, Func<IReadOnlyList<DeitySprit
     }
 
     /// <summary>The tale for an episode: a shuffle of all of them per round, seeded by the round.</summary>
+    private static readonly TwelveTales.Tale[] Everything = [.. TwelveTales.All, TwelveTales.Egg];
+
     private static TwelveTales.Tale TaleFor(int episode)
     {
-        // About once in a hundred, the one he is not supposed to tell.
-        if (episode % 97 == 42)
-            return TwelveTales.Egg;
-
-        var all = TwelveTales.All;
+        // The Twelve's tales and the ogre's, shuffled together each round.
+        var all = Everything;
         var round = episode / all.Length;
         var slot = episode % all.Length;
         var order = Enumerable.Range(0, all.Length).OrderBy(i => Pick(round, i + 1, 1_000_000)).ToArray();

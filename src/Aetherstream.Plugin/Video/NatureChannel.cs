@@ -22,7 +22,8 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
     private const double CloseFor = 9.0;
     private const double WrangleFor = 11.0;
     private const double SignOffFor = 8.0;
-    private const double EpisodeFor = TitlesFor + ApproachFor + CloseFor + WrangleFor + SignOffFor;
+    private const double BitFor = 14.0;
+    private const double EpisodeFor = TitlesFor + ApproachFor + CloseFor + WrangleFor + SignOffFor + BitFor;
 
     private static readonly uint Khaki = Canvas.Rgb(0xC8, 0xB0, 0x78);
     private static readonly uint Ink = Canvas.Rgb(0x1E, 0x1A, 0x14);
@@ -80,6 +81,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         Close,
         Wrangle,
         SignOff,
+        Bit,
     }
 
     public bool Available => font.Available;
@@ -116,9 +118,17 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             : into < TitlesFor + ApproachFor ? (Phase.Approach, into - TitlesFor)
             : into < TitlesFor + ApproachFor + CloseFor ? (Phase.Close, into - TitlesFor - ApproachFor)
             : into < TitlesFor + ApproachFor + CloseFor + WrangleFor ? (Phase.Wrangle, into - TitlesFor - ApproachFor - CloseFor)
-            : (Phase.SignOff, into - TitlesFor - ApproachFor - CloseFor - WrangleFor);
+            : into < TitlesFor + ApproachFor + CloseFor + WrangleFor + SignOffFor ? (Phase.SignOff, into - TitlesFor - ApproachFor - CloseFor - WrangleFor)
+            : (Phase.Bit, into - TitlesFor - ApproachFor - CloseFor - WrangleFor - SignOffFor);
 
         var seed = episode * 31;
+        if (phase == Phase.Bit)
+        {
+            this.DrawBit(span, episode, creature, next, biome, daylight, seed, t, seconds, all);
+            this.DrawFooter(span, episode, creature, into, all);
+            return;
+        }
+
         var pan = phase == Phase.Approach ? t * 30.0 : phase == Phase.Titles ? 0 : ApproachFor * 30.0;
         Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, pan);
 
@@ -237,12 +247,182 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             font.Draw(span, W, bug, 36, 70, Cream, 1, all);
         }
 
+        this.DrawFooter(span, episode, creature, into, all);
+    }
+
+    private void DrawFooter(Span<uint> span, int episode, Creature creature, double into, in BitmapFont.Clip all)
+    {
         Canvas.Fill(span, 0, 676, W, 4, Ink);
         Canvas.Fill(span, 0, 676, (int)(W * (into / EpisodeFor)), 4, Khaki);
         Canvas.Fill(span, 0, 680, W, 40, Ink);
         font.Draw(span, W, "AETHERSTREAM WILDLIFE", 24, 680, Khaki, 1, all);
         var right = Canvas.Cut($"EP {episode % 10000}  /  {Canvas.Plain(creature.Name).ToUpperInvariant()}", 50);
         font.Draw(span, W, right, W - 24 - font.Measure(right), 680, Cream, 1, all);
+    }
+
+    // -- between episodes ----------------------------------------------------------------------------------------
+
+    private static readonly string[] NoteLines =
+    [
+        "{name}: BIGGER THAN IT LOOKS. IT ALWAYS IS, KUPO.",
+        "FOUND IN {zone}. DO NOT ASK HOW I KNOW.",
+        "TEMPERAMENT: HAS ONE.",
+        "DIET: NOT MOOGLES. (TESTED.)",
+        "APPROACH FROM DOWNWIND. THERE IS NO DOWNWIND.",
+        "POM STATUS AFTER FILMING: RUFFLED.",
+        "WOULD I GO BACK? KUPO, I AM ALREADY PACKING.",
+        "NOTE TO SELF: THE {name} CAN JUMP.",
+    ];
+
+    private static readonly (string Question, string Answer)[] Letters =
+    [
+        ("DEAR MOGWYN, WHY DO YOU GET SO CLOSE?", "Because from far away, kupo, they all look like rocks. And the rocks are not the interesting bit."),
+        ("DEAR MOGWYN, DOES YOUR POM HURT WHEN IT GETS BITTEN?", "Only when I think about it. So I try to think about the animal instead, kupo. Isn't she gorgeous?"),
+        ("DEAR MOGWYN, WHAT IS THE MOST DANGEROUS THING IN EORZEA?", "A closed gate with a sign on it, kupo. Everything worth seeing is on the other side."),
+        ("DEAR MOGWYN, HAVE YOU EVER BEEN SCARED?", "Constantly, kupo! That is how you know you are looking at something real."),
+        ("DEAR MOGWYN, DO YOU HAVE A FAVOURITE?", "Whichever one is in front of me, kupo. Ask me again next episode."),
+        ("DEAR MOGWYN, WHERE DO YOU GET THE HATS?", "There is only the one hat, kupo. It has been through a lot. We do not talk about the hat."),
+    ];
+
+    /// <summary>
+    /// The bit between episodes, so the show is more than the hunt: field notes in his own hand,
+    /// a snack on a rock, the injury tally, a letter from a viewer, or a chase after the last
+    /// beast when it turns out not to have gone far.
+    /// </summary>
+    private void DrawBit(Span<uint> span, int episode, Creature creature, Creature next, Biome biome, float daylight, int seed, double t, double seconds, in BitmapFont.Clip all)
+    {
+        var bob = (int)(Math.Sin(seconds * 2.4) * 8);
+        var name = Canvas.Plain(creature.Name);
+        switch (Pick(episode * 13, 5))
+        {
+            case 0:
+            {
+                // Field notes: a page from the notebook, filled in line by line, the beast sketched in the corner.
+                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, 0);
+                Canvas.Fill(span, 200, 90, 880, 470, Cream);
+                Canvas.Fill(span, 200, 90, 880, 470, Canvas.Lerp(Cream, Canvas.Rgb(0xE8, 0xD8, 0xB0), 0.4f));
+                Canvas.Rect(span, 200, 90, 880, 470, Ink, 3);
+                for (var r = 0; r < 9; r++)
+                    Canvas.Fill(span, 230, 170 + (r * 44), 820, 2, Canvas.Rgb(0xC8, 0xB8, 0x98));
+                Canvas.Fill(span, 300, 90, 4, 470, Canvas.Rgb(0xE0, 0x80, 0x80));
+                for (var h = 0; h < 6; h++)
+                    Canvas.Disc(span, 214, 130 + (h * 72), 8, Ink);
+                font.Draw(span, W, "MOGWYN'S FIELD NOTES, KUPO", 320, 104, Ink, 1, all);
+                var lines = (int)Math.Min(4, t / 2.5);
+                for (var l = 0; l < lines; l++)
+                {
+                    var text = NoteLines[Pick((episode * 5) + l, NoteLines.Length)].Replace("{name}", name.ToUpperInvariant()).Replace("{zone}", creature.Zone.ToUpperInvariant());
+                    text = Canvas.Cut(text, font.Fit(720));
+                    // The line being written appears letter by letter.
+                    if (l == lines - 1)
+                        text = text[..Math.Min(text.Length, (int)((t - (l * 2.5)) / 2.5 * text.Length * 1.3))];
+                    font.Draw(span, W, text, 320, 176 + (l * 44), Canvas.Rgb(0x2A, 0x3A, 0x6A), 1, all);
+                }
+
+                Canvas.Rect(span, 860, 360, 190, 170, Ink, 3);
+                this.DrawIcon(span, creature.Icon, 885, 375, 140);
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Point, seconds, 20, 330 + bob, 6);
+                break;
+            }
+
+            case 1:
+            {
+                // Snack break: on a rock, a kupo nut going down in bites.
+                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, 0);
+                Canvas.Disc(span, 620, Ground - 40, 110, Ink);
+                Canvas.Disc(span, 700, Ground - 20, 80, Ink);
+                var bites = (int)(t / 2.5);
+                var nutR = Math.Max(0, 44 - (bites * 10));
+                var chew = (int)(t % 2.5 * 8) % 2 == 0 ? 0 : 4;
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 520, Ground - 40 - 250 + chew, 7);
+                if (nutR > 0)
+                {
+                    Canvas.Disc(span, 700, Ground - 150, nutR, Canvas.Rgb(0xC0, 0x60, 0x40));
+                    Canvas.Disc(span, 700 - (nutR / 3), Ground - 150 - (nutR / 3), nutR / 3, Canvas.Rgb(0xE0, 0x90, 0x60));
+                    Canvas.Fill(span, 698, Ground - 150 - nutR - 12, 4, 14, Canvas.Rgb(0x4A, 0x8A, 0x3A));
+                }
+
+                var crumbs = Math.Min(12, bites * 4);
+                for (var i = 0; i < crumbs; i++)
+                    Canvas.Disc(span, 640 + ((i * 37) % 120), Ground - 46 - ((i * 13) % 20), 3, Canvas.Rgb(0xC0, 0x60, 0x40));
+                this.DrawLowerThird(span, "SNACK", nutR > 0 ? "Snack break, kupo. Kupo nuts: the only thing out here that does not bite back." : "That was the last one. Right. Where were we, kupo?", false, all);
+                break;
+            }
+
+            case 2:
+            {
+                // The injury tally: bandaged, counting on a board.
+                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, 0);
+                Canvas.Fill(span, 700, 120, 420, 340, Canvas.Rgb(0x2A, 0x3A, 0x2E));
+                Canvas.Rect(span, 700, 120, 420, 340, Canvas.Rgb(0x8A, 0x6A, 0x3A), 6);
+                font.Draw(span, W, "INJURIES THIS SEASON", 724, 136, Cream, 1, all);
+                var count = 7 + (episode % 9) + (t > 6.0 ? 1 : 0);
+                for (var i = 0; i < count; i++)
+                {
+                    var g = i / 5;
+                    var k = i % 5;
+                    var x = 740 + ((g % 4) * 90) + (k * 14);
+                    var y = 200 + ((g / 4) * 70);
+                    if (k < 4)
+                        Canvas.Fill(span, x, y, 4, 40, Cream);
+                    else
+                        Canvas.Line(span, x - 60, y + 36, x + 4, y + 4, Cream);
+                }
+
+                if (t > 6.0 && t < 6.6)
+                    Canvas.Fill(span, 700, 120, 420, 340, Canvas.Lerp(Canvas.White, Canvas.Rgb(0x2A, 0x3A, 0x2E), 0.5f));
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 260, HoverY + bob, 7);
+                // Bandages: strips across the body and one over the pom.
+                Canvas.Fill(span, 300, HoverY + bob + 150, 120, 12, Cream);
+                Canvas.Fill(span, 320, HoverY + bob + 176, 90, 10, Cream);
+                Canvas.Fill(span, 350, HoverY + bob - 6, 40, 8, Cream);
+                Canvas.Fill(span, 318, HoverY + bob + 100, 48, 8, Cream);
+                this.DrawLowerThird(span, "TALLY", t > 6.0 ? $"...and one more, from the {name}. They were all worth it, kupo. Mostly." : "Let us see. The claws, the tail, the tail again, the thing with the teeth, kupo...", false, all);
+                break;
+            }
+
+            case 3:
+            {
+                // A letter from a viewer, read out and answered.
+                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, 0);
+                var (q, a) = Letters[Pick(episode * 7, Letters.Length)];
+                var open = Math.Clamp(t / 1.5, 0.0, 1.0);
+                Canvas.Fill(span, 560, 120, 560, 300, Cream);
+                Canvas.Rect(span, 560, 120, 560, 300, Ink, 3);
+                for (var i = 0; i < (int)(280 * (1.0 - open)); i++)
+                    Canvas.Fill(span, 560 + (i / 2) + 1, 120 + i, 560 - i - 2, 1, Canvas.Lerp(Cream, Canvas.Rgb(0xD8, 0xC8, 0xA0), 0.5f));
+                if (open >= 1.0)
+                {
+                    font.Draw(span, W, "A LETTER FROM A VIEWER", 584, 134, Canvas.Rgb(0x8A, 0x3A, 0x2A), 1, all);
+                    var y = 190;
+                    foreach (var l in Canvas.Wrap(q, font.Fit(520), 3))
+                    {
+                        font.Draw(span, W, l, 584, y, Ink, 1, all);
+                        y += 40;
+                    }
+                }
+
+                HostSprites.DrawRanger(span, t < 1.5 ? HostSprites.Ranger.Stand : HostSprites.Ranger.Point, seconds, 220, HoverY + bob, 7);
+                if (t > 4.0)
+                    this.DrawLowerThird(span, "MOGWYN", a, false, all);
+                break;
+            }
+
+            default:
+            {
+                // The chase: the beast turns out not to have gone far.
+                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, t * 80.0);
+                var bx = -200 + (int)(t * 130);
+                var hop = (int)(Math.Abs(Math.Sin(t * 8.0)) * 20);
+                Canvas.Disc(span, bx + 70, Horizon + 140, 60, Canvas.Lerp(Canvas.Black, Canvas.Rgb(0x40, 0x40, 0x40), 0.5f));
+                this.DrawIcon(span, creature.Icon, bx, Horizon - 10 - hop, 120);
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Run, seconds, bx - 260 + (int)(Math.Sin(t * 3.0) * 20), HoverY + bob, 7, flip: false);
+                for (var i = 0; i < 6; i++)
+                    Canvas.Disc(span, bx - 300 - (i * 30), Ground - 30 - ((i * 7) % 20), 6 - i, Canvas.Rgb(0xC8, 0xB0, 0x78));
+                this.DrawLowerThird(span, "KUPO", t < 7.0 ? $"Get back here, kupo! I only want to measure you!" : $"Fine. FINE. We will find you next week, {name}. Probably.", t < 7.0, all);
+                break;
+            }
+        }
     }
 
     private void DrawLowerThird(Span<uint> span, string tab, string line, bool danger, in BitmapFont.Clip all)
