@@ -537,6 +537,16 @@ internal sealed class SetupTab(UiContext ui)
 
         Ui.Tip("Listings come from ffxivvenues.com for your region. Venues mark themselves; the site's own word is taken for it. With this off, adult venues are listed in purple.");
 
+        Ui.Section("Fishing");
+        var caught = ui.Config.FishingShowCaught;
+        if (ImGui.Checkbox("List fish already in your log too", ref caught))
+        {
+            ui.Config.FishingShowCaught = caught;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip("Off, the board is what you still need. On, caught fish are listed dimmed. Windows come from the Carbuncle Plushy fish tracker's data, bundled with the plugin.");
+
         Ui.Section("Maintenance banner");
         var banner = ui.Config.MaintenanceBanner;
         if (ImGui.Checkbox("Show a banner when maintenance is coming", ref banner))

@@ -78,6 +78,7 @@ a plugin that fetches executables is not something to ask people to trust.
 | --- | --- | --- |
 | [iptv-org](https://github.com/iptv-org/iptv) | The default live TV playlist (`index.m3u`) | Volunteer-maintained index of publicly available streams. Cached locally for 12 hours; any other extended M3U can be used instead or alongside it. |
 | [Plex](https://www.plex.tv/) | Your own library, via `plex.tv/link` sign-in | The token is stored locally and only ever sent to your own server. |
+| [Carbuncle Plushy fish tracker](https://github.com/icykoneko/ff14-fish-tracker-app) | The fishing channel's windows: weather, preceding weather, hours, bait | MIT, by icykoneko. Trimmed to the fish with a window by `tools/make_fishdata.py` and bundled as `data/fish.json.gz`; nothing is fetched at run time. |
 
 ### Server — the party host only
 
@@ -295,6 +296,7 @@ implementing `IFrameChannel` in `Video\`, handed a snapshot by the plugin when i
 | News | Lodestone headlines, one story at a time, maintenance windows in local time with a countdown | lodestonenews.com, every fifteen minutes, cached in the config folder |
 | Market | The watch list (kept in Setup) priced, a chart of the featured item, a ticker | Universalis, every ten minutes, for the world you are on |
 | Gathering | Timed nodes as a departures board: up now, then soonest, with real-time countdowns | The game's gathering tables and the clock |
+| Fishing | The fish you still need that have a window: up now with time left, then the soonest to open, each with spot, zone, weather and hours, bait or intuition; folklore fish in gold, your current zone marked; the next four boats along the top | Windows from the Carbuncle Plushy fish tracker's data (MIT), bundled; spots and zones from the game's tables, the forecast from the weather code, your log through ClientStructs. Caught fish hidden unless Setup says otherwise |
 | Venues | Who is open in your region tonight (every datacenter of it) and who opens within a day, one venue featured with its banner and description, a crawl of everyone open | ffxivvenues.com's public API, every ten minutes, filtered to your region by the game's datacenter table; banners decoded with ImageSharp. SFW only by default, toggled in Setup |
 | Almanac | Daily, Grand Company and weekly resets, the next ocean fishing boat and both routes' destinations, the Jumbo Cactpot draw for your region, retainers out on ventures; the right column turns pages between today's roulettes, a to-do list (leve and allied society allowances, custom deliveries, Wondrous Tails, the squadron, Fashion Report) and the estate's submersibles and airships | The clock; the rest through ClientStructs. Vessels are read while you stand in the workshop and remembered after |
 | Aquarium, Fireplace, Starfield, Plasma, Mystify, 3D Maze, Pipes | Something on, nothing to read | Procedural; the heavy ones draw at a quarter size and scale up. The maze is a raycaster with the smileys that flip the world and the rat; Pipes is a 3D grid drawn back to front, teapot included |

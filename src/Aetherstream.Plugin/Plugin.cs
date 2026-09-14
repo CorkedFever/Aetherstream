@@ -58,6 +58,7 @@ public sealed partial class Plugin : IDalamudPlugin
 
     private CancellationTokenSource? resolving;
     private readonly EorzeaWeather weather;
+    private readonly string fishDataPath;
     private readonly GuideChannel guideChannel;
     private readonly WeatherChannel weatherChannel;
     private readonly (string Name, string Blurb, IFrameChannel Channel)[] channels;
@@ -107,6 +108,9 @@ public sealed partial class Plugin : IDalamudPlugin
         var images = Path.Combine(
             pluginInterface.AssemblyLocation.Directory?.FullName ?? AppContext.BaseDirectory,
             "images");
+        this.fishDataPath = Path.Combine(
+            pluginInterface.AssemblyLocation.Directory?.FullName ?? AppContext.BaseDirectory,
+            "data", "fish.json.gz");
 
         this.session = new StreamSession(this.vlc, textures, log, this.config)
         {
@@ -127,6 +131,7 @@ public sealed partial class Plugin : IDalamudPlugin
             ("News", "Lodestone headlines, one story at a time.", new NewsChannel(face, this.NewsSnapshot)),
             ("Market", "Your watch list, priced by Universalis.", new MarketChannel(face, this.MarketSnapshot)),
             ("Gathering", "Timed nodes: what is up, and how long until each pops.", new GatheringChannel(face, this.GatheringSnapshot)),
+            ("Fishing", "Fish you still need, up now and next; the boats along the top.", new FishingChannel(face, this.FishingSnapshot)),
             ("Almanac", "Resets, the boat, the cactpot, your retainers, today's roulettes.", new TimersChannel(face, this.TimersSnapshot)),
             ("Venues", "Who is open in your region tonight, via ffxivvenues.com.", new VenuesChannel(face, this.VenuesSnapshot)),
             ("Aquarium", "Fish. The odd Namazu. Nothing to read.", new AquariumChannel(face)),

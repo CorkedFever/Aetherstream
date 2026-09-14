@@ -359,6 +359,9 @@ public sealed class Configuration : IPluginConfiguration
     /// </summary>
     public bool MaintenanceBanner { get; set; } = true;
 
+    /// <summary>Whether the fishing channel lists fish already in your log. Off: the board is what you still need.</summary>
+    public bool FishingShowCaught { get; set; }
+
     /// <summary>How far ahead of a scheduled window the banner goes up, in minutes.</summary>
     public int MaintenanceBannerMinutes { get; set; } = 60;
 

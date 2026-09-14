@@ -20,6 +20,8 @@
     <None Include="images\testcard.rgba.gz" CopyToOutputDirectory="PreserveNewest" />
     <!-- The guide channel's face: VT323 rasterised to an alpha atlas at build time. -->
     <None Include="images\guidefont.a8.gz" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The fishing channel's windows: the Carbuncle Plushy tracker's data (MIT), trimmed by tools\make_fishdata.py. -->
+    <None Include="data\fish.json.gz" CopyToOutputDirectory="PreserveNewest" />
     <!-- VT323, SIL Open Font License. The licence ships beside it, as the OFL requires. -->
     <None Include="Fonts\VT323-Regular.ttf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Fonts\OFL.txt" CopyToOutputDirectory="PreserveNewest" />

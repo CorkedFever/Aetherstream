@@ -116,6 +116,16 @@ internal static class ChannelLogos
                 d.AddCircleFilled(P(-8f, 6f), 2.8f * u, Theme.U32(Leaf), 10);
                 break;
 
+            case "fishing":
+                // A rod's line down to a bobber, red over white, and ripples under it.
+                d.AddLine(P(-12f, -13f), P(2f, -13f), Theme.U32(Theme.TextDim), 1.6f * u);
+                d.AddLine(P(2f, -13f), P(2f, -2f), Theme.U32(Theme.TextDim), 1.2f * u);
+                d.AddCircleFilled(P(2f, 3f), 6f * u, Theme.U32(Theme.Bad), 16);
+                d.AddCircleFilled(P(2f, 5.5f), 4f * u, Theme.U32(Paper), 14);
+                d.AddLine(P(-12f, 11f), P(16f, 11f), Theme.U32(Sky), 1.4f * u);
+                d.AddLine(P(-8f, 14f), P(12f, 14f), Theme.U32(Theme.WithAlpha(Sky, 0.5f)), 1.2f * u);
+                break;
+
             case "almanac":
                 // A calendar page with its rings, and a marked day.
                 d.AddRectFilled(P(-13f, -10f), P(13f, 13f), Theme.U32(Paper), 2f * u);
