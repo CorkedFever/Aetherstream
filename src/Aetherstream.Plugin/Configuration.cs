@@ -353,6 +353,15 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Whether the venues channel lists only venues marked safe for work. On by default: it is a TV in a house.</summary>
     public bool VenuesSfwOnly { get; set; } = true;
 
+    /// <summary>
+    /// A band along the bottom of the picture when maintenance is coming: the game's own push the
+    /// moment it lands, and the Lodestone's schedule once it is within the notice period.
+    /// </summary>
+    public bool MaintenanceBanner { get; set; } = true;
+
+    /// <summary>How far ahead of a scheduled window the banner goes up, in minutes.</summary>
+    public int MaintenanceBannerMinutes { get; set; } = 60;
+
     /// <summary>What the market channel lists. Seeded with the crystals, which every crafter watches.</summary>
     public List<MarketItem> MarketWatch { get; set; } = [];
 

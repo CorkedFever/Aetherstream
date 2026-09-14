@@ -24,6 +24,9 @@ internal sealed class SetupTab(UiContext ui)
     /// <summary>Set by the plugin: checks every lineup channel's link in the background.</summary>
     public Action? CheckChannels;
 
+    /// <summary>Set by the plugin: puts a made-up emergency notice on the banner for a few seconds.</summary>
+    public Action? TestBanner;
+
     /// <summary>Set by the plugin: the last check's verdict.</summary>
     public Func<string>? HealthStatus;
 
@@ -533,5 +536,33 @@ internal sealed class SetupTab(UiContext ui)
         }
 
         Ui.Tip("Listings come from ffxivvenues.com for your region. Venues mark themselves; the site's own word is taken for it. With this off, adult venues are listed in purple.");
+
+        Ui.Section("Maintenance banner");
+        var banner = ui.Config.MaintenanceBanner;
+        if (ImGui.Checkbox("Show a banner when maintenance is coming", ref banner))
+        {
+            ui.Config.MaintenanceBanner = banner;
+            ui.SaveConfig();
+        }
+
+        using (ImRaii.Disabled(!banner))
+        {
+            var minutes = ui.Config.MaintenanceBannerMinutes;
+            ImGui.SetNextItemWidth(220);
+            if (ImGui.SliderInt("##bannerlead", ref minutes, 15, 240, "%d min ahead"))
+            {
+                ui.Config.MaintenanceBannerMinutes = minutes;
+                ui.SaveConfig();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Test") && this.TestBanner is { } test)
+                test();
+        }
+
+        Ui.Tip(
+            "A band along the bottom of the picture. The game's own push - the purple notice everyone gets " +
+            "for an emergency - goes up the moment it lands, with the window in your time and a countdown. " +
+            "Scheduled maintenance from the Lodestone goes up this far ahead. Test shows one for twenty seconds.");
     }
 }

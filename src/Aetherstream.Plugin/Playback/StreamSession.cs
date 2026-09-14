@@ -286,7 +286,15 @@ internal sealed class StreamSession(
             return;
 
         if (!this.PullVideo())
-            return;
+        {
+            // A paused or stalled picture still gets a moving banner, twice a second.
+            var overlayDue = this.Overlay is { Active: true }
+                && (this.overlayPaintedMs < 0 || this.channelClock.ElapsedMilliseconds - this.overlayPaintedMs > 500);
+            if (!overlayDue)
+                return;
+        }
+
+        this.PaintOverlay(this.frame);
 
         if (config.RetroMode)
             this.Retro(this.frame);
@@ -657,7 +665,7 @@ internal sealed class StreamSession(
     /// <summary>Whether the uploader currently holds the test card rather than video.</summary>
     public bool IdleShowing { get; private set; }
 
-    private (int Minute, bool Retro, bool Opaque, bool Fit) idleStamp = (-1, false, false, false);
+    private (int Minute, bool Retro, bool Opaque, bool Fit, int Overlay) idleStamp = (-1, false, false, false, -1);
 
     /// <summary>Where the last resume landed, or -1; and when, for the OSD and the start-over button.</summary>
     public long ResumedAtMs { get; private set; } = -1;
@@ -679,13 +687,15 @@ internal sealed class StreamSession(
         }
 
         var now = DateTime.Now;
-        var stamp = ((now.Hour * 60) + now.Minute, config.RetroMode, config.PaintOnSurface, config.HasFit);
+        // While the banner is up the card repaints twice a second, for the countdown and the pulse.
+        var overlayTick = this.Overlay is { Active: true } ? (int)(Environment.TickCount64 / 500 % 1_000_000) : -1;
+        var stamp = ((now.Hour * 60) + now.Minute, config.RetroMode, config.PaintOnSurface, config.HasFit, overlayTick);
 
         if (this.uploader is null)
         {
             this.uploader = this.CreateUploader();
             this.IdleShowing = true;
-            this.idleStamp = (-1, false, false, false);
+            this.idleStamp = (-1, false, false, false, -1);
         }
 
         if (stamp == this.idleStamp)
@@ -693,6 +703,7 @@ internal sealed class StreamSession(
 
         this.idleStamp = stamp;
         card.Render(this.frame, now);
+        this.PaintOverlay(this.frame);
 
         if (config.RetroMode)
             this.Retro(this.frame);
@@ -718,6 +729,25 @@ internal sealed class StreamSession(
     /// It composes over whatever else is on, or over nothing; the sound carries on underneath.
     /// </summary>
     public IFrameChannel? Channel { get; set; }
+
+    /// <summary>Painted over whatever is on - picture, channel or test card - when it has something to say.</summary>
+    public IFrameOverlay? Overlay { get; set; }
+
+    private long overlayPaintedMs = -1;
+
+    /// <summary>Paints the overlay if it is active. True when it painted.</summary>
+    private bool PaintOverlay(uint[] target)
+    {
+        if (this.Overlay is not { Active: true } overlay)
+            return false;
+
+        if (!this.channelClock.IsRunning)
+            this.channelClock.Restart();
+
+        this.overlayPaintedMs = this.channelClock.ElapsedMilliseconds;
+        overlay.Paint(target, DateTime.Now, this.overlayPaintedMs / 1000.0);
+        return true;
+    }
 
     /// <summary>What to play under a channel that wants music. Set by the plugin; asked once a frame.</summary>
     public Func<IReadOnlyList<string>>? MusicTracks { get; set; }
@@ -766,7 +796,7 @@ internal sealed class StreamSession(
         }
 
         // The test card path must repaint from scratch once the channel comes down.
-        this.idleStamp = (-1, false, false, false);
+        this.idleStamp = (-1, false, false, false, -1);
         this.IdleShowing = this.source is null;
 
         var moved = this.PullVideo();
@@ -792,6 +822,7 @@ internal sealed class StreamSession(
 
         this.composed ??= new uint[Width * Height];
         channel.Render(this.composed, picture, DateTime.Now, now / 1000.0);
+        this.PaintOverlay(this.composed);
 
         if (config.RetroMode)
             this.Retro(this.composed);

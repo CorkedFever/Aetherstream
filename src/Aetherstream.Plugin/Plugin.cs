@@ -29,6 +29,7 @@ public sealed partial class Plugin : IDalamudPlugin
     private readonly IDataManager dataManager;
     private readonly IObjectTable objects;
     private readonly IPluginLog log;
+    private readonly IChatGui chat;
     private readonly WindowSystem windows = new("Aetherstream");
     private readonly FileDialogManager fileDialogs = new();
     private readonly Configuration config;
@@ -71,6 +72,7 @@ public sealed partial class Plugin : IDalamudPlugin
         IObjectTable objects,
         ITargetManager targets,
         IDataManager data,
+        IChatGui chat,
         IPluginLog log)
     {
         this.pluginInterface = pluginInterface;
@@ -79,6 +81,7 @@ public sealed partial class Plugin : IDalamudPlugin
         this.objects = objects;
         this.dataManager = data;
         this.log = log;
+        this.chat = chat;
 
         this.config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         if (this.config.Migrate())
@@ -199,6 +202,9 @@ public sealed partial class Plugin : IDalamudPlugin
         this.window.Setup.HealthStatus = () => this.healthStatus;
         this.window.Setup.FindItem = this.FindMarketItem;
         this.window.Setup.WatchListChanged = this.WatchListChanged;
+        this.window.Setup.TestBanner = this.TestMaintenanceBanner;
+        this.session.Overlay = new MaintenanceOverlay(new MaintenanceBanner(face), this.CurrentNotice);
+        this.chat.ChatMessage += this.OnChatMessage;
 
         this.windows.AddWindow(this.window);
 
@@ -224,6 +230,7 @@ public sealed partial class Plugin : IDalamudPlugin
         // deliberately (see the note at the end of this method), so a subscription left behind here
         // would call into a log this unload is about to invalidate.
         this.vlc.Log -= this.OnVlcLog;
+        this.chat.ChatMessage -= this.OnChatMessage;
 
         this.pluginInterface.UiBuilder.Draw -= this.OnDraw;
         this.pluginInterface.UiBuilder.OpenMainUi -= this.OpenMainUi;
