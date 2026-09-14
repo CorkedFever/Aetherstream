@@ -1,7 +1,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 
   <PropertyGroup>
-    <Version>0.2.11.0</Version>
+    <Version>0.2.12.0</Version>
     <Authors>CorkedFever</Authors>
     <Description>Live streams on a screen anchored in the world.</Description>
     <AssemblyName>Aetherstream</AssemblyName>
