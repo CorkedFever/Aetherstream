@@ -47,6 +47,10 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
 
     private static readonly string[] Callings = ["a fisher", "a miner", "a dancer", "a cook", "a sellsword", "a scholar", "a retainer", "a chocobo keeper", "an astrologian", "a weaver"];
 
+    private static readonly uint[] Hairs = [Canvas.Rgb(0x2A, 0x1E, 0x14), Canvas.Rgb(0xD8, 0xB0, 0x60), Canvas.Rgb(0x8A, 0x3A, 0x2A), Canvas.Rgb(0xE8, 0xE0, 0xD0), Canvas.Rgb(0x4A, 0x3A, 0x6A), Canvas.Rgb(0x6A, 0x4A, 0x2A), Canvas.Rgb(0xC0, 0x70, 0xA0)];
+    private static readonly uint[] Cloaks = [Canvas.Rgb(0x3A, 0x5A, 0x8A), Canvas.Rgb(0x6A, 0x2A, 0x2A), Canvas.Rgb(0x2E, 0x5C, 0x3C), Canvas.Rgb(0x5A, 0x3A, 0x6A), Canvas.Rgb(0x8A, 0x6A, 0x2A), Canvas.Rgb(0x3A, 0x3A, 0x44)];
+    private static readonly uint[] Skins = [Canvas.Rgb(0xE8, 0xB8, 0x90), Canvas.Rgb(0xC8, 0x90, 0x60), Canvas.Rgb(0x8A, 0x5A, 0x3A), Canvas.Rgb(0xF0, 0xD8, 0xC0), Canvas.Rgb(0xA8, 0x9A, 0xC8)];
+
     private static readonly string[] Deities = ["Halone", "Menphina", "Thaliak", "Nymeia", "Llymlaen", "Oschon", "Byregot", "Rhalgr", "Azeyma", "Nald'thal", "Nophica", "Althyk"];
 
     // Six pages, each with a few tellings. {hero} {race} {calling} {home} {far} {beast} {treasure} {god}.
@@ -93,7 +97,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         "THE {TREASURE} UNDER THE {BEAST}",
     ];
 
-    private sealed record Story(string Hero, string Race, string Calling, string Home, string Far, Biome HomeBiome, Biome FarBiome, string Beast, uint BeastIcon, string Treasure, uint TreasureIcon, string God, string Title, string[] Pages);
+    private sealed record Story(string Hero, string Race, string Calling, string Home, string Far, Biome HomeBiome, Biome FarBiome, string Beast, uint BeastIcon, string Treasure, uint TreasureIcon, string God, string Title, string[] Pages, uint Hair, uint Cloak, uint Skin);
 
     public bool Available => font.Available;
 
@@ -204,7 +208,10 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
             pages[p] = Fill(PageLines[p][Pick(episode, 10 + p, PageLines[p].Length)]);
 
         var title = Fill(Titles[Pick(episode, 9, Titles.Length)]);
-        return new Story(hero, race, calling, home.Zone, far.Zone, Scenery.BiomeOf(home.Region, home.Zone), Scenery.BiomeOf(far.Region, far.Zone), beast.Name, beast.Icon, treasure.Name, treasure.Icon, god, title, pages);
+        var hair = Hairs[Pick(episode, 20, Hairs.Length)];
+        var cloak = Cloaks[Pick(episode, 21, Cloaks.Length)];
+        var skin = Skins[Pick(episode, 22, Skins.Length)];
+        return new Story(hero, race, calling, home.Zone, far.Zone, Scenery.BiomeOf(home.Region, home.Zone), Scenery.BiomeOf(far.Region, far.Zone), beast.Name, beast.Icon, treasure.Name, treasure.Icon, god, title, pages, hair, cloak, skin);
     }
 
     private static string NextTitle(StoryStock s, int episode) => Compose(s, episode).Title;
@@ -282,7 +289,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
 
         // The hero: a small figure, walking on the road page, standing otherwise.
         var heroX = page == 2 ? 200 + (int)((seconds * 30.0) % 700) : 300;
-        HostSprites.DrawRanger(span, page == 2 ? HostSprites.Ranger.Run : HostSprites.Ranger.Stand, seconds, heroX, 540 - 200, 5);
+        HostSprites.DrawHero(span, page == 2 ? HostSprites.Hero.Walk : HostSprites.Hero.Stand, seconds, heroX, 540 - 200, 5, story.Hair, story.Cloak, story.Skin);
 
         // The beast on the pages it is on; the treasure where it is found and where it ends up.
         if (page is 3 or 4)
