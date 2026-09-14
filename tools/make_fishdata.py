@@ -42,12 +42,21 @@ for f in fish:
         "e": end,
         "w": weather,
         "p": prev,
-        "b": f.get("bestCatchPath") or [],
+        "b": [" or ".join(b) if isinstance(b, list) else b for b in (f.get("bestCatchPath") or [])],
         "m": f.get("predators") or {},
         "f": bool(f.get("folklore")),
         "v": float(f.get("patch") or 0),
         "t": f.get("tug") or "",
     })
+
+# Every field's type is checked here, so a surprise in the source stops this script rather
+# than the plugin's loader, which would take the whole channel down with it.
+for k in kept:
+    assert isinstance(k["n"], str) and isinstance(k["l"], str), k
+    assert all(isinstance(x, (int, float)) for x in (k["s"], k["e"], k["v"])), k
+    assert all(isinstance(x, str) for x in k["w"] + k["p"] + k["b"]), k
+    assert all(isinstance(a, str) and isinstance(b, int) for a, b in k["m"].items()), k
+    assert isinstance(k["f"], bool) and isinstance(k["t"], str), k
 
 os.makedirs(os.path.dirname(out), exist_ok=True)
 with gzip.open(out, "wt", encoding="utf-8") as z:
