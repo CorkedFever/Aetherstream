@@ -268,7 +268,7 @@ public sealed partial class Plugin
         try
         {
             this.rouletteList ??= this.dataManager.GetExcelSheet<Lumina.Excel.Sheets.ContentRoulette>()
-                .Where(r => r.IsInDutyFinder && !r.IsPvP && r.Name.ToString().Length > 0)
+                .Where(r => r.IsInDutyFinder && !r.IsPvP && !r.IsGoldSaucer && r.Name.ToString().Length > 0)
                 .OrderBy(r => r.SortKey)
                 .Select(r => (r.RowId, r.Name.ToString()))
                 .ToList();

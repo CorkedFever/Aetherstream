@@ -142,7 +142,7 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
 
         foreach (var (name, value, done) in items)
         {
-            if (ry > 566)
+            if (ry > 560)
                 break;
 
             // A box, ticked when done; the value dim beside or under the name.
@@ -152,18 +152,22 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
 
             var label = Canvas.Cut(name.ToUpperInvariant(), font.Fit(W - Split - 72));
             font.Draw(span, W, label, Split + 48, ry, done ? Canvas.Faint : Canvas.White, 1, all);
-            ry += 36;
 
             if (value.Length > 0)
             {
-                font.Draw(span, W, Canvas.Cut(value.ToUpperInvariant(), font.Fit(W - Split - 72)), Split + 48, ry - 6, Canvas.Dim, 1, all);
-                ry += 34;
+                font.Draw(span, W, Canvas.Cut(value.ToUpperInvariant(), font.Fit(W - Split - 72)), Split + 48, ry + 32, Canvas.Dim, 1, all);
+                ry += 76;
+            }
+            else
+            {
+                ry += 44;
             }
         }
 
-        ry = 604;
+        ry = 616;
         font.Draw(span, W, "RETAINERS", Split + 16, ry, Canvas.Amber, 1, all);
-        font.Draw(span, W, Canvas.Cut(snapshot.RetainerNote.ToUpperInvariant(), font.Fit(W - Split - 40 - 200)), Split + 16 + 200, ry, Canvas.Dim, 1, all);
+        var noteLeft = Split + 16 + font.Measure("RETAINERS") + 24;
+        font.Draw(span, W, Canvas.Cut(snapshot.RetainerNote.ToUpperInvariant(), font.Fit(W - noteLeft - 24)), noteLeft, ry, Canvas.Dim, 1, all);
 
         this.DrawFooter(span, all);
     }
