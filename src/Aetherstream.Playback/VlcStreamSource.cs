@@ -73,6 +73,12 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
     // Only ever touched on the audio callback thread.
     private float[] audioScratch = [];
 
+    // A tap on the sound for anyone drawing it: the last four thousand frames, mono, in a
+    // ring written by the callback thread and read by whoever asks. Torn reads are fine for a
+    // picture of a waveform.
+    private readonly float[] tap = new float[4096];
+    private int tapAt;
+
     /// <param name="sampleRate">
     /// Required, and deliberately without a default: it must come from the audio endpoint that
     /// will actually play this. Assuming a rate here is how you get a stream decoded at one rate
@@ -542,6 +548,26 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
         var block = scratch.AsSpan(0, pcm.Length);
         this.InspectFormat(block);
         this.Audio.Write(block);
+
+        var at = this.tapAt;
+        for (var i = 0; i + 1 < block.Length; i += 2)
+        {
+            this.tap[at] = (block[i] + block[i + 1]) * 0.5f;
+            at = (at + 1) & (this.tap.Length - 1);
+        }
+
+        Volatile.Write(ref this.tapAt, at);
+    }
+
+    /// <summary>Copies the most recent mono samples into <paramref name="into"/>, oldest first. Any thread.</summary>
+    public void CopyTap(Span<float> into)
+    {
+        var count = Math.Min(into.Length, this.tap.Length);
+        var end = Volatile.Read(ref this.tapAt);
+        var start = (end - count) & (this.tap.Length - 1);
+        for (var i = 0; i < count; i++)
+            into[into.Length - count + i] = this.tap[(start + i) & (this.tap.Length - 1)];
+        into[..(into.Length - count)].Clear();
     }
 
     private void InspectFormat(ReadOnlySpan<float> block)

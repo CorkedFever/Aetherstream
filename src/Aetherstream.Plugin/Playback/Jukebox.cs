@@ -39,6 +39,23 @@ internal sealed class Jukebox(LibVLC vlc, IPluginLog log) : IDisposable
     /// <summary>The file name or title of what is on, for anyone who wants to show it.</summary>
     public string NowPlaying { get; private set; } = string.Empty;
 
+    /// <summary>The track after this one, by name, or empty.</summary>
+    public string UpNext => this.queue.Count > 1 ? TitleOf(this.queue[(this.index + 1) % this.queue.Count]) : string.Empty;
+
+    /// <summary>Which track of how many, one-based.</summary>
+    public (int Index, int Count) Position => (this.index + 1, this.queue.Count);
+
+    /// <summary>The most recent samples of the sound, mono, oldest first; silence when nothing plays.</summary>
+    public void CopyTap(Span<float> into)
+    {
+        if (this.source is { } s)
+            s.CopyTap(into);
+        else
+            into.Clear();
+    }
+
+    private static string TitleOf(string track) => Path.GetFileNameWithoutExtension(Uri.UnescapeDataString(track.Split('?')[0]));
+
     /// <summary>
     /// Makes sure this list is playing. The same list twice is a no-op; a different one starts
     /// over, shuffled. Render thread.

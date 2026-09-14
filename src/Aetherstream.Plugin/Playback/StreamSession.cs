@@ -759,6 +759,19 @@ internal sealed class StreamSession(
     /// <summary>The track under the channel, or empty. For the screen's corner.</summary>
     public string MusicNowPlaying => this.music?.NowPlaying ?? string.Empty;
 
+    public string MusicUpNext => this.music?.UpNext ?? string.Empty;
+
+    public (int Index, int Count) MusicPosition => this.music?.Position ?? (0, 0);
+
+    /// <summary>The most recent samples of the music, for anyone drawing it.</summary>
+    public void MusicTap(Span<float> into)
+    {
+        if (this.music is { } m)
+            m.CopyTap(into);
+        else
+            into.Clear();
+    }
+
     private uint[]? composed;
     private IFrameChannel? lastChannel;
     private readonly System.Diagnostics.Stopwatch channelClock = new();

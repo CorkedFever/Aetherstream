@@ -57,6 +57,9 @@ internal static class HostSprites
         ['q'] = Canvas.Rgb(0xF6, 0xF0, 0xE0),
         ['l'] = Canvas.Rgb(0x50, 0x54, 0x5C),
         ['b'] = Canvas.Rgb(0x3A, 0x22, 0x44),
+        // The goblin.
+        ['z'] = Canvas.Rgb(0xC8, 0xE8, 0xFF),
+        ['a'] = Canvas.Rgb(0x30, 0x30, 0x38),
     };
 
     // The ranger is a moogle in a bush hat and a khaki vest: 32 wide, 36 tall. He hovers, so the
@@ -429,6 +432,162 @@ internal static class HostSprites
 
 
 
+
+    public enum Goblin
+    {
+        Talk,
+        Excited,
+    }
+
+    // The shopping host is a goblin in a hood and goggles with a headset: 24 wide, 30 tall.
+    // 'z' is the goggle glass, 'a' the headset arm.
+    private static readonly string[][] GoblinTalk =
+    [
+        [
+            "........rrrrrrrr........",
+            "......rrrrrrrrrrrr......",
+            ".....rrrrrrrrrrrrrr.....",
+            "....rrrrrrrrrrrrrrrr....",
+            "....rrkkkkkkkkkkkkrr....",
+            "...rrkzzzkkkkkkzzzkrr...",
+            "...rrkzyzkkkkkkzyzkrr...",
+            "...rrkzzzkkkkkkzzzkrr...",
+            "...rrkkkkkkkkkkkkkkrra..",
+            "....rrggggggggggggrraa..",
+            "....rggggggggggggggr.a..",
+            "....rggggGGGGGGggggr.a..",
+            ".....gggGkkkkkkGggg.aa..",
+            ".....gggGGGGGGGGggg.....",
+            "......ggggggggggg.......",
+            ".......gggggggg.........",
+            "....hhhhhhhhhhhhhhhh....",
+            "...hhhhxxxxxxxxxxhhhh...",
+            "..gghhxxxxxxxxxxxxhhgg..",
+            "..gghhxxxxxxxxxxxxhhgg..",
+            "..gghhxxxxxxxxxxxxhhgg..",
+            "..gg.hxxxxxxxxxxxxh.gg..",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hhhhhhhhhhhhhh.....",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            ".....kkkkkk..kkkkkk.....",
+            ".....kkkkkk..kkkkkk.....",
+        ],
+        [
+            "........rrrrrrrr........",
+            "......rrrrrrrrrrrr......",
+            ".....rrrrrrrrrrrrrr.....",
+            "....rrrrrrrrrrrrrrrr....",
+            "....rrkkkkkkkkkkkkrr....",
+            "...rrkzzzkkkkkkzzzkrr...",
+            "...rrkzyzkkkkkkzyzkrr...",
+            "...rrkzzzkkkkkkzzzkrr...",
+            "...rrkkkkkkkkkkkkkkrra..",
+            "....rrggggggggggggrraa..",
+            "....rggggggggggggggr.a..",
+            "....rggggGGGGGGggggr.a..",
+            ".....gggGkkkkkkGggg.aa..",
+            ".....gggGkkkkkkGggg.....",
+            "......gggGGGGGGgg.......",
+            ".......gggggggg.........",
+            "....hhhhhhhhhhhhhhhh....",
+            "...hhhhxxxxxxxxxxhhhh...",
+            "..gghhxxxxxxxxxxxxhhgg..",
+            ".gg.hhxxxxxxxxxxxxhh.gg.",
+            ".gg.hhxxxxxxxxxxxxhh.gg.",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hhhhhhhhhhhhhh.....",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            ".....kkkkkk..kkkkkk.....",
+            ".....kkkkkk..kkkkkk.....",
+        ],
+    ];
+
+    private static readonly string[][] GoblinExcited =
+    [
+        [
+            "gg......rrrrrrrr......gg",
+            "gg....rrrrrrrrrrrr....gg",
+            "gg...rrrrrrrrrrrrrr...gg",
+            "gg..rrrrrrrrrrrrrrrr..gg",
+            ".g..rrkkkkkkkkkkkkrr..g.",
+            ".g.rrkzzzkkkkkkzzzkrr.g.",
+            ".g.rrkzyzkkkkkkzyzkrr.g.",
+            ".g.rrkzzzkkkkkkzzzkrr.g.",
+            ".g.rrkkkkkkkkkkkkkkrrag.",
+            ".g..rrggggggggggggrraag.",
+            ".g..rggggggggggggggr.ag.",
+            ".g..rggggGGGGGGggggr.ag.",
+            ".g...gggGkkkkkkGggg.aag.",
+            ".g...gggGkkkkkkGggg...g.",
+            ".g....gggGGGGGGgg.....g.",
+            ".g.....gggggggg.......g.",
+            ".ghhhhhhhhhhhhhhhhhhhhg.",
+            "..hhhhhxxxxxxxxxxhhhhh..",
+            "....hhxxxxxxxxxxxxhh....",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hhhhhhhhhhhhhh.....",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            ".....kkkkkk..kkkkkk.....",
+            ".....kkkkkk..kkkkkk.....",
+        ],
+        [
+            "........rrrrrrrr........",
+            "gg....rrrrrrrrrrrr....gg",
+            "gg...rrrrrrrrrrrrrr...gg",
+            "gg..rrrrrrrrrrrrrrrr..gg",
+            "gg..rrkkkkkkkkkkkkrr..gg",
+            ".g.rrkzzzkkkkkkzzzkrr.g.",
+            ".g.rrkzyzkkkkkkzyzkrr.g.",
+            ".g.rrkzzzkkkkkkzzzkrr.g.",
+            ".g.rrkkkkkkkkkkkkkkrrag.",
+            ".g..rrggggggggggggrraag.",
+            ".g..rggggggggggggggr.ag.",
+            ".g..rggggGGGGGGggggr.ag.",
+            ".g...gggGkkkkkkGggg.aag.",
+            ".g...gggGGGGGGGGggg...g.",
+            ".g....ggggggggggg.....g.",
+            ".g.....gggggggg.......g.",
+            ".ghhhhhhhhhhhhhhhhhhhhg.",
+            "..hhhhhxxxxxxxxxxhhhhh..",
+            "....hhxxxxxxxxxxxxhh....",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hxxxxxxxxxxxxh.....",
+            ".....hhhhhhhhhhhhhh.....",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            "......rrrrr..rrrrr......",
+            ".....kkkkkk..kkkkkk.....",
+            ".....kkkkkk..kkkkkk.....",
+        ],
+    ];
+
+    public static void DrawGoblin(Span<uint> target, Goblin action, double seconds, int x, int y, int scale, bool flip = false)
+    {
+        var (frames, rate) = action switch
+        {
+            Goblin.Excited => (GoblinExcited, 6.0),
+            _ => (GoblinTalk, 5.0),
+        };
+
+        var frame = frames[(int)(seconds * rate) % frames.Length];
+        Canvas.Sprite(target, frame, c => Palette.GetValueOrDefault(c, 0u), x, y, scale, flip);
+    }
 
     public static void DrawRanger(Span<uint> target, Ranger action, double seconds, int x, int y, int scale, bool flip = false)
     {

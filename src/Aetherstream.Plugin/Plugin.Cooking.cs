@@ -82,6 +82,20 @@ public sealed partial class Plugin
     /// An item icon at the high-resolution size, as frame pixels. Read once and kept; a miss is
     /// kept too, so a missing texture is not asked for every frame.
     /// </summary>
+    private readonly Dictionary<uint, uint> itemIcons = [];
+
+    /// <summary>The icon of an item, by item id, through the item sheet.</summary>
+    private IconPixels? ItemIcon(uint itemId)
+    {
+        if (!this.itemIcons.TryGetValue(itemId, out var iconId))
+        {
+            iconId = this.dataManager.GetExcelSheet<Item>().GetRowOrDefault(itemId)?.Icon ?? 0;
+            this.itemIcons[itemId] = iconId;
+        }
+
+        return iconId == 0 ? null : this.Icon(iconId);
+    }
+
     private IconPixels? Icon(uint iconId)
     {
         if (this.iconCache.TryGetValue(iconId, out var cached))

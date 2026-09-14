@@ -145,6 +145,8 @@ public sealed partial class Plugin : IDalamudPlugin
             ("Kitchen", "A cooking show. Every episode a real recipe, ingredient by ingredient.", new CookingChannel(face, this.Dishes, this.Icon)),
             ("Wildlife", "A ranger in khaki gets far too close to the hunting log, one beast at a time.", new NatureChannel(face, this.Creatures, this.Icon)),
             ("Stories", "The Tonberry's Lantern: the tales of the Twelve, one a time, by the fire.", new BardChannel(face, this.Twelve)),
+            ("Shopping", "The Eorzean Shopping Network: your market watch, one item at a time, with a goblin who wants you to call now.", new ShoppingChannel(face, this.MarketSnapshot, this.ItemIcon)),
+            ("Radio", "Aether FM: the set's own jukebox on screen, with a spectrum that moves to it.", new MusicChannel(face, () => new MusicState(this.session.MusicPlaying, this.session.MusicNowPlaying, this.session.MusicUpNext, this.session.MusicPosition.Index, this.session.MusicPosition.Count), buf => this.session.MusicTap(buf))),
             ("Scrambled", "Channel 99. You did not subscribe. Nothing to see, and you keep looking.", new ScrambledChannel(face)),
         ];
         this.screen = new WorldScreen(gameGui);
