@@ -159,10 +159,6 @@ internal sealed class AudioOutput : IDisposable
         private long firstDataTicks = -1;
         private int measuredLeadFrames = -1;
 
-        // The ring's depth when things are steady, and how long it has sat well above that.
-        private float steadyFrames = -1f;
-        private int backlogReads;
-
         public int HeldMs { get; private set; } = -1;
 
         public int CatchUps { get; private set; }
@@ -176,47 +172,11 @@ internal sealed class AudioOutput : IDisposable
         public float Pan { get; set; }
 
         /// <summary>
-        /// After a stall the device has played silence, and the audio that then arrives sits
-        /// behind that silence for good: the sound trails the picture by the length of the gap
-        /// until something flushes the ring. So the ring's steady depth is tracked, slowly, and
-        /// when the depth has sat a quarter second or more above it for a second and a half the
-        /// excess is dropped.
-        /// One short skip, then the sound is back with the picture.
+        /// Not used: an automatic catch-up that dropped ring backlog after a stall was tried, and
+        /// on a live HLS channel it misfired — the audio arrives in segment-sized bursts, so the
+        /// ring's depth swings by seconds in normal play and the "backlog" it saw was not one. The
+        /// skips were the stutter. Kept out until there is a sync signal worth acting on.
         /// </summary>
-        private void CatchUp()
-        {
-            var depth = ring.Count;
-            if (depth == 0)
-                return;
-
-            if (this.steadyFrames < 0f)
-            {
-                this.steadyFrames = depth;
-                return;
-            }
-
-            var rate = this.WaveFormat.SampleRate;
-            var backlog = depth - this.steadyFrames;
-            if (backlog > rate * 0.25f)
-            {
-                // The device reads every sixty milliseconds or so; twenty-five reads is a second and a half.
-                if (++this.backlogReads >= 25)
-                {
-                    // Down to the steady depth plus a twentieth of a second, so a read a moment later
-                    // does not run the ring dry and start the whole cycle again.
-                    var skipped = ring.Skip((int)backlog - (rate / 50));
-                    this.CatchUps++;
-                    this.CaughtUpMs += skipped * 1000 / rate;
-                    this.backlogReads = 0;
-                }
-
-                return;
-            }
-
-            this.backlogReads = 0;
-            this.steadyFrames += (depth - this.steadyFrames) * 0.01f;
-        }
-
         public int Read(byte[] buffer, int offset, int count)
         {
             var channels = this.WaveFormat.Channels;
@@ -278,8 +238,6 @@ internal sealed class AudioOutput : IDisposable
                     this.started = true;
                 }
             }
-
-            this.CatchUp();
 
             var needed = frames * 2;
             if (this.scratch.Length < needed)
