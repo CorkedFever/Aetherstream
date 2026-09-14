@@ -179,7 +179,8 @@ internal sealed class AudioOutput : IDisposable
         /// After a stall the device has played silence, and the audio that then arrives sits
         /// behind that silence for good: the sound trails the picture by the length of the gap
         /// until something flushes the ring. So the ring's steady depth is tracked, slowly, and
-        /// when the depth has sat well above it for a second and a half the excess is dropped.
+        /// when the depth has sat a quarter second or more above it for a second and a half the
+        /// excess is dropped.
         /// One short skip, then the sound is back with the picture.
         /// </summary>
         private void CatchUp()
@@ -196,12 +197,14 @@ internal sealed class AudioOutput : IDisposable
 
             var rate = this.WaveFormat.SampleRate;
             var backlog = depth - this.steadyFrames;
-            if (backlog > rate * 0.5f)
+            if (backlog > rate * 0.25f)
             {
                 // The device reads every sixty milliseconds or so; twenty-five reads is a second and a half.
                 if (++this.backlogReads >= 25)
                 {
-                    var skipped = ring.Skip((int)backlog - (rate / 10));
+                    // Down to the steady depth plus a twentieth of a second, so a read a moment later
+                    // does not run the ring dry and start the whole cycle again.
+                    var skipped = ring.Skip((int)backlog - (rate / 50));
                     this.CatchUps++;
                     this.CaughtUpMs += skipped * 1000 / rate;
                     this.backlogReads = 0;
