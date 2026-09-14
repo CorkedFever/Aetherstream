@@ -81,7 +81,7 @@ internal sealed class ChannelsTab(UiContext ui)
             ui.SaveConfig();
         }
 
-        Ui.Tip("Listings come from ffxivvenues.com for your region. Venues mark themselves; the site's own word is taken for it. With this off, adult venues are listed with an 18+ tag.");
+        Ui.Tip("Listings come from ffxivvenues.com for your region. Venues mark themselves; the site's own word is taken for it. With this off, adult venues are listed in purple.");
     }
 
     private void DrawMarketWatch()

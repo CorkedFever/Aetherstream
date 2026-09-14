@@ -33,6 +33,9 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
     private const double FeatureSeconds = 12.0;
     private const double TickerSpeed = 90.0;
 
+    /// <summary>Adult venues, when the filter lets them through: purple, instead of a label on every line.</summary>
+    private static readonly uint Adult = Canvas.Rgb(0xC9, 0x8A, 0xF0);
+
     public const int BannerWidth = 560;
     public const int BannerHeight = 280;
 
@@ -94,7 +97,7 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         var ty = 72 + BannerHeight + 14;
         foreach (var line in Canvas.Wrap(venue.Name.ToUpperInvariant(), font.Fit(BannerWidth, 2), 1))
         {
-            font.Draw(span, W, line, Left, ty, Canvas.White, 2, all);
+            font.Draw(span, W, line, Left, ty, venue.Sfw ? Canvas.White : Adult, 2, all);
             ty += 84;
         }
 
@@ -119,8 +122,6 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
             ? venue.ClosesUtc is { } c ? $"OPEN NOW UNTIL {c.ToLocalTime():h:mm tt}" : "OPEN NOW"
             : venue.OpensUtc is { } o ? $"OPENS {WhenText(o, now)}" : "HOURS NOT LISTED";
         font.Draw(span, W, hours.ToUpperInvariant(), Left, ty, venue.OpenNow ? Canvas.Good : Canvas.Amber, 1, all);
-        if (!venue.Sfw)
-            font.Draw(span, W, "18+", Left + font.Measure(hours) + 24, ty, Canvas.Bad, 1, all);
         ty += 40;
 
         // The description, or the tags when there is none; the space fits two lines either way.
@@ -142,13 +143,13 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         if (open.Count == 0)
             entries.Add(("nobody yet", string.Empty, string.Empty, Canvas.Faint, false, true, false));
         foreach (var v in open)
-            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.ClosesUtc is { } closes ? $"til {closes.ToLocalTime():h:mm tt}" : string.Empty, Canvas.Good, ReferenceEquals(v, venue), false, !v.Sfw));
+            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.ClosesUtc is { } closes ? $"til {closes.ToLocalTime():h:mm tt}" : string.Empty, v.Sfw ? Canvas.Good : Adult, ReferenceEquals(v, venue), false, !v.Sfw));
 
         entries.Add(("COMING UP", string.Empty, string.Empty, Canvas.Amber, false, true, false));
         if (soon.Count == 0)
             entries.Add(("nothing in the next day", string.Empty, string.Empty, Canvas.Faint, false, true, false));
         foreach (var v in soon)
-            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.OpensUtc is { } opens ? WhenText(opens, now) : string.Empty, Canvas.White, ReferenceEquals(v, venue), false, !v.Sfw));
+            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.OpensUtc is { } opens ? WhenText(opens, now) : string.Empty, v.Sfw ? Canvas.White : Adult, ReferenceEquals(v, venue), false, !v.Sfw));
 
         // Headings take one line, venues two; the list climbs when it does not fit.
         var heights = entries.Select(e => e.Heading ? 44 : 76).ToList();
@@ -174,11 +175,8 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
 
                 var timeText = time.ToUpperInvariant();
                 var timeWidth = timeText.Length > 0 ? font.Measure(timeText) + 16 : 0;
-                var tagWidth = adult ? font.Measure("18+") + 12 : 0;
-                var nameText = Canvas.Cut(text.ToUpperInvariant(), font.Fit(W - ListLeft - 40 - timeWidth - tagWidth));
+                var nameText = Canvas.Cut(text.ToUpperInvariant(), font.Fit(W - ListLeft - 40 - timeWidth));
                 font.Draw(span, W, nameText, ListLeft, top, colour, 1, region);
-                if (adult)
-                    font.Draw(span, W, "18+", ListLeft + font.Measure(nameText) + 12, top, Canvas.Bad, 1, region);
                 if (timeText.Length > 0)
                     font.Draw(span, W, timeText, W - 40 - font.Measure(timeText), top, Canvas.Dim, 1, region);
 
@@ -198,6 +196,12 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         }
 
         this.DrawFooter(span, snapshot, all);
+
+        if (open.Concat(soon).Any(v => !v.Sfw))
+        {
+            const string Key = "PURPLE: 18+";
+            font.Draw(span, W, Key, (W - font.Measure(Key)) / 2, 680, Adult, 1, all);
+        }
     }
 
     private static string WhenText(DateTime utc, DateTime now)
