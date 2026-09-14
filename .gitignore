@@ -21,7 +21,3 @@ libvlc/
 deploy/meteor/api.env
 deploy/meteor/mediamtx.yml
 deploy/meteor/Caddyfile
-
-# The wildlife show's photo pack: the pictures stay local, only the packed data ships.
-tools/hunt_photos/*
-!tools/hunt_photos/README.md
