@@ -3,9 +3,9 @@ namespace Aetherstream.Plugin.Video;
 /// <summary>
 /// The Tonberry's Lantern: the tales of the Twelve, one a time, told from a chair by the fire
 /// by a tonberry with the book on his knee and his lantern in the other hand. Each tale is six pages; each page is read from the chair and then shown as a
-/// plate in a shadow play: a backlit paper screen, the country in cut paper, the mortals as
-/// cutouts, and the god in colour as the game draws them, acting the page's beat: arriving,
-/// working their element, striking, meeting another of the Twelve, blessing, departing. On a
+/// plate in a shadow play: a backlit paper screen with the page's own scene on it, the country
+/// and the mortals in cut paper and the god in colour as the game draws them, doing what the
+/// words say. On a
 /// schedule from the clock, so everyone hears the same tale at the same time.
 /// </summary>
 /// <summary>One of the Twelve as a sprite made from their render: frame-format pixels, alpha in the top byte. The Traders have two.</summary>
@@ -86,7 +86,7 @@ internal sealed class BardChannel(BitmapFont font, Func<IReadOnlyList<DeitySprit
             }
             else
             {
-                this.DrawPlate(span, tale, page, seconds, now, all);
+                this.DrawPlate(target, tale, page, seconds, now, all);
                 this.DrawCaption(span, $"PAGE {page + 1}", text, all);
             }
         }
@@ -121,18 +121,18 @@ internal sealed class BardChannel(BitmapFont font, Func<IReadOnlyList<DeitySprit
 
     // -- the plates -----------------------------------------------------------------------------------------
 
-    private void DrawPlate(Span<uint> span, TwelveTales.Tale tale, int page, double seconds, DateTime now, in BitmapFont.Clip all)
+    private void DrawPlate(uint[] target, TwelveTales.Tale tale, int page, double seconds, DateTime now, in BitmapFont.Clip all)
     {
-        // A shadow play with one thing in colour: the god, acting the page's beat on the ground
-        // among the cut-paper country and the cutout mortals. The screen is paper lit from behind,
-        // warmest in the middle, flickering like a candle, in a wooden frame.
-        var (text, beat) = tale.Pages[page];
+        var span = target.AsSpan();
+        // A shadow play with the god in colour: the paper screen lit from behind, the page's own
+        // scene drawn on it — the country, the props, the mortals in cut paper and the god as the
+        // game draws them, doing what the words say — in a wooden frame.
+        var (text, scene) = tale.Pages[page];
         var into = seconds % PictureFor;
-        var flash = beat == Beat.Strike && into is > 2.0 and < 2.35 ? 0.5f : 0f;
-        var flicker = 0.92f + (0.08f * (float)Math.Sin(seconds * 11.0) * (float)Math.Abs(Math.Sin(seconds * 3.1))) + flash;
-        var paper = Canvas.Lerp(Canvas.Rgb(0xF4, 0xD8, 0xA0), Canvas.Rgb(0xFF, 0xF4, 0xD8), Math.Clamp(flicker, 0f, 1f));
+        var flicker = 0.92f + (0.08f * (float)Math.Sin(seconds * 11.0) * (float)Math.Abs(Math.Sin(seconds * 3.1)));
+        var paper = Canvas.Lerp(Canvas.Rgb(0xF4, 0xD8, 0xA0), Canvas.Rgb(0xFF, 0xEC, 0xC0), flicker);
         var paperEdge = Canvas.Rgb(0xC8, 0xA0, 0x60);
-        const int Top = 60, Bottom = 540, GroundY = 470;
+        const int Top = 60, Bottom = 540, GroundY = TaleScenes.Ground;
 
         Canvas.Fill(span, 0, 0, W, H, Wood);
         for (var y = Top; y < Bottom; y++)
@@ -146,115 +146,49 @@ internal sealed class BardChannel(BitmapFont font, Func<IReadOnlyList<DeitySprit
             }
         }
 
-        if (tale.Where == Biome.Night)
-            Dim(span, 0.2f);
-
-        // The ground shakes on a strike.
-        var quake = beat == Beat.Strike && into is > 2.0 and < 2.8 ? (int)(Math.Sin(seconds * 60.0) * 6) : 0;
-
         var ink = Canvas.Rgb(0x14, 0x10, 0x0C);
         var (name, _, _, element) = TwelveTales.Of(tale.Deity);
-        var pan = seconds * 3.0;
-        ShadowHills(span, GroundY + quake, ink, (page * 17) + 3, 0.006, 70, pan * 0.3);
-        ShadowHills(span, GroundY + quake, ink, (page * 17) + 9, 0.011, 44, pan * 0.6);
-        Canvas.Fill(span, 0, GroundY + quake, W, Bottom - GroundY, ink);
-        ShadowProps(span, tale.Where, GroundY + quake, ink, (page * 17) + 5, pan);
 
-        // Where the god stands, and how, by the beat. The sprites face left, toward the mortals.
+        // The ground band, always; the scene draws everything on and above it.
+        Canvas.Fill(span, 0, GroundY, W, Bottom - GroundY, ink);
+
         var gods = deities().Where(d => d.Deity == tale.Deity).ToList();
         var others = tale.Other > 0 ? deities().Where(d => d.Deity == tale.Other).ToList() : [];
-        const int Scale = 3;
-        var godH = gods.Count > 0 ? gods.Max(g => g.Height) * Scale : 288;
-        var godW = gods.Count > 0 ? gods.Sum(g => g.Width * Scale) + ((gods.Count - 1) * 20) : 200;
-        var homeX = 780;
-        var bob = (int)(Math.Sin(seconds * 2.0) * 4);
-        int gx, gy;
-        var halo = 1f;
-        switch (beat)
+        const int Scale = 2;
+
+        void DrawGods(List<DeitySprite> list, int x, int y, bool flip, float halo)
         {
-            case Beat.Arrive:
-            {
-                var t = Math.Clamp(into / 2.5, 0.0, 1.0);
-                var eased = 1.0 - Math.Pow(1.0 - t, 3.0);
-                gx = W + 40 - (int)((W + 40 - homeX) * eased);
-                gy = GroundY - godH + (t < 1.0 ? (int)(Math.Abs(Math.Sin(into * 9.0)) * -10) : bob);
-                halo = (float)t;
-                break;
-            }
+            if (list.Count == 0)
+                return;
 
-            case Beat.Strike:
-            {
-                var lunge = into is > 1.6 and < 2.6 ? (int)(Math.Sin((into - 1.6) * Math.PI) * -140) : 0;
-                gx = homeX + lunge;
-                gy = GroundY - godH + (into is > 1.6 and < 2.6 ? -30 : bob);
-                halo = into is > 2.0 and < 2.6 ? 1.6f : 1f;
-                break;
-            }
+            var span = target.AsSpan();
 
-            case Beat.Depart:
+            var h = list.Max(g => g.Height) * Scale;
+            var w = list.Sum(g => g.Width * Scale) + ((list.Count - 1) * 20);
+            if (halo > 0f)
+                Canvas.Disc(span, x + (w / 2), y + (h / 2), (int)(h * 0.36f * halo) + 10, Canvas.Lerp(paper, Canvas.White, Math.Clamp(0.22f * halo, 0f, 0.5f)));
+            foreach (var g in list)
             {
-                var t = Math.Clamp((into - 3.0) / 4.0, 0.0, 1.0);
-                gx = homeX + (int)(t * 200);
-                gy = GroundY - godH - (int)(t * t * 700) + bob;
-                halo = 1f + (float)t;
-                break;
-            }
-
-            case Beat.Bless:
-                gx = homeX;
-                gy = GroundY - godH - 30 + (int)(Math.Sin(seconds * 1.2) * 10);
-                halo = 1.3f + (0.3f * (float)Math.Sin(seconds * 3.0));
-                break;
-            default:
-                gx = homeX;
-                gy = GroundY - godH + bob;
-                break;
-        }
-
-        // The halo, then the god. The Traders stand side by side.
-        if (gods.Count > 0)
-        {
-            var haloR = (int)((godH / 2 + 30) * halo);
-            Canvas.Disc(span, gx + (godW / 2), gy + (godH / 2), haloR, Canvas.Lerp(paper, Canvas.White, Math.Clamp(0.3f * halo, 0f, 0.7f)));
-            var x = gx;
-            foreach (var g in gods)
-            {
-                DrawSprite(span, g, x, gy + (godH - (g.Height * Scale)), Scale, flip: false);
+                DrawSprite(span, g, x, y + (h - (g.Height * Scale)), Scale, flip);
                 x += (g.Width * Scale) + 20;
             }
         }
 
-        // The other god, on a meeting page, from the left, facing the first.
-        if (beat == Beat.Meet && others.Count > 0)
+        var ctx = new TaleScenes.Context
         {
-            var t = Math.Clamp(into / 2.5, 0.0, 1.0);
-            var eased = 1.0 - Math.Pow(1.0 - t, 3.0);
-            var oh = others.Max(o => o.Height) * Scale;
-            var ow = others.Sum(o => o.Width * Scale) + ((others.Count - 1) * 20);
-            var ox = -ow - 40 + (int)((300 + ow + 40) * eased);
-            var oy = GroundY - oh + (t < 1.0 ? (int)(Math.Abs(Math.Sin(into * 9.0)) * -10) : (int)(Math.Sin((seconds * 2.0) + 1.0) * 4));
-            Canvas.Disc(span, ox + (ow / 2), oy + (oh / 2), (oh / 2) + 30, Canvas.Lerp(paper, Canvas.White, 0.3f * (float)t));
-            var x = ox;
-            foreach (var o in others)
-            {
-                DrawSprite(span, o, x, oy + (oh - (o.Height * Scale)), Scale, flip: true);
-                x += (o.Width * Scale) + 20;
-            }
-        }
-
-        // The element at work: what the god's power looks like over the country.
-        if (beat is Beat.Work or Beat.Strike or Beat.Bless)
-            DrawElement(span, element, gx + (godW / 2), gy + (godH / 3), seconds, beat == Beat.Strike, ink, paper);
-
-        // The mortals: cutouts on the left, bowing when blessed, flinching at a strike.
-        var mortals = beat == Beat.Meet ? 0 : page switch { 0 => 1, 1 => 2, 2 => 2, 3 => 3, 4 => 3, _ => 4 };
-        for (var m = 0; m < mortals; m++)
-        {
-            var mx = 180 + (m * 110) + (int)(Math.Sin((seconds * 0.7) + m) * 3);
-            var scale = 0.55f + (0.1f * ((m + page) % 3));
-            var bow = beat == Beat.Bless ? 0.8f : beat == Beat.Strike && into is > 2.0 and < 3.0 ? 0.9f : 1f;
-            ShadowMortal(span, mx, GroundY + quake, scale * bow, ink, m % 2 == 0);
-        }
+            Paper = paper,
+            Ink = ink,
+            Seconds = seconds,
+            Into = into,
+            Element = element,
+            God = (x, y, flip, halo) => DrawGods(gods, x, y, flip, halo),
+            Other = (x, y, flip, halo) => DrawGods(others, x, y, flip, halo),
+            GodWidth = gods.Count > 0 ? gods.Sum(g => g.Width * Scale) + ((gods.Count - 1) * 20) : 200,
+            GodHeight = gods.Count > 0 ? gods.Max(g => g.Height) * Scale : 288,
+            OtherWidth = others.Count > 0 ? others.Sum(g => g.Width * Scale) + ((others.Count - 1) * 20) : 200,
+            OtherHeight = others.Count > 0 ? others.Max(g => g.Height) * Scale : 288,
+        };
+        TaleScenes.Draw(span, scene, ctx);
 
         Canvas.Fill(span, 0, Top - 12, W, 12, WoodDark);
         Canvas.Fill(span, 0, Bottom, W, 12, WoodDark);
@@ -266,46 +200,6 @@ internal sealed class BardChannel(BitmapFont font, Func<IReadOnlyList<DeitySprit
         font.Draw(span, W, plate, 30, 10, Cream, 1, all);
     }
 
-    /// <summary>The god's element made visible: flakes, drops, leaves, sparks, embers or dust, streaming from them.</summary>
-    private static void DrawElement(Span<uint> span, string element, int cx, int cy, double seconds, bool hard, uint ink, uint paper)
-    {
-        var rng = 2463534242u;
-        var count = hard ? 40 : 22;
-        for (var i = 0; i < count; i++)
-        {
-            rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5;
-            var phase = ((seconds * (hard ? 1.6 : 0.5)) + (i * 0.137)) % 1.0;
-            var angle = ((rng % 360) * Math.PI / 180.0) + (seconds * 0.2);
-            var reach = (hard ? 420 : 260) * phase;
-            var x = cx + (int)(Math.Cos(angle) * reach);
-            var y = cy + (int)(Math.Sin(angle) * reach * 0.6) + (element is "earth" or "water" ? (int)(phase * 120) : element == "fire" ? -(int)(phase * 120) : 0);
-            var size = Math.Max(1, (int)((1.0 - phase) * (hard ? 9 : 6)));
-            var colour = element switch
-            {
-                "ice" => Canvas.Rgb(0x9A, 0xD8, 0xFF),
-                "water" => Canvas.Rgb(0x4A, 0x8A, 0xE0),
-                "wind" => Canvas.Rgb(0x6A, 0xB0, 0x5A),
-                "lightning" => Canvas.Rgb(0xC0, 0x8A, 0xFF),
-                "fire" => Canvas.Rgb(0xFF, 0x8A, 0x2E),
-                _ => Canvas.Rgb(0x9A, 0x6A, 0x3A),
-            };
-
-            switch (element)
-            {
-                case "lightning":
-                    Canvas.Line(span, x, y, x + (int)((rng >> 8) % 24) - 12, y + 18, colour);
-                    Canvas.Line(span, x + 1, y, x + 1 + (int)((rng >> 8) % 24) - 12, y + 18, colour);
-                    break;
-                case "wind":
-                    Canvas.Line(span, x, y, x + size * 3, y - size, colour);
-                    Canvas.Line(span, x, y + 1, x + size * 3, y - size + 1, colour);
-                    break;
-                default:
-                    Canvas.Disc(span, x, y, size, colour);
-                    break;
-            }
-        }
-    }
 
 
     /// <summary>A sprite scaled up whole, its transparent cells left alone.</summary>
@@ -326,37 +220,6 @@ internal sealed class BardChannel(BitmapFont font, Func<IReadOnlyList<DeitySprit
     }
 
 
-    /// <summary>A mortal as a cutout: a hooded head, a cloak to the ground, a staff or a raised hand.</summary>
-    private static void ShadowMortal(Span<uint> span, int x, int ground, float scale, uint ink, bool staff)
-    {
-        var h = (int)(200 * scale);
-        var top = ground - h;
-        var cx = x + (int)(40 * scale);
-        var headR = (int)(22 * scale);
-        var headY = top + headR + (int)(10 * scale);
-        Canvas.Disc(span, cx, headY, headR, ink);
-
-        var shoulderY = headY + headR - (int)(4 * scale);
-        for (var y = shoulderY; y < ground; y++)
-        {
-            var t = (float)(y - shoulderY) / Math.Max(1, ground - shoulderY);
-            var half = (int)((26 + (t * 22)) * scale);
-            Canvas.Fill(span, cx - half, y, half * 2, 1, ink);
-        }
-
-        if (staff)
-        {
-            var sx = cx - (int)(40 * scale);
-            Canvas.Fill(span, sx, top - (int)(10 * scale), (int)(5 * scale), ground - top + (int)(10 * scale), ink);
-            Canvas.Disc(span, sx + (int)(2 * scale), top - (int)(10 * scale), (int)(6 * scale), ink);
-        }
-        else
-        {
-            Canvas.Line(span, cx + (int)(26 * scale), shoulderY + (int)(30 * scale), cx + (int)(56 * scale), shoulderY - (int)(20 * scale), ink);
-            Canvas.Line(span, cx + (int)(27 * scale), shoulderY + (int)(31 * scale), cx + (int)(57 * scale), shoulderY - (int)(19 * scale), ink);
-            Canvas.Disc(span, cx + (int)(56 * scale), shoulderY - (int)(20 * scale), (int)(5 * scale), ink);
-        }
-    }
 
     private void DrawParlour(Span<uint> span, double seconds, HostSprites.Bard action, in BitmapFont.Clip all)
     {
@@ -479,64 +342,7 @@ internal sealed class BardChannel(BitmapFont font, Func<IReadOnlyList<DeitySprit
         Canvas.Fill(span, lx + 18, ly, 4, 48, ink);
     }
 
-    private static void ShadowHills(Span<uint> span, int ground, uint ink, int seed, double freq, int height, double shift)
-    {
-        for (var x = 0; x < W; x++)
-        {
-            var wx = x + shift;
-            var h = (Math.Sin((wx * freq) + seed) * 0.5) + (Math.Sin((wx * freq * 2.3) + (seed * 1.7)) * 0.3) + (Math.Sin((wx * freq * 5.1) + (seed * 0.4)) * 0.2);
-            var top = ground - (int)(((h + 1.0) / 2.0) * height) - 4;
-            Canvas.Fill(span, x, top, 1, ground - top, ink);
-        }
-    }
 
-    private static void ShadowProps(Span<uint> span, Biome biome, int ground, uint ink, int seed, double scroll)
-    {
-        var rng = (uint)(seed * 11) | 1u;
-        for (var i = 0; i < 7; i++)
-        {
-            rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5;
-            var px = (int)((rng % (uint)(W + 200)) - 100 - (scroll * 0.9) % (W + 200));
-            if (px < -100)
-                px += W + 200;
-            var scale = 2 + (int)((rng >> 8) % 2);
-            switch (biome)
-            {
-                case Biome.Desert:
-                    Canvas.Fill(span, px - (2 * scale), ground - (16 * scale), 4 * scale, 16 * scale, ink);
-                    Canvas.Fill(span, px - (7 * scale), ground - (12 * scale), 5 * scale, 2 * scale, ink);
-                    Canvas.Fill(span, px - (7 * scale), ground - (16 * scale), 2 * scale, 5 * scale, ink);
-                    Canvas.Fill(span, px + (2 * scale), ground - (9 * scale), 5 * scale, 2 * scale, ink);
-                    Canvas.Fill(span, px + (5 * scale), ground - (13 * scale), 2 * scale, 5 * scale, ink);
-                    break;
-                case Biome.Snow:
-                    for (var t = 0; t < 3; t++)
-                    {
-                        var w = (10 - (t * 2)) * scale;
-                        var ty = ground - (6 * scale) - (t * 6 * scale);
-                        for (var r = 0; r < 6 * scale; r++)
-                            Canvas.Fill(span, px - (w * r / (6 * scale)), ty - r, (2 * w * r / (6 * scale)) + 1, 1, ink);
-                    }
-
-                    break;
-                case Biome.Coast:
-                    for (var k = 0; k < 16 * scale; k++)
-                        Canvas.Fill(span, px + (k / 4), ground - k, 3 * scale / 2, 1, ink);
-                    for (var f = -2; f <= 2; f++)
-                        Canvas.Line(span, px + (4 * scale), ground - (16 * scale), px + (4 * scale) + (f * 7 * scale), ground - (16 * scale) + (Math.Abs(f) * 3 * scale) - (2 * scale), ink);
-                    break;
-                case Biome.Highland:
-                case Biome.Steppe:
-                    Canvas.Disc(span, px, ground - (3 * scale), 6 * scale, ink);
-                    break;
-                default:
-                    Canvas.Fill(span, px - (2 * scale), ground - (18 * scale), 4 * scale, 18 * scale, ink);
-                    Canvas.Disc(span, px, ground - (22 * scale), 10 * scale, ink);
-                    Canvas.Disc(span, px - (4 * scale), ground - (18 * scale), 7 * scale, ink);
-                    break;
-            }
-        }
-    }
 
     private void DrawCaption(Span<uint> span, string tab, string line, in BitmapFont.Clip all)
     {
