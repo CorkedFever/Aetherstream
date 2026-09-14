@@ -53,6 +53,10 @@ internal sealed class TwitchTab(UiContext ui)
         this.Chip("FFXIV", "game", "FINAL FANTASY XIV Online");
         ImGui.SameLine();
         this.Chip("Just Chatting", "game", "Just Chatting");
+        ImGui.SameLine();
+        this.Chip("DJs", "game", "DJs");
+        ImGui.SameLine();
+        this.Chip("Music", "game", "Music");
 
         ImGui.Spacing();
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 90f);
