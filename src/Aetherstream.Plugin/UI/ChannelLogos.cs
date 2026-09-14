@@ -149,6 +149,30 @@ internal static class ChannelLogos
 
                 break;
 
+            case "wildlife":
+                // A bush hat over a pair of eyes in the grass.
+                d.AddRectFilled(P(-6f, -10f), P(6f, -2f), Theme.U32(Coin), 2f * u);
+                d.AddRectFilled(P(-14f, -3f), P(14f, 0f), Theme.U32(Coin), 1f);
+                d.AddCircleFilled(P(-4f, 5f), 2f * u, Theme.U32(Paper), 8);
+                d.AddCircleFilled(P(4f, 5f), 2f * u, Theme.U32(Paper), 8);
+                for (var g = 0; g < 7; g++)
+                    d.AddLine(P(-13f + (g * 4.3f), 13f), P(-12f + (g * 4.3f), 7f), Theme.U32(Leaf), 1.6f * u);
+                break;
+
+            case "stories":
+                // An open book, a page lifting.
+                d.AddRectFilled(P(-13f, -8f), P(0f, 10f), Theme.U32(Paper), 1f);
+                d.AddRectFilled(P(0f, -8f), P(13f, 10f), Theme.U32(Paper), 1f);
+                d.AddLine(P(0f, -8f), P(0f, 10f), Theme.U32(Theme.TextFaint), 1.2f * u);
+                for (var l = 0; l < 3; l++)
+                {
+                    d.AddLine(P(-10f, -4f + (l * 4f)), P(-3f, -4f + (l * 4f)), Theme.U32(Theme.TextFaint), 1f * u);
+                    d.AddLine(P(3f, -4f + (l * 4f)), P(10f, -4f + (l * 4f)), Theme.U32(Theme.TextFaint), 1f * u);
+                }
+
+                d.AddTriangleFilled(P(0f, -8f), P(9f, -13f), P(11f, -6f), Theme.U32(Violet));
+                break;
+
             case "scrambled":
                 // A picture torn into bands, each slid a different way, with a sync line through it.
                 for (var row = 0; row < 5; row++)
