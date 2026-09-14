@@ -126,6 +126,14 @@ internal static class ChannelLogos
                 d.AddLine(P(-8f, 14f), P(12f, 14f), Theme.U32(Theme.WithAlpha(Sky, 0.5f)), 1.2f * u);
                 break;
 
+            case "horoscope":
+                // A crescent and a star: the Sharlayan reading.
+                d.AddCircleFilled(P(-3f, 0f), 11f * u, Theme.U32(Sun), 20);
+                d.AddCircleFilled(P(2f, -3f), 10f * u, Theme.U32(lit ? Theme.GlassEdge : Theme.Tube), 20);
+                DrawStar(d, P(8f, 6f), 4.5f * u, Paper);
+                DrawStar(d, P(11f, -8f), 2.5f * u, Paper);
+                break;
+
             case "scrambled":
                 // A picture torn into bands, each slid a different way, with a sync line through it.
                 for (var row = 0; row < 5; row++)

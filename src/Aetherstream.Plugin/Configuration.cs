@@ -362,6 +362,9 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Whether the fishing channel lists fish already in your log. Off: the board is what you still need.</summary>
     public bool FishingShowCaught { get; set; }
 
+    /// <summary>Whose reading the horoscope gives: 0 for the character's own guardian, else a deity by the game's row id.</summary>
+    public int HoroscopeDeity { get; set; }
+
     /// <summary>How far ahead of a scheduled window the banner goes up, in minutes.</summary>
     public int MaintenanceBannerMinutes { get; set; } = 60;
 

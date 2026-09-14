@@ -141,6 +141,7 @@ public sealed partial class Plugin : IDalamudPlugin
             ("Mystify", "Two polygons and their ghosts.", new MystifyChannel(face)),
             ("3D Maze", "Brick corridors, walked forever. Windows 95.", new MazeChannel(face)),
             ("Pipes", "Plumbing fills the room, then starts over. Windows NT.", new PipesChannel(face)),
+            ("Horoscope", "A Sharlayan reading a day, for those born under your guardian.", new HoroscopeChannel(face, this.HoroscopeSnapshot)),
             ("Scrambled", "Channel 99. You did not subscribe. Nothing to see, and you keep looking.", new ScrambledChannel(face)),
         ];
         this.screen = new WorldScreen(gameGui);

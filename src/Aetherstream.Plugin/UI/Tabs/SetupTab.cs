@@ -547,6 +547,34 @@ internal sealed class SetupTab(UiContext ui)
 
         Ui.Tip("Off, the board is what you still need. On, caught fish are listed dimmed. Windows come from the Carbuncle Plushy fish tracker's data, bundled with the plugin.");
 
+        Ui.Section("Horoscope");
+        var deity = ui.Config.HoroscopeDeity;
+        var deities = Video.HoroscopeChannel.Deities;
+        var chosen = deity == 0 ? "Your own guardian" : deities.FirstOrDefault(d => d.Id == deity).Name ?? "Your own guardian";
+        ImGui.SetNextItemWidth(260);
+        using (var combo = ImRaii.Combo("##deity", chosen))
+        {
+            if (combo)
+            {
+                if (ImGui.Selectable("Your own guardian", deity == 0))
+                {
+                    ui.Config.HoroscopeDeity = 0;
+                    ui.SaveConfig();
+                }
+
+                foreach (var (id, name) in deities)
+                {
+                    if (ImGui.Selectable(name, deity == id))
+                    {
+                        ui.Config.HoroscopeDeity = id;
+                        ui.SaveConfig();
+                    }
+                }
+            }
+        }
+
+        Ui.Tip("Whose reading the horoscope channel gives. Your own guardian is read from the character; pick another of the Twelve to read for a friend.");
+
         Ui.Section("Maintenance banner");
         var banner = ui.Config.MaintenanceBanner;
         if (ImGui.Checkbox("Show a banner when maintenance is coming", ref banner))
