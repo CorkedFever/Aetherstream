@@ -61,7 +61,7 @@ public sealed partial class Plugin : IDalamudPlugin
     private readonly string fishDataPath;
     private readonly GuideChannel guideChannel;
     private readonly WeatherChannel weatherChannel;
-    private readonly (string Name, string Blurb, IFrameChannel Channel)[] channels;
+    private readonly (string Name, string Blurb, string Group, IFrameChannel Channel)[] channels;
     private PlexAccount plex = null!;
 
     public Plugin(
@@ -125,31 +125,31 @@ public sealed partial class Plugin : IDalamudPlugin
         this.weatherChannel = new WeatherChannel(face, this.WeatherSnapshot);
         this.channels =
         [
-            ("Guide", "What's on, scrolling. The picture stays in the corner.", this.guideChannel),
-            ("Weather", "Local on the 8s, for the zone you are in.", this.weatherChannel),
-            ("Clock", "Eorzea time, the date, the moon, the sun.", new ClockChannel(face)),
-            ("News", "Lodestone headlines, one story at a time.", new NewsChannel(face, this.NewsSnapshot)),
-            ("Market", "Your watch list, priced by Universalis.", new MarketChannel(face, this.MarketSnapshot)),
-            ("Gathering", "Timed nodes: what is up, and how long until each pops.", new GatheringChannel(face, this.GatheringSnapshot)),
-            ("Fishing", "Fish you still need, up now and next; the boats along the top.", new FishingChannel(face, this.FishingSnapshot)),
-            ("Almanac", "Resets, the boat, the cactpot, your retainers, today's roulettes.", new TimersChannel(face, this.TimersSnapshot)),
-            ("Venues", "Who is open in your region tonight, via ffxivvenues.com.", new VenuesChannel(face, this.VenuesSnapshot)),
-            ("Aquarium", "Fish. The odd Namazu. Nothing to read.", new AquariumChannel(face)),
-            ("Fireplace", "A fire in a hearth, for the winter.", new FireplaceChannel(face)),
-            ("Starfield", "The screensaver everyone had.", new StarfieldChannel(face)),
-            ("Plasma", "The demoscene's favourite, in the set's colours.", new PlasmaChannel(face)),
-            ("Mystify", "Two polygons and their ghosts.", new MystifyChannel(face)),
-            ("3D Maze", "Brick corridors, walked forever. Windows 95.", new MazeChannel(face)),
-            ("Pipes", "Plumbing fills the room, then starts over. Windows NT.", new PipesChannel(face)),
-            ("Horoscope", "A Sharlayan reading a day, for those born under your guardian.", new HoroscopeChannel(face, this.HoroscopeSnapshot)),
-            ("Kitchen", "A cooking show. Every episode a real recipe, ingredient by ingredient.", new CookingChannel(face, this.Dishes, this.Icon)),
-            ("Wildlife", "A ranger in khaki gets far too close to the hunting log, one beast at a time.", new NatureChannel(face, this.Creatures, this.Icon)),
-            ("Stories", "The Tonberry's Lantern: the tales of the Twelve, one a time, by the fire.", new BardChannel(face, this.Twelve)),
-            ("Shopping", "The Eorzean Shopping Network: your market watch, one item at a time, with a goblin who wants you to call now.", new ShoppingChannel(face, this.MarketSnapshot, this.ItemIcon)),
-            ("Radio", "Aether FM: the set's own jukebox on screen, with a spectrum that moves to it.", new MusicChannel(face, () => new MusicState(this.session.MusicPlaying, this.session.MusicNowPlaying, this.session.MusicUpNext, this.session.MusicPosition.Index, this.session.MusicPosition.Count), buf => this.session.MusicTap(buf))),
-            ("Housing", "Loporrit Estates: the open plots on your world, one at a time, shown by a Loporrit who has read a great deal about houses.", new HousingChannel(face, this.HousingSnapshot)),
-            ("Painting", "The Kupo of Painting: Pom Ross paints a vista from the Sightseeing Log, sky first, one calm stroke at a time.", new PaintingChannel(face, this.Vistas, this.Icon, this.VistaFound)),
-            ("Scrambled", "Channel 99. You did not subscribe. Nothing to see, and you keep looking.", new ScrambledChannel(face)),
+            ("Guide", "What's on, scrolling. The picture stays in the corner.", "Info", this.guideChannel),
+            ("Weather", "Local on the 8s, for the zone you are in.", "Info", this.weatherChannel),
+            ("Clock", "Eorzea time, the date, the moon, the sun.", "Info", new ClockChannel(face)),
+            ("News", "Lodestone headlines, one story at a time.", "Info", new NewsChannel(face, this.NewsSnapshot)),
+            ("Market", "Your watch list, priced by Universalis.", "Info", new MarketChannel(face, this.MarketSnapshot)),
+            ("Gathering", "Timed nodes: what is up, and how long until each pops.", "Info", new GatheringChannel(face, this.GatheringSnapshot)),
+            ("Fishing", "Fish you still need, up now and next; the boats along the top.", "Info", new FishingChannel(face, this.FishingSnapshot)),
+            ("Almanac", "Resets, the boat, the cactpot, your retainers, today's roulettes.", "Info", new TimersChannel(face, this.TimersSnapshot)),
+            ("Venues", "Who is open in your region tonight, via ffxivvenues.com.", "Info", new VenuesChannel(face, this.VenuesSnapshot)),
+            ("Aquarium", "Fish. The odd Namazu. Nothing to read.", "Ambience", new AquariumChannel(face)),
+            ("Fireplace", "A fire in a hearth, for the winter.", "Ambience", new FireplaceChannel(face)),
+            ("Starfield", "The screensaver everyone had.", "Ambience", new StarfieldChannel(face)),
+            ("Plasma", "The demoscene's favourite, in the set's colours.", "Ambience", new PlasmaChannel(face)),
+            ("Mystify", "Two polygons and their ghosts.", "Ambience", new MystifyChannel(face)),
+            ("3D Maze", "Brick corridors, walked forever. Windows 95.", "Ambience", new MazeChannel(face)),
+            ("Pipes", "Plumbing fills the room, then starts over. Windows NT.", "Ambience", new PipesChannel(face)),
+            ("Horoscope", "A Sharlayan reading a day, for those born under your guardian.", "Shows", new HoroscopeChannel(face, this.HoroscopeSnapshot)),
+            ("Kitchen", "A cooking show. Every episode a real recipe, ingredient by ingredient.", "Shows", new CookingChannel(face, this.Dishes, this.Icon)),
+            ("Wildlife", "A ranger in khaki gets far too close to the hunting log, one beast at a time.", "Shows", new NatureChannel(face, this.Creatures, this.Icon)),
+            ("Stories", "The Tonberry's Lantern: the tales of the Twelve, one a time, by the fire.", "Shows", new BardChannel(face, this.Twelve)),
+            ("Shopping", "The Eorzean Shopping Network: your market watch, one item at a time, with a goblin who wants you to call now.", "Shows", new ShoppingChannel(face, this.MarketSnapshot, this.ItemIcon)),
+            ("Radio", "Aether FM: the set's own jukebox on screen, with a spectrum that moves to it.", "Shows", new MusicChannel(face, () => new MusicState(this.session.MusicPlaying, this.session.MusicNowPlaying, this.session.MusicUpNext, this.session.MusicPosition.Index, this.session.MusicPosition.Count), buf => this.session.MusicTap(buf))),
+            ("Housing", "Loporrit Estates: the open plots on your world, one at a time, shown by a Loporrit who has read a great deal about houses.", "Info", new HousingChannel(face, this.HousingSnapshot)),
+            ("Painting", "The Kupo of Painting: Pom Ross paints a vista from the Sightseeing Log, sky first, one calm stroke at a time.", "Shows", new PaintingChannel(face, this.Vistas, this.Icon, this.VistaFound)),
+            ("Scrambled", "Channel 99. You did not subscribe. Nothing to see, and you keep looking.", "Ambience", new ScrambledChannel(face)),
         ];
         this.screen = new WorldScreen(gameGui);
         this.gameGuiRef = gameGui;

@@ -61,7 +61,7 @@ internal sealed class UiContext
     public required Video.IFrameChannel? Weather { get; init; }
 
     /// <summary>All the drawn channels, in dial order, with a line each for the Channels tab.</summary>
-    public required IReadOnlyList<(string Name, string Blurb, Video.IFrameChannel Channel)> Channels { get; init; }
+    public required IReadOnlyList<(string Name, string Blurb, string Group, Video.IFrameChannel Channel)> Channels { get; init; }
 
 
     /// <summary>
