@@ -15,6 +15,7 @@ public sealed partial class Plugin
 {
     private List<Creature>? creatures;
     private List<DeitySprite>? twelve;
+    private Dictionary<string, HuntPhoto>? huntPhotos;
 
     private IReadOnlyList<Creature> Creatures()
     {
@@ -85,6 +86,44 @@ public sealed partial class Plugin
         this.creatures = list;
         return list;
     }
+
+    /// <summary>A hunt mark's photograph from data/hunts.json.gz, matched by name without regard to case, spaces or punctuation.</summary>
+    private HuntPhoto? HuntPhoto(string name)
+    {
+        if (this.huntPhotos is null)
+        {
+            this.huntPhotos = new Dictionary<string, HuntPhoto>();
+            try
+            {
+                var path = Path.Combine(Path.GetDirectoryName(this.fishDataPath)!, "hunts.json.gz");
+                if (File.Exists(path))
+                {
+                    using var file = File.OpenRead(path);
+                    using var gz = new GZipStream(file, CompressionMode.Decompress);
+                    using var doc = JsonDocument.Parse(gz);
+                    foreach (var e in doc.RootElement.EnumerateArray())
+                    {
+                        var w = e.GetProperty("w").GetInt32();
+                        var h = e.GetProperty("h").GetInt32();
+                        var px = e.GetProperty("p").EnumerateArray().Select(v => (uint)v.GetInt64()).ToArray();
+                        if (px.Length == w * h)
+                            this.huntPhotos[PhotoKey(e.GetProperty("n").GetString() ?? string.Empty)] = new HuntPhoto(w, h, px);
+                    }
+                }
+
+                this.log.Information($"[wildlife] {this.huntPhotos.Count} photographs in the pack");
+            }
+            catch (Exception ex)
+            {
+                this.log.Warning($"[wildlife] the photo pack could not be read: {ex.Message}");
+            }
+        }
+
+        return this.huntPhotos.GetValueOrDefault(PhotoKey(name));
+    }
+
+    private static string PhotoKey(string name) =>
+        new string(name.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
 
     /// <summary>The Twelve's sprites, from data/twelve.json.gz beside the fish; none if the file is missing.</summary>
     private IReadOnlyList<DeitySprite> Twelve()

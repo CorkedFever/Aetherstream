@@ -143,7 +143,7 @@ public sealed partial class Plugin : IDalamudPlugin
             ("Pipes", "Plumbing fills the room, then starts over. Windows NT.", new PipesChannel(face)),
             ("Horoscope", "A Sharlayan reading a day, for those born under your guardian.", new HoroscopeChannel(face, this.HoroscopeSnapshot)),
             ("Kitchen", "A cooking show. Every episode a real recipe, ingredient by ingredient.", new CookingChannel(face, this.Dishes, this.Icon)),
-            ("Wildlife", "A ranger in khaki gets far too close to the hunting log, one beast at a time.", new NatureChannel(face, this.Creatures, this.Icon)),
+            ("Wildlife", "A ranger in khaki gets far too close to the hunting log, one beast at a time.", new NatureChannel(face, this.Creatures, this.Icon, this.HuntPhoto)),
             ("Stories", "The Tonberry's Lantern: the tales of the Twelve, one a time, by the fire.", new BardChannel(face, this.Twelve)),
             ("Scrambled", "Channel 99. You did not subscribe. Nothing to see, and you keep looking.", new ScrambledChannel(face)),
         ];

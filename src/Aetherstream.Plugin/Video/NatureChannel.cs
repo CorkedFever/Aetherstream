@@ -13,7 +13,10 @@ internal sealed record Creature(string Name, string Zone, string Region, uint Ic
 /// the moment he gets far too close, and the sign-off. Backdrops by the creature's region;
 /// the sky by the local hour. On a schedule from the clock.
 /// </summary>
-internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature>> creatures, Func<uint, IconPixels?> icon) : IFrameChannel
+/// <summary>A photograph of a hunt mark from the photo pack: frame-format pixels, opaque.</summary>
+internal sealed record HuntPhoto(int Width, int Height, uint[] Pixels);
+
+internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature>> creatures, Func<uint, IconPixels?> icon, Func<string, HuntPhoto?> photo) : IFrameChannel
 {
     private const int W = Canvas.Width;
     private const int H = Canvas.Height;
@@ -206,7 +209,10 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         if (phase == Phase.Close && t is > 1.5 and < 7.5)
         {
             Scenery.Paint(span, W, 0, Horizon + 120, H, biome, daylight, seed + 5, pan * 2);
-            this.DrawBeast(span, creature, 120, 120, 400, seconds);
+            if (creature.Mark && photo(creature.Name) is { } shot)
+                DrawPhoto(span, shot, 120, 120, 400);
+            else
+                this.DrawBeast(span, creature, 120, 120, 400, seconds);
             var y = 130;
             var name = Canvas.Cut(Canvas.Plain(creature.Name).ToUpperInvariant(), font.Fit(W - 600, 2));
             Canvas.Fill(span, 560, y - 8, font.Measure(name, 2) + 32, 96, Ink);
@@ -351,7 +357,10 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
                 }
 
                 Canvas.Rect(span, 860, 360, 190, 170, Ink, 3);
-                this.DrawBeast(span, creature, 885, 375, 140, seconds);
+                if (creature.Mark && photo(creature.Name) is { } shot)
+                    DrawPhoto(span, shot, 885, 375, 140);
+                else
+                    this.DrawBeast(span, creature, 885, 375, 140, seconds);
                 HostSprites.DrawRanger(span, HostSprites.Ranger.Point, seconds, 20, 330 + bob, 6);
                 break;
             }
@@ -562,7 +571,45 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         }
     }
 
-    /// <summary>The WANTED poster, on the titles, for a mark: name, rank, zone, and the shape nobody has drawn properly.</summary>
+    /// <summary>
+    /// A photograph from the pack, scaled to <paramref name="height"/> rows with its own proportions,
+    /// nearest-neighbour so it stays pixelated, centred in a width of <paramref name="fit"/> when
+    /// one is given, with a pale border like a print.
+    /// </summary>
+    private static void DrawPhoto(Span<uint> span, HuntPhoto shot, int x, int y, int height, int fit = 0)
+    {
+        var width = Math.Max(1, shot.Width * height / shot.Height);
+        if (fit > 0 && width > fit)
+        {
+            width = fit;
+            height = Math.Max(1, shot.Height * fit / shot.Width);
+        }
+
+        if (fit > 0)
+            x += (fit - width) / 2;
+
+        Canvas.Fill(span, x - 6, y - 6, width + 12, height + 12, Canvas.Rgb(0xF0, 0xEA, 0xD8));
+        Canvas.Rect(span, x - 6, y - 6, width + 12, height + 12, Canvas.Rgb(0x1E, 0x1A, 0x14), 2);
+        for (var ty = 0; ty < height; ty++)
+        {
+            var yy = y + ty;
+            if (yy < 0 || yy >= H)
+                continue;
+
+            var sy = ty * shot.Height / height;
+            var row = span.Slice(yy * W, W);
+            for (var tx = 0; tx < width; tx++)
+            {
+                var xx = x + tx;
+                if (xx < 0 || xx >= W)
+                    continue;
+
+                row[xx] = shot.Pixels[(sy * shot.Width) + (tx * shot.Width / width)] | 0xFF000000u;
+            }
+        }
+    }
+
+    /// <summary>The WANTED poster, on the titles, for a mark: name, rank, zone, and the photograph if the pack has one, else the shape nobody has drawn properly.</summary>
     private void DrawPoster(Span<uint> span, Creature creature, double t, double seconds, in BitmapFont.Clip all)
     {
         var drop = (int)((1.0 - Math.Clamp(t / 0.6, 0.0, 1.0)) * -400);
@@ -576,7 +623,10 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         font.Draw(span, W, Wanted, px + ((440 - font.Measure(Wanted, 2)) / 2), py + 24, Ink, 2, all);
         Canvas.Fill(span, px + 40, py + 120, 360, 200, Canvas.Rgb(0xD8, 0xC4, 0x98));
         Canvas.Rect(span, px + 40, py + 120, 360, 200, Ink, 2);
-        Silhouette(span, creature, px + 130, py + 130, 180, seconds);
+        if (photo(creature.Name) is { } shot)
+            DrawPhoto(span, shot, px + 40, py + 120, 200, fit: 360);
+        else
+            Silhouette(span, creature, px + 130, py + 130, 180, seconds);
         var name = Canvas.Cut(Canvas.Plain(creature.Name).ToUpperInvariant(), font.Fit(400));
         font.Draw(span, W, name, px + ((440 - font.Measure(name)) / 2), py + 340, Ink, 1, all);
         var rank = $"RANK {RankLetter(creature.Rank)} MARK";
