@@ -238,6 +238,31 @@ internal sealed class SoundTab(UiContext ui)
 
         this.DrawDevicePicker();
 
+        var vlcEngine = ui.Config.UsesVlcAudio;
+        ImGui.SetNextItemWidth(320);
+        using (var combo = ImRaii.Combo("##engine", vlcEngine ? "libvlc plays the sound (in sync)" : "Aetherstream plays the sound (placed in the room)"))
+        {
+            if (combo)
+            {
+                if (ImGui.Selectable("libvlc plays the sound (in sync)", vlcEngine))
+                {
+                    ui.Config.AudioEngine = "vlc";
+                    ui.SaveConfig();
+                }
+
+                if (ImGui.Selectable("Aetherstream plays the sound (placed in the room)", !vlcEngine))
+                {
+                    ui.Config.AudioEngine = "ring";
+                    ui.SaveConfig();
+                }
+            }
+        }
+
+        Ui.Tip(
+            "libvlc keeps sound and picture on one clock, so a stall on a live channel never pulls them " +
+            "apart — but it cannot place the sound left or right. Aetherstream's own path can, and can " +
+            "drift after a stall until you pause and resume. Takes effect on the next Play.");
+
         var falloff = ui.Config.AudioFalloffYalms;
         if (ImGui.SliderFloat("Fades out over", ref falloff, 0f, 60f, "%.0f yalms"))
         {
@@ -250,10 +275,13 @@ internal sealed class SoundTab(UiContext ui)
             "room. Set it to zero to keep the level constant wherever you are.");
 
         var spatial = ui.Config.SpatialSound;
-        if (ImGui.Checkbox("Sound comes from where the screen is", ref spatial))
+        using (ImRaii.Disabled(ui.Config.UsesVlcAudio))
         {
-            ui.Config.SpatialSound = spatial;
-            ui.SaveConfig();
+            if (ImGui.Checkbox(ui.Config.UsesVlcAudio ? "Sound comes from where the screen is (needs the Aetherstream engine)" : "Sound comes from where the screen is", ref spatial))
+            {
+                ui.Config.SpatialSound = spatial;
+                ui.SaveConfig();
+            }
         }
 
         Ui.Tip(

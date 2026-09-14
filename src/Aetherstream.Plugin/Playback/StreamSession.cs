@@ -370,6 +370,7 @@ internal sealed class StreamSession(
         this.SampledBrightness = count == 0 ? -1f : total / (float)count;
     }
 
+    private long lastFramesSeen = -1;
     private long resumeTargetMs;
     private long lastPresented = -1;
     private uint[]? fitted;
@@ -529,9 +530,13 @@ internal sealed class StreamSession(
         // starved live stream — libvlc's clock runs on regardless — so accepting *either* signal, as
         // this did, meant a stream that had plainly stopped never registered as stalled at all: a
         // real one ran thirty-three seconds past its last sample without a word.
+        // Without audio callbacks the frames presented stand in: like delivered audio they only
+        // move when the decoder is fed, where the position keeps counting on a starved stream.
+        var frames = playing.Stats.FramesPresented;
         var moved = playing.SampleRate > 0
             ? delivered != this.lastDeliveredMs
-            : position != this.lastPositionMs;
+            : frames != this.lastFramesSeen;
+        this.lastFramesSeen = frames;
 
         if (moved)
         {
@@ -605,6 +610,12 @@ internal sealed class StreamSession(
     public void ReopenAudio()
     {
         this.music?.Reopen(config.AudioDeviceId);
+
+        if (this.source is { OwnsAudioOutput: true } vlcOut)
+        {
+            vlcOut.SetOutputDevice(config.AudioDeviceId);
+            return;
+        }
 
         if (this.source is not { } playing || this.ring is null || this.current is null)
             return;
@@ -864,6 +875,22 @@ internal sealed class StreamSession(
     /// <summary>Applies the configured volume, optionally attenuated by distance to the screen.</summary>
     public void ApplyVolume(float distanceYalms, float pan = 0f)
     {
+        if (this.audio is null && this.source is { OwnsAudioOutput: true } vlcOut)
+        {
+            var fall = 1f;
+            if (config.AudioFalloffYalms > 0.01f)
+            {
+                var tv = Math.Clamp(distanceYalms / config.AudioFalloffYalms, 0f, 1f);
+                fall = (1f - tv) * (1f - tv);
+            }
+
+            this.DistanceGain = fall;
+            var musicUnder = this.music is { Playing: true };
+            vlcOut.SetVolume((int)(config.Volume * fall * 100), this.Muted || musicUnder);
+            this.music?.ApplyVolume(this.Muted ? 0f : config.Volume * config.ChannelMusicVolume * fall, pan);
+            return;
+        }
+
         if (this.audio is null)
         {
             // No picture sound, but music may still be on — the guide over nothing, say.
@@ -925,6 +952,7 @@ internal sealed class StreamSession(
         try
         {
             var wantsAudio = config.AudioEnabled;
+            var vlcAudio = wantsAudio && config.UsesVlcAudio;
             var sampleRate = 0;
 
             AudioOutput? output = null;
@@ -934,7 +962,7 @@ internal sealed class StreamSession(
             {
                 // The device decides the rate; the decoder is configured to match it, never the
                 // other way round.
-                if (wantsAudio)
+                if (wantsAudio && !vlcAudio)
                     sampleRate = AudioOutput.MixRateOf(config.AudioDeviceId);
 
                 created = new VlcStreamSource(
@@ -942,12 +970,12 @@ internal sealed class StreamSession(
                     sampleRate: sampleRate,
                     width: Width,
                     height: Height,
-                    callbackAudio: wantsAudio,
+                    callbackAudio: wantsAudio && !vlcAudio,
                     muteOutput: !wantsAudio,
                     // Room for libvlc's lead plus the hold that answers it, with margin.
                     ringSeconds: (config.NetworkCachingMs / 1000) + 6);
 
-                if (wantsAudio && created.Audio is { } ring)
+                if (wantsAudio && !vlcAudio && created.Audio is { } ring)
                 {
                     // A positive offset holds the sound back, which we do ourselves by buffering.
                     var offsetMs = config.OffsetFor(config.Source);
@@ -965,8 +993,15 @@ internal sealed class StreamSession(
                 created.Play(
                     stream,
                     config.UseHardwareDecode,
-                    Math.Min(0, config.OffsetFor(config.Source)),
+                    vlcAudio ? config.OffsetFor(config.Source) : Math.Min(0, config.OffsetFor(config.Source)),
                     config.NetworkCachingMs);
+
+                // libvlc's own output: the chosen endpoint and the starting level, on its clock.
+                if (vlcAudio)
+                {
+                    created.SetOutputDevice(config.AudioDeviceId);
+                    created.SetVolume((int)(config.Volume * 100), this.Muted);
+                }
 
                 created.PlaybackEnded += (_, _) => this.endedPending = true;
                 created.PlaybackFailed += (_, _) => this.failedPending = true;

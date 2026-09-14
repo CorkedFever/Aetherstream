@@ -413,6 +413,16 @@ public sealed class Configuration : IPluginConfiguration
     public int AudioOffsetMs { get; set; }
 
     /// <summary>
+    /// Who plays the sound. "vlc": libvlc's own output, on the same clock as the picture, so
+    /// stalls and re-times never pull the two apart — but no left-right placement. "ring":
+    /// the plugin's own path through a ring and WASAPI, which can pan the sound to where the
+    /// screen stands but can drift after a stall on a live stream.
+    /// </summary>
+    public string AudioEngine { get; set; } = "vlc";
+
+    public bool UsesVlcAudio => this.AudioEngine != "ring";
+
+    /// <summary>
     /// Hold the sound back by however much libvlc delivers ahead of time, measured at the start
     /// of each play. Off by default: on a live channel the opening burst is the buffer catching
     /// up rather than a steady lead, and the hold overshoots. The per-source offset applies on top.

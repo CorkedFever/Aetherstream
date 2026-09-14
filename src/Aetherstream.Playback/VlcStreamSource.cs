@@ -310,6 +310,42 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
     /// The subtitle tracks libvlc knows about, once the media is open. libvlc lists its own
     /// "Disable" entry with id -1; that is left out and offered by the caller as "Off".
     /// </summary>
+    /// <summary>Whether audio leaves through libvlc's own output rather than our callbacks.</summary>
+    public bool OwnsAudioOutput => this.Audio is null;
+
+    /// <summary>Points libvlc's own output at an endpoint, by the same id Windows uses; empty for the default.</summary>
+    public void SetOutputDevice(string? deviceId)
+    {
+        if (this.disposed || this.tearingDown)
+            return;
+
+        try
+        {
+            this.player.SetOutputDevice(string.IsNullOrEmpty(deviceId) ? string.Empty : deviceId);
+        }
+        catch (Exception)
+        {
+            // A device that vanished mid-play; libvlc keeps whatever it had.
+        }
+    }
+
+    /// <summary>libvlc's own volume, 0 to 100, and mute. Only meaningful when it owns the output.</summary>
+    public void SetVolume(int percent, bool mute)
+    {
+        if (this.disposed || this.tearingDown)
+            return;
+
+        try
+        {
+            this.player.Mute = mute;
+            if (!mute)
+                this.player.Volume = Math.Clamp(percent, 0, 100);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
     public IReadOnlyList<(int Id, string Name)> Subtitles()
     {
         if (this.disposed)
