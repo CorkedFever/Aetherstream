@@ -61,6 +61,12 @@ public static class StreamResolvers
             return new PlexResolver(http, plex.Server, plex.Token, plex.MaxKilobits, plex.ClientId);
         }
 
+        if (LocalFileResolver.Matches(input))
+        {
+            description = "local file";
+            return new LocalFileResolver();
+        }
+
         if (IsDirectMedia(input))
         {
             description = "direct URL";

@@ -28,6 +28,9 @@ internal sealed class LibraryTab(UiContext ui)
     /// <summary>The other library: the Internet Archive's films, no account needed.</summary>
     internal ArchiveTab Archive { get; } = new(ui);
 
+    /// <summary>Videos on this machine.</summary>
+    internal LocalTab Local { get; } = new(ui);
+
     /// <summary>
     /// How deep into a show we are: empty at the library, one entry inside a show, two inside a
     /// season. Held here rather than as a single label so "back" can go up one level instead of
@@ -81,6 +84,12 @@ internal sealed class LibraryTab(UiContext ui)
             return;
         }
 
+        if (this.shelf == 2)
+        {
+            this.Local.Draw();
+            return;
+        }
+
         if (!this.Configured)
         {
             this.DrawSignIn();
@@ -108,7 +117,7 @@ internal sealed class LibraryTab(UiContext ui)
     private void DrawShelfStrip()
     {
         var drawList = ImGui.GetWindowDrawList();
-        var labels = new[] { "PLEX", "ARCHIVE" };
+        var labels = new[] { "PLEX", "ARCHIVE", "LOCAL" };
         using (Theme.PushDisplay())
         {
             for (var i = 0; i < labels.Length; i++)

@@ -157,6 +157,26 @@ internal sealed class PlexArt(ITextureProvider textures, HttpClient http, IPlugi
         return this.Fetch(url, url);
     }
 
+    /// <summary>The texture for an image file on this machine, cached by its path.</summary>
+    public IDalamudTextureWrap? GetFile(string path)
+    {
+        if (this.disposed || path.Length == 0)
+            return null;
+
+        if (this.cache.TryGetValue(path, out var existing))
+        {
+            existing.LastUsed = this.tick;
+            return existing.Wrap;
+        }
+
+        var entry = new Entry { LastUsed = this.tick };
+        if (!this.cache.TryAdd(path, entry))
+            return null;
+
+        _ = Task.Run(() => this.FetchAsync(path, entry, fromDisk: true));
+        return null;
+    }
+
     /// <summary>Starts a fetch for a key that is not cached yet, and returns nothing this frame.</summary>
     private IDalamudTextureWrap? Fetch(string key, string url)
     {
@@ -168,7 +188,7 @@ internal sealed class PlexArt(ITextureProvider textures, HttpClient http, IPlugi
         return null;
     }
 
-    private async Task FetchAsync(string url, Entry entry)
+    private async Task FetchAsync(string url, Entry entry, bool fromDisk = false)
     {
         await this.fetching.WaitAsync();
 
@@ -178,7 +198,7 @@ internal sealed class PlexArt(ITextureProvider textures, HttpClient http, IPlugi
             if (this.disposed)
                 return;
 
-            var bytes = await http.GetByteArrayAsync(url);
+            var bytes = fromDisk ? await File.ReadAllBytesAsync(url) : await http.GetByteArrayAsync(url);
             if (this.disposed)
                 return;
 

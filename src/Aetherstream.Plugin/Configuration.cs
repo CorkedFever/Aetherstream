@@ -334,6 +334,9 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>A folder of your own music, searched for audio files, when the source is "folder".</summary>
     public string ChannelMusicFolder { get; set; } = string.Empty;
 
+    /// <summary>Folders the library's Local shelf scans for videos. Empty means the Videos folder.</summary>
+    public List<string> LocalVideoFolders { get; set; } = [];
+
     /// <summary>The Plex playlist's rating key and its name for the picker, when the source is "plex".</summary>
     public string ChannelMusicPlexPlaylist { get; set; } = string.Empty;
 
