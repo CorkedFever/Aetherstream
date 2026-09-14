@@ -4,7 +4,7 @@ namespace Aetherstream.Plugin.Video;
 internal sealed record Creature(string Name, string Zone, string Region, uint Icon, int Rank);
 
 /// <summary>
-/// The wildlife show. A moogle in a bush hat and a khaki vest, more enthusiasm than sense, and a
+/// The wildlife show. A moogle in a bush hat and a khaki vest, Steppe Mogwyn, more enthusiasm than sense, and a
 /// creature from the hunting log every episode: the approach through its country, the close-up,
 /// the moment he gets far too close, and the sign-off. Backdrops by the creature's region;
 /// the sky by the local hour. On a schedule from the clock.
@@ -15,6 +15,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
     private const int H = Canvas.Height;
     private const int Horizon = 400;
     private const int Ground = 640;
+    private const int HoverY = 290;
 
     private const double TitlesFor = 6.0;
     private const double ApproachFor = 12.0;
@@ -30,37 +31,37 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
 
     private static readonly string[] Approach =
     [
-        "Crikey! Look at this. We are in {zone}, and somewhere out here is a {name}.",
-        "Now, you have to be quiet in {zone}. The {name} has ears like you would not believe.",
-        "Right, we are going in. {zone} is {name} country, and that is exactly where we want to be.",
-        "Isn't {zone} gorgeous? And what makes it gorgeous is what lives in it. Today: the {name}.",
-        "Keep low. A {name} does not like surprises, and neither do I, but here we are.",
+        "Kupo! Look at this. We are in {zone}, and somewhere out here is a {name}, kupo.",
+        "Now, you have to be quiet in {zone}, kupo. The {name} has ears like you would not believe. Bigger than mine!",
+        "Right, we are going in, kupo. {zone} is {name} country, and that is exactly where a moogle wants to be.",
+        "Isn't {zone} gorgeous, kupo? And what makes it gorgeous is what lives in it. Today: the {name}!",
+        "Keep low, kupo. A {name} does not like surprises, and neither does my pom, but here we are.",
     ];
 
     private static readonly string[] Close =
     [
-        "Isn't she gorgeous? Look at the size of her. A {name}, in the wild, in {zone}.",
-        "What a beauty. The {name} is one of {zone}'s absolute treasures, and people just walk past it.",
-        "Look at the colours on this one. A {name}. You do not see that every day, and I say that every day.",
-        "This is a {name}. Absolutely magnificent. And absolutely not to be touched, which brings me to my next point.",
-        "Danger, danger, danger. That is a {name}, and that is as close as sensible people get.",
+        "Isn't she gorgeous, kupo? Look at the size of her! A {name}, in the wild, in {zone}.",
+        "What a beauty, kupo. The {name} is one of {zone}'s absolute treasures, and people just walk past it.",
+        "Look at the colours on this one, kupo! A {name}. You do not see that every day, and I say that every day.",
+        "This is a {name}, kupo. Absolutely magnificent. And absolutely not to be touched, which brings me to my next point.",
+        "Danger, danger, danger, kupo! That is a {name}, and that is as close as sensible moogles get.",
     ];
 
     private static readonly string[] Wrangle =
     [
-        "I am just going to get a little bit closer. Woah! She is feisty! Good on ya!",
-        "Now, if I just... crikey! She has got a bit of go in her! Beautiful!",
-        "Watch this. Watch this. Ohh, she does not like that at all! What a champion!",
-        "Careful now... she is coming round... she is coming ROUND. RUN. Ha ha! Gorgeous!",
-        "Gently, gently... nope! No! She has had enough of me, and fair enough!",
+        "I am just going to get a little bit closer, kupo. Woah! She is feisty! Good on ya, kupo!",
+        "Now, if I just... KUPO! She has got a bit of go in her! Beautiful!",
+        "Watch this, watch this. Ohh, she does not like that at all, kupo! What a champion!",
+        "Careful now... she is coming round... she is coming ROUND. KUPOOO! Ha ha! Gorgeous!",
+        "Gently, gently... nope! Kupo! She has had enough of me, and fair enough, kupo!",
     ];
 
     private static readonly string[] SignOff =
     [
-        "What an animal. The {name}: leave her be, and she will leave you be. Mostly. See you next time.",
-        "That is the {name}, and that is {zone}. Look after them both. I am off to find a healer.",
-        "Crikey, what a day. Remember: if it has teeth, it has a reason. Until next time!",
-        "The {name}. Remember the name, respect the name, and for the love of Nophica, keep your distance.",
+        "What an animal, kupo. The {name}: leave her be, and she will leave you be. Mostly. See you next time, kupo!",
+        "That is the {name}, and that is {zone}, kupo. Look after them both. I am off to find a healer, kupo.",
+        "Kupo, what a day! Remember: if it has teeth, it has a reason. Until next time, kupo!",
+        "The {name}, kupo. Remember the name, respect the name, and for the love of the Mogfather, keep your distance.",
     ];
 
     private static readonly string[] Facts =
@@ -124,7 +125,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         // The creature stands in the middle distance: its portrait on a shadow, breathing.
         var breathe = (int)(Math.Sin(seconds * 2.0) * 3);
         var creatureX = 820;
-        var creatureY = Horizon + 40;
+        var creatureY = Horizon - 20;
         if (phase != Phase.Titles)
         {
             var shown = phase != Phase.Approach || t > 4.0;
@@ -141,33 +142,33 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         switch (phase)
         {
             case Phase.Titles:
-                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 200, Ground - 238, 7);
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 200, HoverY + (int)(Math.Sin(seconds * 2.4) * 8), 7);
                 break;
             case Phase.Approach:
             {
                 var x = 120 + (int)(Math.Min(t, 9.0) / 9.0 * 380);
-                HostSprites.DrawRanger(span, t < 9.0 ? HostSprites.Ranger.Creep : HostSprites.Ranger.Point, seconds, x, Ground - 238, 7);
+                HostSprites.DrawRanger(span, t < 9.0 ? HostSprites.Ranger.Creep : HostSprites.Ranger.Point, seconds, x, HoverY + (int)(Math.Sin(seconds * 2.4) * 8), 7);
                 break;
             }
 
             case Phase.Close:
-                HostSprites.DrawRanger(span, HostSprites.Ranger.Point, seconds, 500, Ground - 238, 7);
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Point, seconds, 500, HoverY + (int)(Math.Sin(seconds * 2.4) * 8), 7);
                 break;
             case Phase.Wrangle:
                 if (t < 6.0)
                 {
                     var x = 500 + (int)(t / 6.0 * 160);
-                    HostSprites.DrawRanger(span, HostSprites.Ranger.Grab, seconds, x, Ground - 238, 7);
+                    HostSprites.DrawRanger(span, HostSprites.Ranger.Grab, seconds, x, HoverY + (int)(Math.Sin(seconds * 2.4) * 8), 7);
                 }
                 else
                 {
                     var x = 660 - (int)((t - 6.0) * 220);
-                    HostSprites.DrawRanger(span, HostSprites.Ranger.Run, seconds, x, Ground - 238, 7, flip: true);
+                    HostSprites.DrawRanger(span, HostSprites.Ranger.Run, seconds, x, HoverY + (int)(Math.Sin(seconds * 2.4) * 8), 7, flip: true);
                 }
 
                 break;
             default:
-                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 200, Ground - 238, 7);
+                HostSprites.DrawRanger(span, HostSprites.Ranger.Stand, seconds, 200, HoverY + (int)(Math.Sin(seconds * 2.4) * 8), 7);
                 break;
         }
 
@@ -199,7 +200,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             var tw = font.Measure(Title, 2) + 64;
             Canvas.Fill(span, (W - tw) / 2, 160, tw, 112, Khaki);
             font.Draw(span, W, Title, (W - font.Measure(Title, 2)) / 2, 176, Ink, 2, all);
-            const string With = "WITH STEPPE IRWYN, THE WIVRE WRANGLER, KUPO";
+            const string With = "WITH STEPPE MOGWYN, THE WIVRE WRANGLER, KUPO";
             font.Draw(span, W, With, (W - font.Measure(With)) / 2, 300, Cream, 1, all);
             if (t > 2.5)
             {
@@ -226,7 +227,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         if (line.Length > 0)
         {
             line = line.Replace("{name}", Canvas.Plain(creature.Name)).Replace("{zone}", creature.Zone);
-            this.DrawLowerThird(span, phase == Phase.Wrangle && t > 6.0 ? "DANGER" : "STEPPE", line, phase == Phase.Wrangle && t > 6.0, all);
+            this.DrawLowerThird(span, phase == Phase.Wrangle && t > 6.0 ? "DANGER" : "MOGWYN", line, phase == Phase.Wrangle && t > 6.0, all);
         }
 
         if (phase != Phase.Titles)
