@@ -97,7 +97,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         "THE {TREASURE} UNDER THE {BEAST}",
     ];
 
-    private sealed record Story(string Hero, string Race, string Calling, string Home, string Far, Biome HomeBiome, Biome FarBiome, string Beast, uint BeastIcon, string Treasure, uint TreasureIcon, string God, string Title, string[] Pages, uint Hair, uint Cloak, uint Skin);
+    private sealed record Story(string Hero, string Race, string Calling, string Home, string Far, Biome HomeBiome, Biome FarBiome, string Beast, uint BeastIcon, string Treasure, uint TreasureIcon, string God, string Title, string[] Pages, uint Hair, uint Cloak, uint Skin, string People);
 
     public bool Available => font.Available;
 
@@ -211,7 +211,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         var hair = Hairs[Pick(episode, 20, Hairs.Length)];
         var cloak = Cloaks[Pick(episode, 21, Cloaks.Length)];
         var skin = Skins[Pick(episode, 22, Skins.Length)];
-        return new Story(hero, race, calling, home.Zone, far.Zone, Scenery.BiomeOf(home.Region, home.Zone), Scenery.BiomeOf(far.Region, far.Zone), beast.Name, beast.Icon, treasure.Name, treasure.Icon, god, title, pages, hair, cloak, skin);
+        return new Story(hero, race, calling, home.Zone, far.Zone, Scenery.BiomeOf(home.Region, home.Zone), Scenery.BiomeOf(far.Region, far.Zone), beast.Name, beast.Icon, treasure.Name, treasure.Icon, god, title, pages, hair, cloak, skin, people.Race);
     }
 
     private static string NextTitle(StoryStock s, int episode) => Compose(s, episode).Title;
@@ -288,8 +288,11 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         Canvas.Rect(span, 0, 60, W, 480, Ink, 6);
 
         // The hero: a small figure, walking on the road page, standing otherwise.
+        // The hero, sized for their people, feet on the ground line.
         var heroX = page == 2 ? 200 + (int)((seconds * 30.0) % 700) : 300;
-        HostSprites.DrawHero(span, page == 2 ? HostSprites.Hero.Walk : HostSprites.Hero.Stand, seconds, heroX, 540 - 200, 5, story.Hair, story.Cloak, story.Skin);
+        var heroScale = Math.Max(2, (int)Math.Round(5 * HostSprites.HeroScale(story.People)));
+        var heroY = 532 - (38 * heroScale);
+        HostSprites.DrawHero(span, story.People, page == 2 ? HostSprites.Hero.Walk : HostSprites.Hero.Stand, seconds, heroX, heroY, heroScale, story.Hair, story.Cloak, story.Skin);
 
         // The beast on the pages it is on; the treasure where it is found and where it ends up.
         if (page is 3 or 4)

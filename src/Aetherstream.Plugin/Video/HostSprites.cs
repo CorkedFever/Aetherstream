@@ -633,43 +633,211 @@ internal static class HostSprites
         Walk,
     }
 
-    // The story's hero: a traveller in a hooded cloak with a pack and a walking staff, 32 by 40.
-    // The hair and the cloak take whatever colours the tale gives them.
-    private static readonly string[][] HeroStand =
-    [
+    // The story's hero: a head for each of the eight peoples over a shared body — a cloak, a
+    // tunic and belt, a pack, boots — with a walking staff added when the figure is composed.
+    // Heads are nineteen rows; bodies twenty-seven, from the cloak's shoulders down.
+    private static readonly Dictionary<string, string[]> HeroHeads = new()
+    {
+        ["Hyur"] =
         [
             "................................",
             "................................",
-            "..........ccccccccc.............",
-            "....FFF..ccccccccccc............",
-            "....FFF.cccccccccccccc..........",
-            "....FfF.ccrrrrrrrrrcc...........",
-            ".....f..ckrrrrrrrrrkc...........",
-            ".....f..ckssssssssskc...........",
-            ".....f..ckseessseeskc...........",
-            ".....f..ckssssSssskc............",
-            ".....f..cksssmmmsskc............",
-            ".....f...kkssssssSkc............",
-            ".....f.....kkssskk..............",
-            ".....f..ccccttttttcccc..........",
-            ".....f.cccctttttttccccc.........",
-            ".....fccccttttnttttcccc.........",
-            "....sfsccctttttttttccccq........",
-            "....sfscccttttaaatttccqQq.......",
-            "....sfscccttttttttttccqQq.......",
-            ".....fCCcctttttttttccCqqq.......",
-            ".....fCCCcttttttttccCCkkk.......",
-            ".....f.CCCkttttttkCCC...........",
-            ".....f...kkaaaaaakkk............",
-            ".....f....kllllllk..............",
-            ".....f....kllllllk..............",
-            ".....f....kllkkllk..............",
-            ".....f....klk..klk..............",
-            ".....f....klk..klk..............",
-            ".....f....kbk..kbk..............",
-            ".....f....kbbk.kbbk.............",
-            ".....f....kBBk.kBBk.............",
-            ".....f....kkkk.kkkk.............",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "..........rrrrrrrrrr............",
+            ".........rrrrrrrrrrrr...........",
+            ".........krrrrrrrrrrk...........",
+            ".........krsssssssssk...........",
+            ".........ksseesssseesk..........",
+            ".........kssssSsssssk...........",
+            ".........ksssmmmmsssk...........",
+            "..........kssssssssSk...........",
+            "...........kkssssskk............",
+            ".............kssssk.............",
+            "..............kssk..............",
+            "................................",
+            "................................",
+        ],
+        ["Elezen"] =
+        [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "..........rrrrrrrrrr............",
+            ".........rrrrrrrrrrrr...........",
+            ".........krrrrrrrrrrk...........",
+            ".........krrrrrrrrrrk...........",
+            "......ss.kssssssssssk.ss........",
+            ".....ssskssseesssseesksss.......",
+            "......sskssssSsssssskss.........",
+            ".........ksssssssssk............",
+            ".........ksssmmmmssk............",
+            ".........kssssssssSk............",
+            "..........kssssssSk.............",
+            "...........kkssskk..............",
+            ".............kssk...............",
+            "................................",
+            "................................",
+        ],
+        ["Lalafell"] =
+        [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "..........rrrrrrrrrr............",
+            ".........rrrrrrrrrrrr...........",
+            ".........krrrrrrrrrrk...........",
+            ".........krsssssssssk...........",
+            ".........ksseesssseesk..........",
+            ".........kssssSsssssk...........",
+            ".........ksssmmmmsssk...........",
+            "..........kssssssssSk...........",
+            "...........kkssssskk............",
+            ".............kssssk.............",
+            "..............kssk..............",
+            "................................",
+            "................................",
+        ],
+        ["Miqo'te"] =
+        [
+            "................................",
+            "................................",
+            "........rr........rr............",
+            "........rrr......rrr............",
+            "........rsrr....rrsr............",
+            "........rssrr..rrssr............",
+            ".........rrrrrrrrrrr............",
+            ".........rrrrrrrrrrrr...........",
+            ".........krrrrrrrrrrk...........",
+            ".........krsssssssssk...........",
+            ".........ksseesssseesk..........",
+            ".........kssssSsssssk...........",
+            ".........kssSmmmmSssk...........",
+            "..........kssssssssSk...........",
+            "...........kkssssskk............",
+            ".............kssssk.............",
+            "..............kssk..............",
+            "................................",
+            "................................",
+        ],
+        ["Roegadyn"] =
+        [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            ".........rrrrrrrrrrrrr..........",
+            "........rrrrrrrrrrrrrrr.........",
+            "........krrrrrrrrrrrrrk.........",
+            "........krsssssssssssrk.........",
+            "........kssseessssseessk........",
+            "........ksssssSSSssssssk........",
+            "........kssssssssssssssk........",
+            "........kSsssmmmmmmsssSk........",
+            "........kSssssssssssssSk........",
+            ".........kkSSssssssSSkk.........",
+            "...........kksssssskk...........",
+            ".............kssssk.............",
+            "..............kssk..............",
+            "................................",
+            "................................",
+        ],
+        ["Au Ra"] =
+        [
+            "................................",
+            "................................",
+            "................................",
+            "......HH............HH..........",
+            "......HHH..........HHH..........",
+            ".......HHH........HHH...........",
+            "........HHrrrrrrrrHH............",
+            ".........rrrrrrrrrrrr...........",
+            ".........krrrrrrrrrrk...........",
+            ".........krsssssssssk...........",
+            ".........kSseesssseeSk..........",
+            ".........kSsssSsssssSk..........",
+            ".........kSssmmmmsssSk..........",
+            "..........kssssssssSk...........",
+            "...........kkssssskk............",
+            ".............kssssk.............",
+            "..............kssk..............",
+            "................................",
+            "................................",
+        ],
+        ["Hrothgar"] =
+        [
+            "................................",
+            "................................",
+            "................................",
+            "........rr..........rr..........",
+            ".......rrrr........rrrr.........",
+            ".......rrrrrrrrrrrrrrrr.........",
+            ".......rrrrrrrrrrrrrrrr.........",
+            "......rrrkssssssssssskrrr.......",
+            "......rrrksseessssseeskrrr......",
+            "......rrrkssssssssssssskrrr.....",
+            "......rrrksssSSSSSSssskrrr......",
+            "......rrrkssSSkkkkSSsskrrr......",
+            ".......rrkssSSSSSSSSsskrr.......",
+            ".......rrkSssmmmmmmssSkrr.......",
+            "........rkkSSSSSSSSSSkkr........",
+            ".........rkkssssssssskr.........",
+            "...........kkssssssskk..........",
+            ".............kssssk.............",
+            "..............kssk..............",
+        ],
+        ["Viera"] =
+        [
+            ".........rr.......rr............",
+            ".........rrr.....rrr............",
+            ".........rsr.....rsr............",
+            ".........rsrr...rrsr............",
+            ".........rssr...rssr............",
+            ".........rssr...rssr............",
+            "..........rrrrrrrrr.............",
+            ".........rrrrrrrrrrr............",
+            ".........krrrrrrrrrrk...........",
+            ".........krsssssssssk...........",
+            ".........ksseesssseesk..........",
+            ".........kssssSsssssk...........",
+            ".........ksssmmmmsssk...........",
+            "..........kssssssssSk...........",
+            "...........kkssssskk............",
+            ".............kssssk.............",
+            "..............kssk..............",
+            "................................",
+            "................................",
+        ],
+    };
+
+    private static readonly string[][] HeroBodyStand =
+    [
+        [
+            "........ccccttttttcccc..........",
+            ".......cccctttttttccccc.........",
+            "......ccccttttnttttcccc.........",
+            "......cccctttttttttccccq........",
+            "......ccccttttaaatttccqQq.......",
+            "......CcccttttttttttccqQq.......",
+            "......CCcctttttttttccCqqq.......",
+            "......CCCcttttttttccCCkkk.......",
+            ".......CCCkttttttkCCC...........",
+            ".........kkaaaaaakkk............",
+            "..........kllllllk..............",
+            "..........kllllllk..............",
+            "..........kllkkllk..............",
+            "..........klk..klk..............",
+            "..........klk..klk..............",
+            "..........kbk..kbk..............",
+            "..........kbbk.kbbk.............",
+            "..........kBBk.kBBk.............",
+            "..........kkkk.kkkk.............",
             "................................",
             "................................",
             "................................",
@@ -680,38 +848,25 @@ internal static class HostSprites
             "................................",
         ],
         [
-            "................................",
-            "................................",
-            "..........ccccccccc.............",
-            "....FFF..ccccccccccc............",
-            "....FFF.cccccccccccccc..........",
-            "....FfF.ccrrrrrrrrrcc...........",
-            ".....f..ckrrrrrrrrrkc...........",
-            ".....f..ckssssssssskc...........",
-            ".....f..cksseesseeskc...........",
-            ".....f..ckssssSssskc............",
-            ".....f..cksssmmmsskc............",
-            ".....f...kkssssssSkc............",
-            ".....f.....kkssskk..............",
-            ".....f..ccccttttttcccc..........",
-            ".....f.cccctttttttccccc.........",
-            ".....fccccttttnttttcccc.........",
-            "....sfsccctttttttttccccq........",
-            "....sfscccttttaaatttccqQq.......",
-            "....sfscccttttttttttccqQq.......",
-            ".....fCCcctttttttttccCqqq.......",
-            ".....fCCCcttttttttccCCkkk.......",
-            ".....f.CCCkttttttkCCC...........",
-            ".....f...kkaaaaaakkk............",
-            ".....f....kllllllk..............",
-            ".....f....kllllllk..............",
-            ".....f....kllkkllk..............",
-            ".....f....klk..klk..............",
-            ".....f....klk..klk..............",
-            ".....f....kbk..kbk..............",
-            ".....f....kbbk.kbbk.............",
-            ".....f....kBBk.kBBk.............",
-            ".....f....kkkk.kkkk.............",
+            "........ccccttttttcccc..........",
+            ".......cccctttttttccccc.........",
+            "......ccccttttnttttcccc.........",
+            "......cccctttttttttccccq........",
+            "......ccccttttaaatttccqQq.......",
+            "......CcccttttttttttccqQq.......",
+            "......CCcctttttttttccCqqq.......",
+            "......CCCcttttttttccCCkkk.......",
+            ".......CCCkttttttkCCC...........",
+            ".........kkaaaaaakkk............",
+            "..........kllllllk..............",
+            "..........kllllllk..............",
+            "..........kllkkllk..............",
+            "..........klk..klk..............",
+            "..........klk..klk..............",
+            "..........kbk..kbk..............",
+            "..........kbbk.kbbk.............",
+            "..........kBBk.kBBk.............",
+            "..........kkkk.kkkk.............",
             "................................",
             "................................",
             "................................",
@@ -723,41 +878,28 @@ internal static class HostSprites
         ],
     ];
 
-    private static readonly string[][] HeroWalk =
+    private static readonly string[][] HeroBodyWalk =
     [
         [
-            "................................",
-            "................................",
-            "..........ccccccccc.............",
-            "....FFF..ccccccccccc............",
-            "....FFF.cccccccccccccc..........",
-            "....FfF.ccrrrrrrrrrcc...........",
-            ".....f..ckrrrrrrrrrkc...........",
-            ".....f..ckssssssssskc...........",
-            ".....f..ckseessseeskc...........",
-            ".....f..ckssssSssskc............",
-            ".....f..cksssmmmsskc............",
-            ".....f...kkssssssSkc............",
-            ".....f.....kkssskk..............",
-            ".....f..ccccttttttcccc..........",
-            ".....f.cccctttttttccccc.........",
-            ".....fccccttttnttttcccc.........",
-            "....sfsccctttttttttccccq........",
-            "....sfscccttttaaatttccqQq.......",
-            "....sfscccttttttttttccqQq.......",
-            ".....fCCcctttttttttccCqqq.......",
-            ".....fCCCcttttttttccCCkkk.......",
-            ".....f.CCCkttttttkCCC...........",
-            ".....f...kkaaaaaakkk............",
-            ".....f...klllllllllk............",
-            ".....f..klllllkllllk............",
-            ".....f.klllk...kllllk...........",
-            ".....fklk........klk............",
-            ".....flk..........klk...........",
-            "....kfk............kbk..........",
-            "...kbfk.............kbbk........",
-            "...kBfk.............kBBk........",
-            "...kkfk.............kkkk........",
+            "........ccccttttttcccc..........",
+            ".......cccctttttttccccc.........",
+            "......ccccttttnttttcccc.........",
+            "......cccctttttttttccccq........",
+            "......ccccttttaaatttccqQq.......",
+            "......CcccttttttttttccqQq.......",
+            "......CCcctttttttttccCqqq.......",
+            "......CCCcttttttttccCCkkk.......",
+            ".......CCCkttttttkCCC...........",
+            ".........kkaaaaaakkk............",
+            ".........klllllllllk............",
+            "........klllllkllllk............",
+            ".......klllk...kllllk...........",
+            "......klk........klk............",
+            ".....klk..........klk...........",
+            "....kbk............kbk..........",
+            "...kbbk.............kbbk........",
+            "...kBBk.............kBBk........",
+            "...kkkk.............kkkk........",
             "................................",
             "................................",
             "................................",
@@ -768,38 +910,25 @@ internal static class HostSprites
             "................................",
         ],
         [
-            "................................",
-            "................................",
-            "..........ccccccccc.............",
-            "....FFF..ccccccccccc............",
-            "....FFF.cccccccccccccc..........",
-            "....FfF.ccrrrrrrrrrcc...........",
-            ".....f..ckrrrrrrrrrkc...........",
-            ".....f..ckssssssssskc...........",
-            ".....f..ckseessseeskc...........",
-            ".....f..ckssssSssskc............",
-            ".....f..cksssmmmsskc............",
-            ".....f...kkssssssSkc............",
-            ".....f.....kkssskk..............",
-            ".....f..ccccttttttcccc..........",
-            ".....f.cccctttttttccccc.........",
-            ".....fccccttttnttttcccc.........",
-            "....sfsccctttttttttccccq........",
-            "....sfscccttttaaatttccqQq.......",
-            "....sfscccttttttttttccqQq.......",
-            ".....fCCcctttttttttccCqqq.......",
-            ".....fCCCcttttttttccCCkkk.......",
-            ".....f.CCCkttttttkCCC...........",
-            ".....f...kkaaaaaakkk............",
-            ".....f....kllllllk..............",
-            ".....f....kllllllk..............",
-            ".....f....kllkkllk..............",
-            ".....f....klk..klk..............",
-            ".....f....klk..klk..............",
-            ".....f....kbk..kbk..............",
-            ".....f....kbbk.kbbk.............",
-            ".....f....kBBk.kBBk.............",
-            ".....f....kkkk.kkkk.............",
+            "........ccccttttttcccc..........",
+            ".......cccctttttttccccc.........",
+            "......ccccttttnttttcccc.........",
+            "......cccctttttttttccccq........",
+            "......ccccttttaaatttccqQq.......",
+            "......CcccttttttttttccqQq.......",
+            "......CCcctttttttttccCqqq.......",
+            "......CCCcttttttttccCCkkk.......",
+            ".......CCCkttttttkCCC...........",
+            ".........kkaaaaaakkk............",
+            "..........kllllllk..............",
+            "..........kllllllk..............",
+            "..........kllkkllk..............",
+            "..........klk..klk..............",
+            "..........klk..klk..............",
+            "..........kbk..kbk..............",
+            "..........kbbk.kbbk.............",
+            "..........kBBk.kBBk.............",
+            "..........kkkk.kkkk.............",
             "................................",
             "................................",
             "................................",
@@ -810,12 +939,69 @@ internal static class HostSprites
             "................................",
         ],
     ];
+
+    private static readonly Dictionary<(string, Hero, int), string[]> HeroFrames = [];
+
+    /// <summary>How big each people draws, relative to a Hyur.</summary>
+    public static float HeroScale(string race) => race switch
+    {
+        "Lalafell" => 0.6f,
+        "Roegadyn" or "Hrothgar" => 1.2f,
+        "Elezen" or "Viera" => 1.08f,
+        _ => 1f,
+    };
+
+    private static string[] ComposeHero(string race, Hero action, int frame)
+    {
+        var key = (race, action, frame);
+        if (HeroFrames.TryGetValue(key, out var done))
+            return done;
+
+        var head = HeroHeads.GetValueOrDefault(race, HeroHeads["Hyur"]);
+        var body = (action == Hero.Walk ? HeroBodyWalk : HeroBodyStand)[frame];
+        var art = new char[head.Length + body.Length][];
+        for (var i = 0; i < head.Length; i++)
+            art[i] = head[i].ToCharArray();
+        for (var i = 0; i < body.Length; i++)
+            art[head.Length + i] = body[i].ToCharArray();
+
+        // The staff: down the left, a knob at the top, the hand on it at the shoulder.
+        var top = head.Length - 9;
+        for (var r = top; r < head.Length + 19; r++)
+            art[r][5] = 'f';
+        for (var r = top - 1; r <= top + 1; r++)
+        {
+            art[r][4] = 'F';
+            art[r][5] = 'F';
+            art[r][6] = 'F';
+        }
+
+        for (var r = head.Length + 3; r <= head.Length + 5; r++)
+        {
+            art[r][4] = 's';
+            art[r][6] = 's';
+        }
+
+        // Tails, for those that have them.
+        if (race == "Miqo'te")
+        {
+            foreach (var (r, c) in new[] { (9, 24), (10, 25), (11, 26), (12, 26), (13, 26), (14, 25), (15, 24), (15, 23) })
+                art[head.Length + r][c] = 'r';
+        }
+        else if (race == "Au Ra")
+        {
+            foreach (var (r, c) in new[] { (9, 24), (9, 25), (10, 25), (10, 26), (11, 26), (11, 27), (12, 27), (13, 27), (14, 26), (15, 25), (16, 24) })
+                art[head.Length + r][c] = 'a';
+        }
+
+        var result = art.Select(r => new string(r)).ToArray();
+        HeroFrames[key] = result;
+        return result;
+    }
 
     private static readonly Dictionary<char, uint> HeroPalette = new()
     {
         ['k'] = Canvas.Rgb(0x1A, 0x14, 0x10),
-        ['s'] = Canvas.Rgb(0xE8, 0xB8, 0x90),
-        ['S'] = Canvas.Rgb(0xC8, 0x98, 0x70),
         ['e'] = Canvas.Rgb(0x10, 0x10, 0x10),
         ['m'] = Canvas.Rgb(0xC0, 0x50, 0x50),
         ['t'] = Canvas.Rgb(0xB8, 0xA0, 0x78),
@@ -828,14 +1014,18 @@ internal static class HostSprites
         ['F'] = Canvas.Rgb(0xE0, 0xB8, 0x4A),
         ['q'] = Canvas.Rgb(0x7A, 0x52, 0x2A),
         ['Q'] = Canvas.Rgb(0x9A, 0x6A, 0x3A),
+        ['H'] = Canvas.Rgb(0x3A, 0x30, 0x2A),
     };
 
-    /// <summary>The hero standing or walking, with the tale's hair and cloak colours.</summary>
-    public static void DrawHero(Span<uint> target, Hero action, double seconds, int x, int y, int scale, uint hair, uint cloak, uint skin)
+    /// <summary>The height of the composed figure in cells, for standing it on a ground line.</summary>
+    public const int HeroRows = 46;
+
+    /// <summary>The hero standing or walking, with the tale's people, hair, cloak and skin.</summary>
+    public static void DrawHero(Span<uint> target, string race, Hero action, double seconds, int x, int y, int scale, uint hair, uint cloak, uint skin)
     {
-        var frames = action == Hero.Walk ? HeroWalk : HeroStand;
+        var frames = action == Hero.Walk ? HeroBodyWalk : HeroBodyStand;
         var rate = action == Hero.Walk ? 5.0 : 1.2;
-        var frame = frames[(int)(seconds * rate) % frames.Length];
+        var frame = ComposeHero(race, action, (int)(seconds * rate) % frames.Length);
         var cloakShade = Canvas.Lerp(cloak, Canvas.Black, 0.3f);
         var skinShade = Canvas.Lerp(skin, Canvas.Black, 0.18f);
         Canvas.Sprite(target, frame, c => c switch
