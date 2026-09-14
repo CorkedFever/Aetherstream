@@ -260,6 +260,19 @@ internal static class ChannelLogos
                 d.AddRectFilled(P(-6f, -5f), P(6f, -3f), Theme.U32(Paper), 1f);
                 break;
 
+            case "allagans":
+                // Three pinned photos and the red string between them.
+                d.AddRectFilled(P(-13f, -12f), P(-3f, -4f), Theme.U32(Paper), 1f);
+                d.AddRectFilled(P(3f, -8f), P(13f, 0f), Theme.U32(Paper), 1f);
+                d.AddRectFilled(P(-8f, 4f), P(2f, 12f), Theme.U32(Paper), 1f);
+                d.AddLine(P(-8f, -12f), P(8f, -8f), Theme.U32(Theme.Bad), 1.4f * u);
+                d.AddLine(P(8f, -8f), P(-3f, 4f), Theme.U32(Theme.Bad), 1.4f * u);
+                d.AddLine(P(-3f, 4f), P(-8f, -12f), Theme.U32(Theme.Bad), 1.4f * u);
+                d.AddCircleFilled(P(-8f, -12f), 1.6f * u, Theme.U32(Theme.Bad), 8);
+                d.AddCircleFilled(P(8f, -8f), 1.6f * u, Theme.U32(Theme.Bad), 8);
+                d.AddCircleFilled(P(-3f, 4f), 1.6f * u, Theme.U32(Theme.Bad), 8);
+                break;
+
             case "scrambled":
                 // A picture torn into bands, each slid a different way, with a sync line through it.
                 for (var row = 0; row < 5; row++)

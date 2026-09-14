@@ -63,6 +63,7 @@ internal static class HostSprites
         // The pixie, the kobold, the sahagin.
         ['i'] = Canvas.Rgb(0xC8, 0xB0, 0xE8),
         ['F'] = Canvas.Rgb(0x6A, 0xC8, 0x8A),
+        ['G'] = Canvas.Rgb(0x3E, 0x8A, 0x54),
         ['I'] = Canvas.Rgb(0xE0, 0xF0, 0xFF),
         ['T'] = Canvas.Rgb(0x3A, 0x9A, 0x9A),
         ['C'] = Canvas.Rgb(0xE8, 0x7A, 0x5A),
@@ -1432,6 +1433,156 @@ internal static class HostSprites
         var frame = frames[(int)(seconds * 2.5) % frames.Length];
         var sway = (int)(Math.Sin(seconds * 1.2) * 2);
         Canvas.Sprite(target, frame, c => Palette.GetValueOrDefault(c, 0u), x + sway, y, scale, flip);
+    }
+
+    public enum Mandragora
+    {
+        Talk,
+        Wild,
+    }
+
+    // The conspiracy host is a mandragora with a great deal of hair, 24 by 30.
+    private static readonly string[][] MandragoraTalk =
+    [
+        [
+            "......F....FF....F......",
+            ".....FF.F.FFF.F.FF......",
+            "....FFF.FFFFFFF.FFF.....",
+            "....FFFFFFFFFFFFFFF.....",
+            ".....FFFGFFFFFGFFF......",
+            "......FFFFFFFFFFF.......",
+            ".......GGGGGGGGG........",
+            "......wwwwwwwwwww.......",
+            ".....wwwwwwwwwwwww......",
+            "....wwwwwwwwwwwwwww.....",
+            "....wwweewwwwwweeww.....",
+            "....wwweewwwwwweeww.....",
+            "....wwwwwwwwwwwwwww.....",
+            "....wwwwwkkkkkkwwww.....",
+            ".....wwwwkwwwwkwww......",
+            ".....wwwwwkkkkwwww......",
+            "......wwwwwwwwwww.......",
+            "...ww.wwwwwwwwwww.ww....",
+            "..ww..wwwwwwwwwww..ww...",
+            "..ww.wwwwwwwwwwwww.ww...",
+            ".....wwwwwwwwwwwww......",
+            ".....wwwwwwwwwwwww......",
+            "......wwwwwwwwwww.......",
+            ".......wwwwwwwww........",
+            "........wwwwwww.........",
+            ".........wwwww..........",
+            "..........www...........",
+            "...........w............",
+            "........................",
+            "........................",
+        ],
+        [
+            "......F...FFF...F.......",
+            ".....FF.F.FFF.F.FF......",
+            "....FFF.FFFFFFF.FFF.....",
+            "....FFFFFFFFFFFFFFF.....",
+            ".....FFFGFFFFFGFFF......",
+            "......FFFFFFFFFFF.......",
+            ".......GGGGGGGGG........",
+            "......wwwwwwwwwww.......",
+            ".....wwwwwwwwwwwww......",
+            "....wwwwwwwwwwwwwww.....",
+            "....wwweewwwwwweeww.....",
+            "....wwweewwwwwweeww.....",
+            "....wwwwwwwwwwwwwww.....",
+            "....wwwwwkkkkkkwwww.....",
+            ".....wwwwkkkkkkwww......",
+            ".....wwwwwwwwwwwww......",
+            "......wwwwwwwwwww.......",
+            "...ww.wwwwwwwwwww.ww....",
+            "..ww..wwwwwwwwwww..ww...",
+            "..ww.wwwwwwwwwwwww.ww...",
+            ".....wwwwwwwwwwwww......",
+            ".....wwwwwwwwwwwww......",
+            "......wwwwwwwwwww.......",
+            ".......wwwwwwwww........",
+            "........wwwwwww.........",
+            ".........wwwww..........",
+            "..........www...........",
+            "...........w............",
+            "........................",
+            "........................",
+        ],
+    ];
+
+    private static readonly string[][] MandragoraWild =
+    [
+        [
+            "...F..F...FF...F..F.....",
+            "..FF.FF.F.FF.F.FF.FF....",
+            "...FFFF.FFFFFFF.FFFF....",
+            "....FFFFFFFFFFFFFFF.....",
+            "...FFFFFGFFFFFGFFFFF....",
+            "....FFFFFFFFFFFFFFF.....",
+            ".......GGGGGGGGG........",
+            "......wwwwwwwwwww.......",
+            ".....wwwwwwwwwwwww......",
+            "....wwwwwwwwwwwwwww.....",
+            "....wweeewwwwweeeww.....",
+            "....wweeewwwwweeeww.....",
+            "....wwwwwwwwwwwwwww.....",
+            "....wwwwkkkkkkkwwww.....",
+            ".....wwwkwwwwwkwww......",
+            ".....wwwwkkkkkwwww......",
+            "ww....wwwwwwwwwww....ww.",
+            ".ww...wwwwwwwwwww...ww..",
+            "..ww.wwwwwwwwwwwww.ww...",
+            "...wwwwwwwwwwwwwwwww....",
+            ".....wwwwwwwwwwwww......",
+            ".....wwwwwwwwwwwww......",
+            "......wwwwwwwwwww.......",
+            ".......wwwwwwwww........",
+            "........wwwwwww.........",
+            ".........wwwww..........",
+            "..........www...........",
+            "...........w............",
+            "........................",
+            "........................",
+        ],
+        [
+            "..F...F...FF...F...F....",
+            "...FF.F.F.FF.F.F.FF.....",
+            "...FFFF.FFFFFFF.FFFF....",
+            "....FFFFFFFFFFFFFFF.....",
+            "...FFFFFGFFFFFGFFFFF....",
+            "....FFFFFFFFFFFFFFF.....",
+            ".......GGGGGGGGG........",
+            "......wwwwwwwwwww.......",
+            ".....wwwwwwwwwwwww......",
+            "....wwwwwwwwwwwwwww.....",
+            "....wweeewwwwweeeww.....",
+            "....wweeewwwwweeeww.....",
+            "....wwwwwwwwwwwwwww.....",
+            "....wwwwkkkkkkkwwww.....",
+            ".....wwwkwwwwwkwww......",
+            ".....wwwwkkkkkwwww......",
+            ".ww...wwwwwwwwwww...ww..",
+            "ww....wwwwwwwwwww....ww.",
+            "..ww.wwwwwwwwwwwww.ww...",
+            "...wwwwwwwwwwwwwwwww....",
+            ".....wwwwwwwwwwwww......",
+            ".....wwwwwwwwwwwww......",
+            "......wwwwwwwwwww.......",
+            ".......wwwwwwwww........",
+            "........wwwwwww.........",
+            ".........wwwww..........",
+            "..........www...........",
+            "...........w............",
+            "........................",
+            "........................",
+        ],
+    ];
+
+    public static void DrawMandragora(Span<uint> target, Mandragora action, double seconds, int x, int y, int scale, bool flip = false)
+    {
+        var (frames, rate) = action == Mandragora.Wild ? (MandragoraWild, 7.0) : (MandragoraTalk, 3.0);
+        var frame = frames[(int)(seconds * rate) % frames.Length];
+        Canvas.Sprite(target, frame, c => Palette.GetValueOrDefault(c, 0u), x, y, scale, flip);
     }
 
     public static void DrawGoblin(Span<uint> target, Goblin action, double seconds, int x, int y, int scale, bool flip = false)
