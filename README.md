@@ -51,6 +51,7 @@ zip; **external** has to be on the user's machine; **server** runs on the party 
 | [LibVLCSharp](https://github.com/videolan/libvlcsharp) | 3.9.4 | LGPL 2.1 | .NET bindings to libvlc — the video and audio callbacks the framebuffer comes through. |
 | [NAudio](https://github.com/naudio/NAudio) / `NAudio.Wasapi` | 2.2.1 / 2.3.0 | MIT | Audio output. Dalamud has no audio API, so the plugin opens its own shared-mode WASAPI render stream. |
 | [VT323](https://fonts.google.com/specimen/VT323) | Google Fonts, 2011 | SIL OFL 1.1 | The display face — headings, the on-screen display, the input strip. `Fonts\OFL.txt` ships beside it, as the licence requires. |
+| Bossa Antigua, Lobby Time, Backbay Lounge, Airport Lounge, Deuces | [Kevin MacLeod](https://incompetech.com), incompetech.com | CC BY 4.0 | The music under the guide and weather channels, re-encoded at 112 kbps. `music\CREDITS.txt` ships beside them; the Sound tab can swap in your own folder or a Plex playlist. |
 | [Dalamud](https://github.com/goatcorp/Dalamud) (`Dalamud.NET.Sdk`) | 15.0.0 / API level 15 | AGPL 3.0 | The plugin host: ImGui, textures, the game object table, logging. Not in the zip — every user already has it. |
 
 libvlc's own plugin set is shipped unpruned. It is the safest choice — pruning it is what produced
@@ -268,6 +269,15 @@ number from 0 to 99 is drawn from the time and looked up in the zone's odds tabl
 the tables and the zone list are read from the game's own data through Dalamud, so a new
 expansion's zones appear on their own. The maths lives in `Weather/EorzeaWeather.cs`; the icons
 are 16x16 pixel art in `Video/WeatherChannel.cs`.
+
+## Channel music
+
+The guide and the weather play music underneath, the way the real ones did. The Sound tab's
+"Channel music" section picks the source: the bundled tracks (five Kevin MacLeod lounge pieces,
+CC BY 4.0, in `music\`), a folder of your own (mp3, flac, ogg, m4a, wav, opus, subfolders
+included), or an audio playlist on the Plex server you are signed in to. It is shuffled, looped,
+placed in the room like the picture's own sound, and ducks that sound to nothing while a channel
+is up. `Playback\Jukebox.cs` is the second, audio-only decoder that plays it.
 
 ## Running the harness
 

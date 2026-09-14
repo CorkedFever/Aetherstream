@@ -1,6 +1,13 @@
 Music under the guide and weather channels.
 
-Tracks in this folder are royalty-free and used under their licences, listed below. Drop your own
-files in here too, or point the Sound tab at a folder or a Plex playlist instead.
+Drop your own files in here too, or point the Sound tab at a folder or a Plex playlist instead.
 
-(credits for each bundled track are appended when it is added)
+The bundled tracks are by Kevin MacLeod (incompetech.com), licensed under Creative Commons:
+By Attribution 4.0 — https://creativecommons.org/licenses/by/4.0/ — and re-encoded at
+112 kbps to keep the download small.
+
+  Bossa Antigua    Kevin MacLeod (incompetech.com)  CC BY 4.0
+  Lobby Time       Kevin MacLeod (incompetech.com)  CC BY 4.0
+  Backbay Lounge   Kevin MacLeod (incompetech.com)  CC BY 4.0
+  Airport Lounge   Kevin MacLeod (incompetech.com)  CC BY 4.0
+  Deuces           Kevin MacLeod (incompetech.com)  CC BY 4.0
