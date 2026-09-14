@@ -201,6 +201,27 @@ Interactive, with the remote:
 - **Trivia.** A question card with a countdown; questions from a file; answers in chat.
 - **Jukebox channel.** The music list on screen, next and previous on the remote, cover art from Plex.
 
+From what is already pulled:
+
+- **Tonight on the venues.** The next twelve hours as a timeline with venues along it.
+- **Market movers.** The biggest jumps and drops today across the market, not just the watch list.
+- **Patch countdown.** A full-screen countdown when the news feed has a patch maintenance.
+
+From the game:
+
+- **Achievement of the day.** An incomplete achievement, big, with progress; a new one a minute.
+- **Mount and minion museum.** A random one you own with its flavour text and icon.
+- **Job board.** Every job and level as a wall, the one nearest a milestone lit.
+- **Aetheryte board.** Everywhere you are attuned, by region, with the teleport cost from here.
+
+Party and estate:
+
+- **Guest book.** Who has been near the set in the last hour, by name, from the object table.
+- **Estate notice board.** Free text the owner types, drawn nicely: rules, set times, the Discord.
+
+More atmosphere: **rain on the window**, **lava lamp** (metaballs), **Matrix rain** in VT323,
+**test card variations** by hour with a midnight sign-off, **Flying Toasters**.
+
 A page dial on the remote is shared by teletext, trivia and the jukebox, so it is the piece to
 build first. Picks: the aquarium for delight, the Eorzea clock for utility, the "ON AIR" card
 because it finishes watch-together.
