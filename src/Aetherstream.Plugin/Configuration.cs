@@ -339,6 +339,14 @@ public sealed class Configuration : IPluginConfiguration
 
     public string ChannelMusicPlexPlaylistName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// What the guide lists after the pins: channels of this country (the playlist's two-letter
+    /// code; empty means the character's region) and, when set, only this group.
+    /// </summary>
+    public string GuideCountry { get; set; } = string.Empty;
+
+    public string GuideGroup { get; set; } = string.Empty;
+
     /// <summary>Whether the venues channel lists only venues marked safe for work. On by default: it is a TV in a house.</summary>
     public bool VenuesSfwOnly { get; set; } = true;
 

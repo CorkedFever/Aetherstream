@@ -59,7 +59,7 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
 
     // The grid: a header row, then rows that scroll under it, then the ticker.
     private const int GridTop = 240;
-    private const int RowHeight = 40;
+    private const int RowHeight = 48;
     private const int RowsTop = GridTop + RowHeight;
     private const int RowsBottom = 680;
     private const int TickerTop = RowsBottom;
@@ -222,7 +222,7 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
         var nowX = this.XOf(DateTime.UtcNow);
         Fill(span, nowX - 1, top, 3, bottom - top, Accent);
 
-        var textY = y;
+        var textY = y + 4;
         var clip = new BitmapFont.Clip(0, top, Width, bottom);
 
         var numberColour = row.Current ? White : row.Live ? Good : Accent;
@@ -281,7 +281,7 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
 
             var clip = new BitmapFont.Clip(x0 + 8, top, x1 - 4, bottom);
             var title = Ellipsis(slot.Title.ToUpperInvariant(), font.Fit(x1 - x0 - 12));
-            font.Draw(span, Width, title, x0 + 10, y, slot.Now ? White : Dim, 1, clip);
+            font.Draw(span, Width, title, x0 + 10, y + 4, slot.Now ? White : Dim, 1, clip);
         }
     }
 

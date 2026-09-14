@@ -31,10 +31,11 @@ public sealed partial class Plugin
         // queued after it, laid end to end from each one's length. A schedule computed, not looked up.
         // A live channel you are on but have not pinned still gets a row, at the top, with its listings.
         var currentChannel = dial.Find(source);
-        if (currentChannel is { } tuned && this.session.IsPlaying && dial.NumberOf(source) == 0)
+        if (currentChannel is { } tuned && this.session.IsPlaying)
         {
             var group = tuned.Group.Length > 0 ? tuned.Group : "Live";
-            rows.Add(new GuideRow("NOW", tuned.Name, group, Current: true, Offline: dial.IsOffline(tuned.Url), Slots: this.ListingsFor(tuned, utc)));
+            var number = dial.NumberOf(source);
+            rows.Add(new GuideRow(number > 0 ? number.ToString() : "NOW", tuned.Name, group, Current: true, Offline: dial.IsOffline(tuned.Url), Slots: this.ListingsFor(tuned, utc)));
         }
 
         if (this.session.Current is { } playing && this.session.IsPlaying && currentChannel is null)
@@ -67,9 +68,15 @@ public sealed partial class Plugin
             rows.Add(new GuideRow("NOW", playing.DisplayName, "playing", Current: true, Slots: slots));
         }
 
-        // Pinned channels, by their number on the dial.
-        foreach (var (number, channel) in dial.Pinned())
+        // The numbered lineup: pins, then the channels the Live TV tab is filtered to. Listings are
+        // looked up for the first forty, since each is a guide lookup a second.
+        var listed = 0;
+        this.window.LiveTv.DefaultCountry = this.CurrentRegion() switch { 1 => "JP", 2 => "US", 3 => "UK", 4 => "AU", _ => string.Empty };
+        foreach (var (number, channel) in dial.Numbered())
         {
+            if (string.Equals(channel.Url, source, StringComparison.OrdinalIgnoreCase) && rows.Count > 0)
+                continue;
+
             var detail = channel.Group.Length > 0
                 ? channel.Country.Length > 0 ? $"{channel.Group} · {channel.Country}" : channel.Group
                 : channel.Country.Length > 0 ? channel.Country : "Live";
@@ -79,26 +86,6 @@ public sealed partial class Plugin
                 channel.Name,
                 detail,
                 Current: string.Equals(channel.Url, source, StringComparison.OrdinalIgnoreCase),
-                Offline: dial.IsOffline(channel.Url),
-                Slots: this.ListingsFor(channel, utc)));
-        }
-
-        // The rest of the lineup: whatever the Live TV tab is filtered to, unpinned, unnumbered.
-        // Listings only for the first few dozen, since every one is a guide lookup a second.
-        var listed = 0;
-        foreach (var channel in this.window.LiveTv.Lineup(80))
-        {
-            if (dial.NumberOf(channel.Url) > 0 || string.Equals(channel.Url, source, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var detail = channel.Group.Length > 0
-                ? channel.Country.Length > 0 ? $"{channel.Group} / {channel.Country}" : channel.Group
-                : channel.Country.Length > 0 ? channel.Country : "Live";
-
-            rows.Add(new GuideRow(
-                "--",
-                channel.Name,
-                detail,
                 Offline: dial.IsOffline(channel.Url),
                 Slots: listed++ < 40 ? this.ListingsFor(channel, utc) : null));
         }

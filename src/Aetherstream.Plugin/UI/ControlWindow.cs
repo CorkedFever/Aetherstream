@@ -48,11 +48,12 @@ internal sealed class ControlWindow : Window
         var watch = new WatchTab(context);
         this.Library = new LibraryTab(context);
         this.LiveTv = new LiveTvTab(context, this.Dial);
+        this.Dial.Lineup = () => this.LiveTv.Lineup(120);
         var screen = new ScreenTab(context);
         this.Sound = new SoundTab(context);
         this.Channels = new ChannelsTab(context);
         this.Share = new ShareTab(context);
-        var setup = new SetupTab(context);
+        this.Setup = new SetupTab(context) { LineupChoices = () => this.LiveTv.Choices };
 
         this.inputs =
         [
@@ -63,7 +64,7 @@ internal sealed class ControlWindow : Window
             ("Screen", screen.Draw),
             ("Sound", this.Sound.Draw),
             ("Share", this.Share.Draw),
-            ("Setup", setup.Draw),
+            ("Setup", this.Setup.Draw),
         ];
 
         // Wide enough for four poster columns and a 16:9 picture worth looking at.
@@ -85,6 +86,8 @@ internal sealed class ControlWindow : Window
     internal SoundTab Sound { get; }
 
     internal ChannelsTab Channels { get; }
+
+    internal SetupTab Setup { get; }
 
     public override void PreDraw()
     {

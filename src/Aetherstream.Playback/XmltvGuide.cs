@@ -123,6 +123,28 @@ public sealed class XmltvGuide
         return guide;
     }
 
+    /// <summary>Several guides as one: ids and names union, the first guide winning a clash.</summary>
+    public static XmltvGuide Merge(IEnumerable<XmltvGuide> guides)
+    {
+        var merged = new XmltvGuide();
+        foreach (var g in guides)
+        {
+            foreach (var id in g.channelIds)
+                merged.channelIds.Add(id);
+            foreach (var (name, id) in g.idsByName)
+                merged.idsByName.TryAdd(name, id);
+            foreach (var (id, list) in g.programmes)
+            {
+                if (!merged.programmes.TryGetValue(id, out var existing))
+                    merged.programmes[id] = [.. list];
+                else if (existing.Count == 0)
+                    existing.AddRange(list);
+            }
+        }
+
+        return merged;
+    }
+
     /// <summary>The guide's id for a playlist channel: its own id when the guide has it, else a name match, else null.</summary>
     public string? IdFor(string tvgId, string name)
     {

@@ -194,8 +194,8 @@ public sealed partial class Plugin : IDalamudPlugin
         this.WireParty();
         this.WireLiveTv();
         this.WireMusic();
-        this.window.Channels.FindItem = this.FindMarketItem;
-        this.window.Channels.WatchListChanged = this.WatchListChanged;
+        this.window.Setup.FindItem = this.FindMarketItem;
+        this.window.Setup.WatchListChanged = this.WatchListChanged;
 
         this.windows.AddWindow(this.window);
 

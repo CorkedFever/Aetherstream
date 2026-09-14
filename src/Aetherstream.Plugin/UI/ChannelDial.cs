@@ -23,6 +23,26 @@ internal sealed class ChannelDial(UiContext ui)
 
     public bool HasChannels => this.byUrl.Count > 0;
 
+    /// <summary>
+    /// The rest of the lineup after the pins: the channels the Live TV tab is filtered to. Set by
+    /// the window. Pins keep their numbers; these take the numbers after them, in list order.
+    /// </summary>
+    public Func<IReadOnlyList<M3uPlaylist.Channel>>? Lineup;
+
+    /// <summary>Every numbered channel: the pins, then the lineup without them.</summary>
+    public List<(int Number, M3uPlaylist.Channel Channel)> Numbered()
+    {
+        var result = this.Pinned().ToList();
+        var seen = new HashSet<string>(result.Select(p => p.Channel.Url), StringComparer.OrdinalIgnoreCase);
+        foreach (var channel in this.Lineup?.Invoke() ?? [])
+        {
+            if (seen.Add(channel.Url))
+                result.Add((result.Count + 1, channel));
+        }
+
+        return result;
+    }
+
     public void SetChannels(List<M3uPlaylist.Channel> channels)
     {
         var map = new Dictionary<string, M3uPlaylist.Channel>(channels.Count, StringComparer.OrdinalIgnoreCase);
@@ -58,14 +78,13 @@ internal sealed class ChannelDial(UiContext ui)
     public M3uPlaylist.Channel? Find(string url) =>
         this.byUrl.TryGetValue(url, out var channel) ? channel : null;
 
-    /// <summary>1-based, or 0 when the URL is not pinned.</summary>
+    /// <summary>1-based, or 0 when the URL is neither pinned nor in the lineup.</summary>
     public int NumberOf(string url)
     {
-        var pins = ui.Config.LiveTvFavourites;
-        for (var i = 0; i < pins.Count; i++)
+        foreach (var (number, channel) in this.Numbered())
         {
-            if (string.Equals(pins[i], url, StringComparison.OrdinalIgnoreCase))
-                return i + 1;
+            if (string.Equals(channel.Url, url, StringComparison.OrdinalIgnoreCase))
+                return number;
         }
 
         return 0;
@@ -73,8 +92,8 @@ internal sealed class ChannelDial(UiContext ui)
 
     public M3uPlaylist.Channel? ByNumber(int number)
     {
-        var pins = ui.Config.LiveTvFavourites;
-        return number >= 1 && number <= pins.Count ? this.Find(pins[number - 1]) : null;
+        var numbered = this.Numbered();
+        return number >= 1 && number <= numbered.Count ? numbered[number - 1].Channel : null;
     }
 
     /// <summary>Pinned channels that are actually in the loaded list, in number order.</summary>
@@ -88,23 +107,23 @@ internal sealed class ChannelDial(UiContext ui)
         }
     }
 
-    public bool CanStep => this.HasChannels && ui.Config.LiveTvFavourites.Count > 0;
+    public bool CanStep => this.HasChannels && this.Numbered().Count > 0;
 
-    /// <summary>Channel up or down through the pins, wrapping at either end.</summary>
+    /// <summary>Channel up or down through the numbered lineup, wrapping at either end.</summary>
     public void Step(int direction)
     {
-        var pinned = this.Pinned().ToList();
-        if (pinned.Count == 0)
+        var numbered = this.Numbered();
+        if (numbered.Count == 0)
             return;
 
-        var at = pinned.FindIndex(p => string.Equals(p.Channel.Url, ui.Config.Source, StringComparison.OrdinalIgnoreCase));
+        var at = numbered.FindIndex(p => string.Equals(p.Channel.Url, ui.Config.Source, StringComparison.OrdinalIgnoreCase));
 
-        // Not on a pinned channel: up goes to the first, down to the last.
+        // Not on a numbered channel: up goes to the first, down to the last.
         var next = at < 0
-            ? (direction > 0 ? 0 : pinned.Count - 1)
-            : ((at + direction) % pinned.Count + pinned.Count) % pinned.Count;
+            ? (direction > 0 ? 0 : numbered.Count - 1)
+            : ((at + direction) % numbered.Count + numbered.Count) % numbered.Count;
 
-        this.Play(pinned[next].Channel);
+        this.Play(numbered[next].Channel);
     }
 
     public bool HasLast => this.previous.Length > 0 && this.byUrl.ContainsKey(this.previous);

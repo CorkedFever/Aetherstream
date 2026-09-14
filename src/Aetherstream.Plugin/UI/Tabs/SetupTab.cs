@@ -15,8 +15,21 @@ internal sealed class SetupTab(UiContext ui)
 {
     private bool showToken;
 
+    /// <summary>Set by the plugin: finds a marketable item by name, or null.</summary>
+    public Func<string, (uint Id, string Name)?>? FindItem;
+
+    /// <summary>Set by the plugin: the watch list changed, fetch again.</summary>
+    public Action? WatchListChanged;
+
+    /// <summary>Set by the window: what the playlist offers to pick a lineup from.</summary>
+    public Func<(IReadOnlyList<string> Countries, IReadOnlyList<string> Groups)>? LineupChoices;
+
+    private string itemInput = string.Empty;
+    private string itemStatus = string.Empty;
+
     public void Draw()
     {
+        this.DrawChannelSettings();
         this.DrawTools();
         this.DrawPlex();
         this.DrawDecoding();
@@ -347,5 +360,136 @@ internal sealed class SetupTab(UiContext ui)
             ui.Inspector.Report.Length > 0
                 ? ui.Inspector.Report
                 : "Target something and press Inspect.");
+    }
+
+    // -- the drawn channels' settings --------------------------------------------------------------
+
+    /// <summary>The guide's lineup, the market watch list, and the venues filter, together.</summary>
+    private void DrawChannelSettings()
+    {
+        Ui.Section("Guide lineup");
+        Ui.Hint("What the guide channel lists after your pinned channels, numbered on from them. Channel up and down step through it.");
+
+        var (countries, groups) = this.LineupChoices?.Invoke() ?? ([], []);
+
+        ImGui.SetNextItemWidth(160);
+        var countryLabel = ui.Config.GuideCountry.Length > 0 ? ui.Config.GuideCountry : "my region";
+        using (var combo = ImRaii.Combo("##guidecountry", countryLabel))
+        {
+            if (combo)
+            {
+                if (ImGui.Selectable("my region", ui.Config.GuideCountry.Length == 0))
+                {
+                    ui.Config.GuideCountry = string.Empty;
+                    ui.SaveConfig();
+                }
+
+                foreach (var country in countries)
+                {
+                    if (ImGui.Selectable(country, country == ui.Config.GuideCountry))
+                    {
+                        ui.Config.GuideCountry = country;
+                        ui.SaveConfig();
+                    }
+                }
+            }
+        }
+
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(220);
+        var groupLabel = ui.Config.GuideGroup.Length > 0 ? ui.Config.GuideGroup : "every group";
+        using (var combo = ImRaii.Combo("##guidegroup", groupLabel))
+        {
+            if (combo)
+            {
+                if (ImGui.Selectable("every group", ui.Config.GuideGroup.Length == 0))
+                {
+                    ui.Config.GuideGroup = string.Empty;
+                    ui.SaveConfig();
+                }
+
+                foreach (var group in groups)
+                {
+                    if (ImGui.Selectable(group, group == ui.Config.GuideGroup))
+                    {
+                        ui.Config.GuideGroup = group;
+                        ui.SaveConfig();
+                    }
+                }
+            }
+        }
+
+        Ui.Tip("Countries are the playlist's two-letter codes. \"My region\" follows the character: US, UK, JP or AU. Up to 120 channels are listed.");
+
+        Ui.Section("Market watch");
+        Ui.Hint("What the market channel lists. Prices come from Universalis for the world you are on.");
+
+        var list = ui.Config.MarketWatch;
+        for (var i = 0; i < list.Count; i++)
+        {
+            var item = list[i];
+            using var id = ImRaii.PushId(i);
+
+            if (ImGui.SmallButton("×"))
+            {
+                list.RemoveAt(i);
+                ui.SaveConfig();
+                this.WatchListChanged?.Invoke();
+                i--;
+                continue;
+            }
+
+            ImGui.SameLine();
+            ImGui.TextUnformatted(item.Name);
+        }
+
+        if (list.Count == 0)
+            ImGui.TextColored(Theme.TextFaint, "nothing watched yet");
+
+        ImGui.SetNextItemWidth(260);
+        var entered = ImGui.InputTextWithHint("##marketitem", "item name, e.g. Fire Crystal", ref this.itemInput, 64, ImGuiInputTextFlags.EnterReturnsTrue);
+        ImGui.SameLine();
+        if ((ImGui.Button("Add") || entered) && this.itemInput.Trim().Length > 0)
+        {
+            var found = this.FindItem?.Invoke(this.itemInput.Trim());
+            if (found is { } item)
+            {
+                if (list.Any(w => w.Id == item.Id))
+                {
+                    this.itemStatus = $"{item.Name} is already on the list.";
+                }
+                else if (list.Count >= 40)
+                {
+                    this.itemStatus = "Forty is plenty for one channel.";
+                }
+                else
+                {
+                    list.Add(new MarketItem { Id = item.Id, Name = item.Name });
+                    ui.SaveConfig();
+                    this.WatchListChanged?.Invoke();
+                    this.itemStatus = $"Added {item.Name}.";
+                    this.itemInput = string.Empty;
+                }
+            }
+            else
+            {
+                this.itemStatus = "No marketable item by that name.";
+            }
+        }
+
+        if (this.itemStatus.Length > 0)
+            ImGui.TextColored(Theme.TextDim, this.itemStatus);
+
+        Ui.Tip("Exact names work best; a name that starts the same way is taken when there is only one.");
+
+        Ui.Section("Venues");
+        var sfw = ui.Config.VenuesSfwOnly;
+        if (ImGui.Checkbox("Only venues marked safe for work", ref sfw))
+        {
+            ui.Config.VenuesSfwOnly = sfw;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip("Listings come from ffxivvenues.com for your region. Venues mark themselves; the site's own word is taken for it. With this off, adult venues are listed in purple.");
     }
 }

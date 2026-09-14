@@ -375,8 +375,38 @@ internal sealed class LiveTvTab(UiContext ui, ChannelDial dial)
     /// The guide's lineup: the channels this tab is filtered to right now, so the group and
     /// country pickers decide what the set lists. Capped so the grid scrolls in minutes, not hours.
     /// </summary>
-    public IReadOnlyList<M3uPlaylist.Channel> Lineup(int cap) =>
-        this.channels.Count == 0 ? [] : this.Filtered().Take(cap).ToList();
+    /// <summary>
+    /// The guide's lineup: the channels of the country and group set in Setup, or of the
+    /// character's region when nothing is set. Capped so the grid scrolls in minutes, not hours.
+    /// </summary>
+    public IReadOnlyList<M3uPlaylist.Channel> Lineup(int cap)
+    {
+        if (this.channels.Count == 0)
+            return [];
+
+        var country = ui.Config.GuideCountry.Length > 0 ? ui.Config.GuideCountry : this.DefaultCountry;
+        var group = ui.Config.GuideGroup;
+        var key = (country, group, cap, this.channels.Count);
+        if (key == this.lineupKey && this.lineup is not null)
+            return this.lineup;
+
+        this.lineupKey = key;
+        this.lineup = this.channels
+            .Where(c => country.Length == 0 || c.Country.Equals(country, StringComparison.OrdinalIgnoreCase))
+            .Where(c => group.Length == 0 || c.Group == group)
+            .Take(cap)
+            .ToList();
+        return this.lineup;
+    }
+
+    /// <summary>Set by the plugin from the character's region: US, UK, JP or AU.</summary>
+    public string DefaultCountry { get; set; } = string.Empty;
+
+    /// <summary>The countries and groups the loaded playlist has, for the Setup tab's pickers.</summary>
+    public (IReadOnlyList<string> Countries, IReadOnlyList<string> Groups) Choices => (this.countries, this.groups);
+
+    private List<M3uPlaylist.Channel>? lineup;
+    private (string, string, int, int) lineupKey;
 
     private List<M3uPlaylist.Channel> Filtered()
     {
