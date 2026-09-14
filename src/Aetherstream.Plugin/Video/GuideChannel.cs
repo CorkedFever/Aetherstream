@@ -175,27 +175,38 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
         if (rows.Count == 0)
             return;
 
-        var region = new BitmapFont.Clip(0, RowsTop, Width, RowsBottom);
-        var visible = (RowsBottom - RowsTop) / RowHeight;
-        var total = rows.Count * RowHeight;
+        // The channel you are on stays pinned at the top; everything else scrolls under it.
+        var current = rows.FirstOrDefault(r => r.Current);
+        var others = current is null ? rows : rows.Where(r => !ReferenceEquals(r, current)).ToList();
+        var scrollTop = current is null ? RowsTop : RowsTop + RowHeight;
+
+        var region = new BitmapFont.Clip(0, scrollTop, Width, RowsBottom);
+        var visible = (RowsBottom - scrollTop) / RowHeight;
+        var total = others.Count * RowHeight;
 
         // Fewer rows than fit: nothing moves. More: they climb, and wrap seamlessly.
-        var offset = rows.Count <= visible ? 0 : (int)((seconds * RowSpeed) % total);
+        var offset = others.Count <= visible ? 0 : (int)((seconds * RowSpeed) % total);
 
         for (var pass = 0; pass < 2; pass++)
         {
-            var baseY = RowsTop - offset + (pass * total);
-            if (pass == 1 && rows.Count <= visible)
+            var baseY = scrollTop - offset + (pass * total);
+            if (pass == 1 && others.Count <= visible)
                 break;
 
-            for (var i = 0; i < rows.Count; i++)
+            for (var i = 0; i < others.Count; i++)
             {
                 var y = baseY + (i * RowHeight);
-                if (y + RowHeight <= RowsTop || y >= RowsBottom)
+                if (y + RowHeight <= scrollTop || y >= RowsBottom)
                     continue;
 
-                this.DrawRow(span, rows[i], y, i, region);
+                this.DrawRow(span, others[i], y, i, region);
             }
+        }
+
+        if (current is not null)
+        {
+            this.DrawRow(span, current, RowsTop, 0, new BitmapFont.Clip(0, RowsTop, Width, RowsTop + RowHeight));
+            Fill(span, 0, RowsTop + RowHeight - 3, Width, 3, Accent);
         }
 
         // Column rules over everything, so they never scroll. Two wide, so a squashed surface keeps them.
