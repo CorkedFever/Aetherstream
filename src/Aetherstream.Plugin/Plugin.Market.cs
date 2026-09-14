@@ -171,6 +171,38 @@ public sealed partial class Plugin
         return starts.Count == 1 ? starts[0] : null;
     }
 
+    private List<AdItem>? adItems;
+
+    /// <summary>Marketable items with an icon and a category, for the adverts. Read once.</summary>
+    private IReadOnlyList<AdItem> AdItems()
+    {
+        if (this.adItems is not null)
+            return this.adItems;
+
+        var list = new List<AdItem>();
+        try
+        {
+            foreach (var item in this.dataManager.GetExcelSheet<Item>())
+            {
+                if (item.ItemSearchCategory.RowId == 0 || item.Icon == 0)
+                    continue;
+
+                var name = item.Name.ToString();
+                if (name.Length == 0)
+                    continue;
+
+                list.Add(new AdItem(item.RowId, name, item.ItemUICategory.ValueNullable?.Name.ToString() ?? "thing"));
+            }
+        }
+        catch (Exception ex)
+        {
+            this.log.Warning(ex, "[adverts] could not read the item table.");
+        }
+
+        this.adItems = list;
+        return list;
+    }
+
     private Dictionary<string, (uint Id, string Name)> ReadMarketableItems()
     {
         var map = new Dictionary<string, (uint, string)>(StringComparer.OrdinalIgnoreCase);
