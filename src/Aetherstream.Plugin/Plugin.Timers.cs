@@ -95,7 +95,7 @@ public sealed partial class Plugin
                 }
 
                 var back = DateTimeOffset.FromUnixTimeSeconds(retainer->VentureComplete).UtcDateTime;
-                rows.Add(new TimerRow(name, back <= utc ? "venture complete, waiting at the bell" : "on a venture", back, "retainer"));
+                rows.Add(new TimerRow(name, back <= utc ? "back, at the bell" : "on a venture", back, "retainer"));
                 away++;
             }
 

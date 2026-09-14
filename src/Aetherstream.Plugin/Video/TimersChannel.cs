@@ -38,7 +38,7 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
         // Header.
         Canvas.Fill(span, 0, 0, W, 56, Canvas.GlassLit);
         Canvas.Fill(span, 0, 56, W, 2, Canvas.Edge);
-        font.Draw(span, W, "TIMERS", 24, 8, Canvas.Amber, 1, all);
+        font.Draw(span, W, "ALMANAC", 24, 8, Canvas.Amber, 1, all);
 
         var etMinutes = DateTimeOffset.UtcNow.ToUnixTimeSeconds() * 24 / 70;
         var et = $"ET {etMinutes / 60 % 24:00}:{etMinutes % 60:00}";
@@ -56,39 +56,54 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
             return;
         }
 
-        // -- the left: what is due, soonest first ----------------------------------------------------
-        const int Left = 24, Split = 800;
-        var y = 76;
-        foreach (var row in snapshot.Rows.OrderBy(r => r.DueUtc))
+        // -- the left: what is due, soonest first; scrolls when there is more than fits --------------
+        const int Left = 24, Split = 800, RowTop = 76, RowHeight = 72, RowsBottom = 668;
+        var ordered = snapshot.Rows.OrderBy(r => r.DueUtc).ToList();
+        var visible = (RowsBottom - RowTop) / RowHeight;
+        var total = ordered.Count * RowHeight;
+        var offset = ordered.Count <= visible ? 0 : (int)((seconds * 16.0) % total);
+        var region = new BitmapFont.Clip(0, RowTop, Split - 16, RowsBottom);
+
+        for (var pass = 0; pass < (ordered.Count <= visible ? 1 : 2); pass++)
         {
-            if (y > 600)
-                break;
-
-            var remaining = row.DueUtc - utc;
-            var colour = remaining < TimeSpan.FromMinutes(5) ? Canvas.Bad
-                : remaining < TimeSpan.FromHours(1) ? Canvas.Amber
-                : Canvas.White;
-
-            var kindColour = row.Kind switch
+            for (var i = 0; i < ordered.Count; i++)
             {
-                "reset" => Canvas.Accent,
-                "boat" => Canvas.Rgb(0x6B, 0xC7, 0xFF),
-                "retainer" => Canvas.Good,
-                "cactpot" => Canvas.Rgb(0xFF, 0xD6, 0x4F),
-                _ => Canvas.Dim,
-            };
+                var y = RowTop - offset + (pass * total) + (i * RowHeight);
+                if (y + RowHeight <= RowTop || y >= RowsBottom)
+                    continue;
 
-            font.Draw(span, W, Canvas.Cut(row.Name.ToUpperInvariant(), 26), Left, y, kindColour, 1, all);
-            var countdown = Countdown(remaining);
-            font.Draw(span, W, countdown, Split - 24 - font.Measure(countdown), y, colour, 1, all);
+                var row = ordered[i];
+                var remaining = row.DueUtc - utc;
+                var colour = remaining < TimeSpan.FromMinutes(5) ? Canvas.Bad
+                    : remaining < TimeSpan.FromHours(1) ? Canvas.Amber
+                    : Canvas.White;
 
-            var when = row.DueUtc.ToLocalTime();
-            var whenText = when.Date == now.Date ? when.ToString("h:mm tt") : when.ToString("ddd h:mm tt");
-            var detail = Canvas.Cut($"{whenText.ToUpperInvariant()}   {Canvas.Plain(row.Detail).ToUpperInvariant()}", font.Fit(Split - Left - 16));
-            font.Draw(span, W, detail, Left, y + 32, Canvas.Dim, 1, all);
+                var kindColour = row.Kind switch
+                {
+                    "reset" => Canvas.Accent,
+                    "boat" => Canvas.Rgb(0x6B, 0xC7, 0xFF),
+                    "retainer" => Canvas.Good,
+                    "cactpot" => Canvas.Rgb(0xFF, 0xD6, 0x4F),
+                    _ => Canvas.Dim,
+                };
 
-            y += 72;
-            Canvas.Fill(span, Left, y - 6, Split - Left - 24, 1, Canvas.Edge);
+                font.Draw(span, W, Canvas.Cut(row.Name.ToUpperInvariant(), 26), Left, y, kindColour, 1, region);
+
+                // A boat that has already left is boarding for its fifteen minutes, not "now".
+                var countdown = row.Kind == "boat" && remaining <= TimeSpan.Zero
+                    ? $"BOARDING {Countdown(remaining + TimeSpan.FromMinutes(15))}"
+                    : Countdown(remaining);
+                font.Draw(span, W, countdown, Split - 24 - font.Measure(countdown), y, colour, 1, region);
+
+                var when = row.DueUtc.ToLocalTime();
+                var whenText = when.Date == now.Date ? when.ToString("h:mm tt") : when.ToString("ddd h:mm tt");
+                var detail = Canvas.Cut($"{whenText.ToUpperInvariant()}   {Canvas.Plain(row.Detail).ToUpperInvariant()}", font.Fit(Split - Left - 16));
+                font.Draw(span, W, detail, Left, y + 32, Canvas.Dim, 1, region);
+
+                var rule = y + RowHeight - 6;
+                if (rule >= RowTop && rule < RowsBottom)
+                    Canvas.Fill(span, Left, rule, Split - Left - 24, 1, Canvas.Edge);
+            }
         }
 
         // -- the right: roulettes and retainers ----------------------------------------------------
@@ -132,7 +147,7 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
     {
         Canvas.Fill(span, 0, 680, W, 40, Canvas.GlassLit);
         Canvas.Fill(span, 0, 680, W, 2, Canvas.Edge);
-        font.Draw(span, W, "AETHERSTREAM TIMERS", 24, 680, Canvas.Accent, 1, all);
+        font.Draw(span, W, "AETHERSTREAM ALMANAC", 24, 680, Canvas.Accent, 1, all);
         const string Note = "RESETS IN YOUR LOCAL TIME";
         font.Draw(span, W, Note, W - 24 - font.Measure(Note), 680, Canvas.Faint, 1, all);
     }
@@ -141,6 +156,8 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
     {
         if (t <= TimeSpan.Zero)
             return "NOW";
+        if (t < TimeSpan.FromMinutes(15) && t.TotalHours < 1)
+            return $"{t.Minutes:00}:{t.Seconds:00}";
         if (t.TotalDays >= 1)
             return $"{(int)t.TotalDays}D {t.Hours:00}H {t.Minutes:00}M";
         if (t.TotalHours >= 1)

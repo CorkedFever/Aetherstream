@@ -124,7 +124,7 @@ public sealed partial class Plugin : IDalamudPlugin
             ("News", "Lodestone headlines, one story at a time.", new NewsChannel(face, this.NewsSnapshot)),
             ("Market", "Your watch list, priced by Universalis.", new MarketChannel(face, this.MarketSnapshot)),
             ("Gathering", "Timed nodes: what is up, and how long until each pops.", new GatheringChannel(face, this.GatheringSnapshot)),
-            ("Timers", "Resets, the boat, the cactpot, your retainers, today's roulettes.", new TimersChannel(face, this.TimersSnapshot)),
+            ("Almanac", "Resets, the boat, the cactpot, your retainers, today's roulettes.", new TimersChannel(face, this.TimersSnapshot)),
             ("Aquarium", "Fish. The odd Namazu. Nothing to read.", new AquariumChannel(face)),
             ("Fireplace", "A fire in a hearth, for the winter.", new FireplaceChannel(face)),
             ("Starfield", "The screensaver everyone had.", new StarfieldChannel(face)),

@@ -43,12 +43,12 @@ internal static class ResetTimers
 
     private static readonly DateTime OceanEpoch = new(2020, 6, 28, 0, 0, 0, DateTimeKind.Utc);
     private static readonly TimeSpan Jst = TimeSpan.FromHours(9);
-    private static readonly TimeSpan Registration = TimeSpan.FromMinutes(45);
+    private static readonly TimeSpan Registration = TimeSpan.FromMinutes(15);
 
     /// <summary>The next boat after a moment, with what each route sails to.</summary>
     public static Voyage NextVoyage(DateTime utc)
     {
-        // Work in JST, shifted back 45 minutes so a boat that is still boarding counts as next.
+        // Work in JST, shifted back fifteen minutes so a boat that is still boarding counts as next.
         var shifted = utc + Jst - Registration;
         var day = (int)Math.Floor((shifted - OceanEpoch).TotalDays);
         var hour = shifted.Hour;
