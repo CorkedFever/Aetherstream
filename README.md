@@ -373,3 +373,8 @@ assumptions. Phase 2 writes a thin adapter implementing Memoria's `IFrameSource`
 `VlcStreamSource` and bridges the audio ring — Memoria's is mono, ours is stereo, so that
 conversion is the one open decision. The libvlc native payload (~60–90 MB) needs pruning before
 plugin distribution.
+
+## What might come next
+
+Ideas that have come up but are not planned live in [IDEAS.md](IDEAS.md), grouped by the kind of
+thing they are. It is a parking lot, not a roadmap.
