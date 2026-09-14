@@ -9,8 +9,8 @@ using SixLabors.ImageSharp.Processing;
 namespace Aetherstream.Plugin;
 
 /// <summary>
-/// Venues for the venues channel, from ffxivvenues.com's public API, for the datacenter the
-/// character is on. The service resolves each venue's next opening itself, so "open now" and
+/// Venues for the venues channel, from ffxivvenues.com's public API, for the region the
+/// character is in — every datacenter of it, since a venue on Aether is a walk away from Primal. The service resolves each venue's next opening itself, so "open now" and
 /// "opens at" are read rather than computed. Fetched every ten minutes while the channel is up;
 /// banners are fetched as they are featured and kept for the session.
 /// </summary>
@@ -28,21 +28,24 @@ public sealed partial class Plugin
     private readonly HashSet<string> bannersLoading = [];
     private readonly Queue<string> bannerOrder = new();
 
+    private Dictionary<string, uint>? dataCenterRegions;
+
     private VenuesSnapshot? VenuesSnapshot()
     {
-        var dc = this.CurrentDataCenterName();
-        var key = $"{dc}|{this.config.VenuesSfwOnly}";
+        var region = this.CurrentRegion();
+        var dc = RegionName(region);
+        var key = $"{region}|{this.config.VenuesSfwOnly}";
         var now = Environment.TickCount64;
 
-        if (dc.Length == 0)
-            return new VenuesSnapshot(string.Empty, [], [], DateTime.MinValue, "log in to a character to see a datacenter");
+        if (region == 0)
+            return new VenuesSnapshot(string.Empty, [], [], DateTime.MinValue, "log in to a character to see a region");
 
         var stale = now - this.venuesRequestedAtMs > VenuesFreshFor.TotalMilliseconds;
         if (!this.venuesFetching && (key != this.venuesKey || stale))
         {
             this.venuesKey = key;
             this.venuesRequestedAtMs = now;
-            this.FetchVenues(dc);
+            this.FetchVenues(dc, region);
         }
 
         // Banners load lazily for whatever is listed; the snapshot is rebuilt with them as they land.
@@ -73,16 +76,17 @@ public sealed partial class Plugin
             ? venue with { Banner = ready }
             : venue;
 
-    private void FetchVenues(string dc)
+    private void FetchVenues(string dc, uint region)
     {
         this.venuesFetching = true;
         _ = Task.Run(async () =>
         {
             try
             {
-                var url = $"https://api.ffxivvenues.com/venue?dataCenter={Uri.EscapeDataString(dc)}";
-                var text = await this.http.GetStringAsync(url);
-                var (open, soon, bannerUris) = this.ParseVenues(text);
+                // The whole list, then only the datacenters of this region: a couple of megabytes
+                // every ten minutes, which is what the site's own page loads.
+                var text = await this.http.GetStringAsync("https://api.ffxivvenues.com/venue");
+                var (open, soon, bannerUris) = this.ParseVenues(text, region);
 
                 this.venuesSnapshot = new VenuesSnapshot(dc, open, soon, DateTime.UtcNow,
                     open.Count + soon.Count == 0 ? "no venues listed for the next day" : string.Empty);
@@ -108,8 +112,9 @@ public sealed partial class Plugin
     /// Open venues, soonest to close; then venues opening within a day, soonest first. A venue
     /// with a closure override in force is left out, as the site itself would show it closed.
     /// </summary>
-    private (List<VenueRow> Open, List<VenueRow> Soon, List<(string Id, string Uri)> Banners) ParseVenues(string json)
+    private (List<VenueRow> Open, List<VenueRow> Soon, List<(string Id, string Uri)> Banners) ParseVenues(string json, uint region)
     {
+        this.dataCenterRegions ??= this.ReadDataCenterRegions();
         var open = new List<(DateTime Key, VenueRow Row)>();
         var soon = new List<(DateTime Key, VenueRow Row)>();
         var bannerUris = new List<(string, string)>();
@@ -158,7 +163,12 @@ public sealed partial class Plugin
             var world = string.Empty;
             if (v.TryGetProperty("location", out var loc) && loc.ValueKind == JsonValueKind.Object)
             {
-                world = Str(loc, "world");
+                // Only this region's datacenters.
+                var venueDc = Str(loc, "dataCenter");
+                if (!this.dataCenterRegions.TryGetValue(venueDc, out var venueRegion) || venueRegion != region)
+                    continue;
+
+                world = $"{Str(loc, "world")} ({venueDc})";
                 var district = Str(loc, "district");
                 var ward = Num(loc, "ward");
                 var plot = Num(loc, "plot");
@@ -177,6 +187,9 @@ public sealed partial class Plugin
             var tags = string.Empty;
             if (v.TryGetProperty("tags", out var tagsEl) && tagsEl.ValueKind == JsonValueKind.Array)
                 tags = string.Join(" / ", tagsEl.EnumerateArray().Select(t => t.GetString() ?? string.Empty).Where(t => t.Length > 0).Take(4));
+
+            if (world.Length == 0)
+                continue;
 
             var bannerUri = Str(v, "bannerUri");
             this.banners.TryGetValue(id, out var banner);
@@ -248,16 +261,34 @@ public sealed partial class Plugin
         });
     }
 
-    private string CurrentDataCenterName()
+    private static string RegionName(uint region) => region switch
     {
+        1 => "Japan",
+        2 => "North America",
+        3 => "Europe",
+        4 => "Oceania",
+        _ => string.Empty,
+    };
+
+    /// <summary>Datacenter name to region id, from the game's own table, so a new datacenter needs no code.</summary>
+    private Dictionary<string, uint> ReadDataCenterRegions()
+    {
+        var map = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            return this.objects.LocalPlayer?.CurrentWorld.Value.DataCenter.Value.Name.ToString() ?? string.Empty;
+            foreach (var dc in this.dataManager.GetExcelSheet<Lumina.Excel.Sheets.WorldDCGroupType>())
+            {
+                var name = dc.Name.ToString();
+                if (name.Length > 0)
+                    map[name] = dc.Region.RowId;
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            return string.Empty;
+            this.log.Warning(ex, "[venues] could not read the datacenter table.");
         }
+
+        return map;
     }
 
     private static string Str(JsonElement e, string property) =>

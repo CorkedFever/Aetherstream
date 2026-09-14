@@ -50,7 +50,7 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         Canvas.Fill(span, 0, 0, W, H, Canvas.Glass);
 
         var snapshot = data();
-        var dc = snapshot?.DataCenter is { Length: > 0 } d ? d.ToUpperInvariant() : "NO DATACENTER";
+        var dc = snapshot?.DataCenter is { Length: > 0 } d ? d.ToUpperInvariant() : "NO REGION";
 
         // Header, in the venue-neon pink of a good evening.
         Canvas.Fill(span, 0, 0, W, 56, Canvas.Rgb(0x4B, 0x15, 0x28));
