@@ -75,7 +75,7 @@ internal sealed class HousingChannel(BitmapFont font, Func<HousingSnapshot?> dat
 
         var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var slot = (int)((unix - 1_700_000_000) / (long)PlotFor);
-        var into = (unix - 1_700_000_000) % (long)PlotFor + (seconds % 1.0);
+        var into = ((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0) - 1_700_000_000) % PlotFor;
         this.RenderAt(target, snapshot, slot, into, now, seconds);
     }
 

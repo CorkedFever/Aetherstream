@@ -53,7 +53,7 @@ internal sealed class SaucerChannel(BitmapFont font, Func<SaucerSnapshot?> data,
     {
         var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var slot = (int)((unix - 1_700_000_000) / (long)SegmentFor);
-        var into = (unix - 1_700_000_000) % (long)SegmentFor + (seconds % 1.0);
+        var into = ((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0) - 1_700_000_000) % SegmentFor;
         this.RenderAt(target, data(), slot, into, now, seconds);
     }
 

@@ -84,9 +84,9 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
     ];
 
     /// <summary>Whether a show should be in a break at this second, and how far in.</summary>
-    public static bool InBreak(long unix, out double into)
+    public static bool InBreak(double clock, out double into)
     {
-        var at = unix % Cycle;
+        var at = clock % Cycle;
         into = at - (Cycle - BreakFor);
         return into >= 0;
     }
@@ -104,14 +104,14 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
 
         public void Render(uint[] target, uint[]? picture, DateTime now, double seconds)
         {
-            var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (!InBreak(unix, out var into))
+            var clock = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
+            if (!InBreak(clock, out var into))
             {
                 show.Render(target, picture, now, seconds);
                 return;
             }
 
-            breaks.RenderBreak(target, name, (int)(unix / Cycle), into + (seconds % 1.0), seconds);
+            breaks.RenderBreak(target, name, (int)(clock / Cycle), into, seconds);
         }
     }
 
@@ -129,10 +129,10 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
         public void Render(uint[] target, uint[]? picture, DateTime now, double seconds)
         {
             // Four in a row, 44 seconds a set: the trailer takes its twenty, the rest eight each.
-            var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            const long Set = 44;
-            var set = (int)(unix / Set);
-            var at = (unix % Set) + (seconds % 1.0);
+            var clock = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
+            const double Set = 44.0;
+            var set = (int)(clock / Set);
+            var at = clock % Set;
             var kind = at < 8 ? 0 : at < 16 ? 1 : at < 36 ? 2 : 3;
             var t = kind switch { 0 => at, 1 => at - 8, 2 => at - 16, _ => at - 36 };
             var index = (set * 4) + kind;

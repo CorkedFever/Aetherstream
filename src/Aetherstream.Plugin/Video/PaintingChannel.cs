@@ -86,7 +86,7 @@ internal sealed class PaintingChannel(BitmapFont font, Func<IReadOnlyList<Vista>
 
         var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var episode = (int)((unix - 1_700_000_000) / (long)EpisodeFor);
-        var into = (unix - 1_700_000_000) % (long)EpisodeFor + (seconds % 1.0);
+        var into = ((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0) - 1_700_000_000) % EpisodeFor;
         this.RenderAt(target, list, episode, into, now, seconds);
     }
 
