@@ -97,10 +97,22 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
             ty += 84;
         }
 
-        font.Draw(span, W, Canvas.Cut(venue.Location.ToUpperInvariant(), font.Fit(BannerWidth)), Left, ty, Canvas.White, 1, all);
-        ty += 40;
-        font.Draw(span, W, Canvas.Cut(venue.World.ToUpperInvariant(), font.Fit(BannerWidth)), Left, ty, Canvas.Dim, 1, all);
-        ty += 40;
+        // Where: the plot on the left and the world on the right of the same line when both fit,
+        // otherwise the world drops to a line of its own.
+        var place = Canvas.Cut(venue.Location.ToUpperInvariant(), font.Fit(BannerWidth));
+        var world = Canvas.Cut(venue.World.ToUpperInvariant(), font.Fit(BannerWidth));
+        font.Draw(span, W, place, Left, ty, Canvas.White, 1, all);
+        if (font.Measure(place) + 32 + font.Measure(world) <= BannerWidth)
+        {
+            font.Draw(span, W, world, Left + BannerWidth - font.Measure(world), ty, Canvas.Dim, 1, all);
+            ty += 40;
+        }
+        else
+        {
+            ty += 40;
+            font.Draw(span, W, world, Left, ty, Canvas.Dim, 1, all);
+            ty += 40;
+        }
 
         var hours = venue.OpenNow
             ? venue.ClosesUtc is { } c ? $"OPEN NOW UNTIL {c.ToLocalTime():h:mm tt}" : "OPEN NOW"
@@ -186,10 +198,9 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         var local = utc.ToLocalTime();
         var until = utc - DateTime.UtcNow;
         var when = local.Date == now.Date ? local.ToString("h:mm tt") : local.ToString("ddd h:mm tt");
-        var inText = until.TotalMinutes < 1 ? string.Empty
-            : until.TotalHours < 1 ? $" (in {(int)until.TotalMinutes} min)"
-            : until.TotalHours < 24 ? $" (in {(int)until.TotalHours}h {until.Minutes:00}m)"
-            : string.Empty;
+        // Only the near ones get a countdown; further out, the clock time says enough and the
+        // list keeps room for the name.
+        var inText = until.TotalMinutes >= 1 && until.TotalHours < 1 ? $" (in {(int)until.TotalMinutes} min)" : string.Empty;
         return when + inText;
     }
 
