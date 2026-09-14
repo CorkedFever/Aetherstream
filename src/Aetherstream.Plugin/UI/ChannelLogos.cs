@@ -173,6 +173,42 @@ internal static class ChannelLogos
                 d.AddTriangleFilled(P(0f, -8f), P(9f, -13f), P(11f, -6f), Theme.U32(Violet));
                 break;
 
+            case "shopping":
+                // A price tag with a string, and a starburst behind it.
+                for (var s = 0; s < 8; s++)
+                {
+                    var a = s * MathF.PI / 4f;
+                    d.AddLine(P(0f, 0f), P(MathF.Cos(a) * 14f, MathF.Sin(a) * 14f), Theme.U32(Coin), 1.4f * u);
+                }
+
+                d.AddRectFilled(P(-9f, -5f), P(9f, 8f), Theme.U32(Rose), 1.5f * u);
+                d.AddTriangleFilled(P(-9f, -5f), P(0f, -12f), P(9f, -5f), Theme.U32(Rose));
+                d.AddCircleFilled(P(0f, -6f), 1.6f * u, Theme.U32(Paper), 8);
+                d.AddLine(P(-5f, 2f), P(5f, 2f), Theme.U32(Paper), 1.4f * u);
+                break;
+
+            case "radio":
+                // A record with its label, and a few bars of a spectrum rising beside it.
+                d.AddCircleFilled(P(-5f, 0f), 10f * u, Theme.U32(Theme.Text), 24);
+                d.AddCircle(P(-5f, 0f), 7f * u, Theme.U32(Theme.TextFaint), 24, 1f * u);
+                d.AddCircleFilled(P(-5f, 0f), 3.2f * u, Theme.U32(Rose), 12);
+                d.AddCircleFilled(P(-5f, 0f), 0.9f * u, Theme.U32(Paper), 8);
+                for (var b = 0; b < 3; b++)
+                    d.AddRectFilled(P(8f + (b * 3.2f), 6f - (b * 4f) - 2f), P(10f + (b * 3.2f), 8f), Theme.U32(Sky), 1f);
+                break;
+
+            case "painting":
+                // A palette with its thumb hole and dabs, and a brush across it.
+                d.AddCircleFilled(P(-2f, 1f), 12f * u, Theme.U32(Coin), 24);
+                d.AddCircleFilled(P(5f, 6f), 3f * u, Theme.U32(Theme.Shell), 12);
+                d.AddCircleFilled(P(-8f, -3f), 2.4f * u, Theme.U32(Rose), 10);
+                d.AddCircleFilled(P(-2f, -8f), 2.4f * u, Theme.U32(Sky), 10);
+                d.AddCircleFilled(P(5f, -5f), 2.4f * u, Theme.U32(Leaf), 10);
+                d.AddCircleFilled(P(-8f, 5f), 2.4f * u, Theme.U32(Paper), 10);
+                d.AddLine(P(-12f, 12f), P(12f, -12f), Theme.U32(Theme.Text), 2f * u);
+                d.AddLine(P(9f, -9f), P(13f, -13f), Theme.U32(Rose), 3f * u);
+                break;
+
             case "scrambled":
                 // A picture torn into bands, each slid a different way, with a sync line through it.
                 for (var row = 0; row < 5; row++)
