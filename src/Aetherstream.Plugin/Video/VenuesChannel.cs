@@ -97,25 +97,23 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
             ty += 84;
         }
 
-        font.Draw(span, W, Canvas.Cut($"{venue.Location}  /  {venue.World}".ToUpperInvariant(), font.Fit(BannerWidth)), Left, ty, Canvas.Dim, 1, all);
-        ty += 36;
+        font.Draw(span, W, Canvas.Cut(venue.Location.ToUpperInvariant(), font.Fit(BannerWidth)), Left, ty, Canvas.White, 1, all);
+        ty += 40;
+        font.Draw(span, W, Canvas.Cut(venue.World.ToUpperInvariant(), font.Fit(BannerWidth)), Left, ty, Canvas.Dim, 1, all);
+        ty += 40;
 
         var hours = venue.OpenNow
             ? venue.ClosesUtc is { } c ? $"OPEN NOW UNTIL {c.ToLocalTime():h:mm tt}" : "OPEN NOW"
             : venue.OpensUtc is { } o ? $"OPENS {WhenText(o, now)}" : "HOURS NOT LISTED";
         font.Draw(span, W, hours.ToUpperInvariant(), Left, ty, venue.OpenNow ? Canvas.Good : Canvas.Amber, 1, all);
-        ty += 36;
+        ty += 40;
 
-        if (venue.Tags.Length > 0)
-        {
-            font.Draw(span, W, Canvas.Cut(venue.Tags.ToUpperInvariant(), font.Fit(BannerWidth)), Left, ty, Canvas.Faint, 1, all);
-            ty += 36;
-        }
-
-        foreach (var line in Canvas.Wrap(venue.Description, font.Fit(BannerWidth), Math.Max(0, (636 - ty) / 34)))
+        // The description, or the tags when there is none; the space fits two lines either way.
+        var blurb = venue.Description.Length > 0 ? venue.Description : venue.Tags;
+        foreach (var line in Canvas.Wrap(blurb, font.Fit(BannerWidth), Math.Max(0, (640 - ty) / 40)))
         {
             font.Draw(span, W, line, Left, ty, Canvas.Dim, 1, all);
-            ty += 34;
+            ty += 40;
         }
 
         // -- the lists ----------------------------------------------------------------------------------
@@ -137,10 +135,10 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         foreach (var v in soon)
             entries.Add((v.Name, v.OpensUtc is { } opens ? WhenText(opens, now) : string.Empty, Canvas.White, ReferenceEquals(v, venue)));
 
-        const int RowHeight = 36;
+        const int RowHeight = 44;
         var visible = (636 - 72) / RowHeight;
         var total = entries.Count * RowHeight;
-        var offset = entries.Count <= visible ? 0 : (int)((seconds * 16.0) % total);
+        var offset = entries.Count <= visible ? 0 : (int)((seconds * 18.0) % total);
 
         for (var pass = 0; pass < (entries.Count <= visible ? 1 : 2); pass++)
         {
