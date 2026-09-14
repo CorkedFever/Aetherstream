@@ -96,6 +96,22 @@ public sealed partial class Plugin
         this.musicKey = string.Empty;
         if (this.config.ChannelMusicSource == "plex")
             this.LoadPlexMusic();
+        this.ShowRadioChannel();
+    }
+
+    /// <summary>
+    /// Puts the Radio channel up when music is chosen: picking a station, a podcast or a playlist
+    /// from the Music tab means you want to hear it, and the Radio channel is the screen that
+    /// plays it and shows it. A film that is on is left alone; the music would not play over it.
+    /// </summary>
+    private void ShowRadioChannel()
+    {
+        if (this.session.IsPlaying && this.session.Channel is null)
+            return;
+
+        var radio = this.channels.FirstOrDefault(c => c.Name == "Radio").Channel;
+        if (radio is not null && !ReferenceEquals(this.session.Channel, radio))
+            this.session.Channel = radio;
     }
 
     private void LoadPlexPlaylists()
