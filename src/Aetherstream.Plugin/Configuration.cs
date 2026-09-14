@@ -413,6 +413,16 @@ public sealed class Configuration : IPluginConfiguration
     public int AudioOffsetMs { get; set; }
 
     /// <summary>
+    /// Offsets remembered per source, by the source string. A channel that needed +400 keeps
+    /// +400 the next time; the global value above is the default for anything not listed.
+    /// </summary>
+    public Dictionary<string, int> AudioOffsets { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The offset in force for a source: its own if remembered, else the default.</summary>
+    public int OffsetFor(string source) =>
+        source.Length > 0 && this.AudioOffsets.TryGetValue(source, out var own) ? own : this.AudioOffsetMs;
+
+    /// <summary>
     /// Fade the sound out with distance, so the screen behaves like something in the room rather
     /// than something in your head. Zero disables it.
     /// </summary>

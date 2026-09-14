@@ -947,7 +947,8 @@ internal sealed class StreamSession(
                 if (wantsAudio && created.Audio is { } ring)
                 {
                     // A positive offset holds the sound back, which we do ourselves by buffering.
-                    var delayFrames = Math.Max(0, config.AudioOffsetMs) * sampleRate / 1000;
+                    var offsetMs = config.OffsetFor(config.Source);
+                    var delayFrames = Math.Max(0, offsetMs) * sampleRate / 1000;
                     output = new AudioOutput(ring, delayFrames, config.AudioDeviceId);
                     output.Volume = config.Volume;
 
@@ -961,7 +962,7 @@ internal sealed class StreamSession(
                 created.Play(
                     stream,
                     config.UseHardwareDecode,
-                    Math.Min(0, config.AudioOffsetMs),
+                    Math.Min(0, config.OffsetFor(config.Source)),
                     config.NetworkCachingMs);
 
                 created.PlaybackEnded += (_, _) => this.endedPending = true;

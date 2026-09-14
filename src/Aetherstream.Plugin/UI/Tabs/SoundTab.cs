@@ -264,34 +264,53 @@ internal sealed class SoundTab(UiContext ui)
 
         Ui.Section("Sync");
 
-        var offset = ui.Config.AudioOffsetMs;
+        // The slider edits the current source's own offset, which is remembered by source; with
+        // nothing playing it edits the default that anything unlisted starts from.
+        var source = ui.Config.Source;
+        var perSource = source.Length > 0;
+        var offset = perSource ? ui.Config.OffsetFor(source) : ui.Config.AudioOffsetMs;
+        var remembered = perSource && ui.Config.AudioOffsets.ContainsKey(source);
 
         ImGui.TextColored(
             offset == 0 ? Ui.Faint : Ui.Accent,
-            offset == 0 ? "sound and picture unshifted"
+            (offset == 0 ? "sound and picture unshifted"
             : offset > 0 ? $"sound held back {offset} ms"
-            : $"sound brought forward {-offset} ms");
+            : $"sound brought forward {-offset} ms") + (perSource ? remembered ? "  (this source)" : "  (default)" : string.Empty));
 
         if (ImGui.SliderInt("##audiooffset", ref offset, -1500, 1500, "%d ms"))
         {
-            ui.Config.AudioOffsetMs = offset;
+            if (perSource)
+                ui.Config.AudioOffsets[source] = offset;
+            else
+                ui.Config.AudioOffsetMs = offset;
             ui.SaveConfig();
         }
 
         Ui.Tip(
             "Positive holds the sound back — use it when the sound runs ahead of the picture. " +
             "Negative brings it forward. Nothing is discarded; libvlc shifts the sound at the " +
-            "source. Takes effect on the next Play.");
+            "source. Takes effect on the next Play, and is remembered for this source.");
 
-        if (offset != 0 && ImGui.SmallButton("Reset to zero"))
+        if (perSource && remembered && ImGui.SmallButton("Forget for this source"))
         {
-            ui.Config.AudioOffsetMs = 0;
+            ui.Config.AudioOffsets.Remove(source);
+            ui.SaveConfig();
+        }
+
+        if (perSource && remembered)
+            ImGui.SameLine();
+
+        if (ImGui.SmallButton("Make this the default"))
+        {
+            ui.Config.AudioOffsetMs = offset;
             ui.SaveConfig();
         }
 
         Ui.Hint(
-            "This is one setting for every source, and the right value is not the same for all of " +
-            "them: live streams generally need none, while a Plex transcode has needed around " +
-            "+1000 ms. Retune it when you switch between the two.");
+            "Each source keeps its own value once you touch the slider while it plays, so a channel " +
+            "that needs +400 stays at +400 and the next one starts from the default. Live channels " +
+            "usually need none; a Plex transcode has needed around +1000 ms. The log's [sync] line, " +
+            "every three seconds, says whether the plugin is in step: a steady lead is the stream's " +
+            "own offset, a drifting one is ours.");
     }
 }
