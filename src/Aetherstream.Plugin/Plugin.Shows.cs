@@ -1,3 +1,6 @@
+using System.IO.Compression;
+using System.Text.Json;
+
 using Aetherstream.Plugin.Video;
 
 using Lumina.Excel.Sheets;
@@ -88,16 +91,49 @@ public sealed partial class Plugin
                 treasures.Add((name, item.Icon));
             }
 
-            this.storyStock = new StoryStock(places, beasts, treasures);
-            this.log.Information($"[stories] {places.Count} places, {beasts.Count} beasts, {treasures.Count} treasures");
+            var scions = this.ReadScions();
+            this.storyStock = new StoryStock(places, beasts, treasures, scions);
+            this.log.Information($"[stories] {places.Count} places, {beasts.Count} beasts, {treasures.Count} treasures, {scions.Count} scions");
         }
         catch (Exception ex)
         {
             this.log.Warning(ex, "Could not read the story stock; the bard has lost his book.");
-            this.storyStock = new StoryStock([], [], []);
+            this.storyStock = new StoryStock([], [], [], []);
         }
 
         return this.storyStock;
+    }
+
+    /// <summary>The Scions' sprites, from data/scions.json.gz beside the fish; none if the file is missing.</summary>
+    private List<ScionSprite> ReadScions()
+    {
+        var list = new List<ScionSprite>();
+        try
+        {
+            var path = Path.Combine(Path.GetDirectoryName(this.fishDataPath)!, "scions.json.gz");
+            if (!File.Exists(path))
+                return list;
+
+            using var file = File.OpenRead(path);
+            using var gz = new GZipStream(file, CompressionMode.Decompress);
+            using var doc = JsonDocument.Parse(gz);
+            foreach (var e in doc.RootElement.EnumerateArray())
+            {
+                var w = e.GetProperty("w").GetInt32();
+                var h = e.GetProperty("h").GetInt32();
+                var px = e.GetProperty("p").EnumerateArray().Select(v => (uint)v.GetInt64()).ToArray();
+                if (px.Length != w * h)
+                    continue;
+
+                list.Add(new ScionSprite(e.GetProperty("n").GetString() ?? string.Empty, e.GetProperty("c").GetString() ?? string.Empty, w, h, px));
+            }
+        }
+        catch (Exception ex)
+        {
+            this.log.Warning($"[stories] the scions could not be read: {ex.Message}");
+        }
+
+        return list;
     }
 
     /// <summary>Outdoor zones by name, with the region each belongs to.</summary>

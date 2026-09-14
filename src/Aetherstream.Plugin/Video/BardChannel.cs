@@ -4,7 +4,11 @@ namespace Aetherstream.Plugin.Video;
 internal sealed record StoryStock(
     IReadOnlyList<(string Zone, string Region)> Places,
     IReadOnlyList<(string Name, uint Icon)> Beasts,
-    IReadOnlyList<(string Name, uint Icon)> Treasures);
+    IReadOnlyList<(string Name, uint Icon)> Treasures,
+    IReadOnlyList<ScionSprite> Scions);
+
+/// <summary>One of the Scions as a sprite made from their render: the pixels in the frame's format, alpha in the top byte.</summary>
+internal sealed record ScionSprite(string Name, string Calling, int Width, int Height, uint[] Pixels);
 
 /// <summary>
 /// The story hour. A tonberry in a high-backed chair by a fire, a book on his knee, a lantern in
@@ -137,7 +141,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         "THE {TREASURE} UNDER THE {BEAST}",
     ];
 
-    private sealed record Story(string Hero, string Race, string Calling, string Home, string Far, Biome HomeBiome, Biome FarBiome, string Beast, uint BeastIcon, string Treasure, uint TreasureIcon, string God, string Title, string[] Pages, uint Hair, uint Cloak, uint Skin, string People);
+    private sealed record Story(string Hero, string Race, string Calling, string Home, string Far, Biome HomeBiome, Biome FarBiome, string Beast, uint BeastIcon, string Treasure, uint TreasureIcon, string God, string Title, string[] Pages, uint Hair, uint Cloak, uint Skin, string People, ScionSprite? Scion);
 
     public bool Available => font.Available;
 
@@ -228,6 +232,16 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         var hero = NameFor(peopleName, episode);
         var race = peopleName switch { "Au Ra" or "Elezen" => $"an {peopleName}", _ => $"a {peopleName}" };
         var calling = Callings[Pick(episode, 3, Callings.Length)];
+
+        // Every other tale is about one of the Scions, told with their own face and their own trade.
+        ScionSprite? scion = null;
+        if (s.Scions.Count > 0 && episode % 2 == 1)
+        {
+            scion = s.Scions[Pick(episode, 30, s.Scions.Count)];
+            hero = scion.Name;
+            race = "a Scion of the Seventh Dawn";
+            calling = scion.Calling;
+        }
         var home = s.Places[Pick(episode, 4, s.Places.Count)];
         var far = s.Places[Pick(episode, 5, s.Places.Count)];
         if (far.Zone == home.Zone)
@@ -236,7 +250,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         var treasure = s.Treasures[Pick(episode, 7, s.Treasures.Count)];
         var god = Deities[Pick(episode, 8, Deities.Length)];
 
-        var first = hero.Split(' ')[0];
+        var first = scion is null ? hero.Split(' ')[0] : hero;
         string Fill(string text) => text
             .Replace("{full}", hero).Replace("{hero}", first).Replace("{race}", race).Replace("{calling}", calling)
             .Replace("{home}", home.Zone).Replace("{far}", far.Zone)
@@ -252,7 +266,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         var hair = Hairs[Pick(episode, 20, Hairs.Length)];
         var cloak = Cloaks[Pick(episode, 21, Cloaks.Length)];
         var skin = Skins[Pick(episode, 22, Skins.Length)];
-        return new Story(hero, race, calling, home.Zone, far.Zone, Scenery.BiomeOf(home.Region, home.Zone), Scenery.BiomeOf(far.Region, far.Zone), beast.Name, beast.Icon, treasure.Name, treasure.Icon, god, title, pages, hair, cloak, skin, peopleName);
+        return new Story(hero, race, calling, home.Zone, far.Zone, Scenery.BiomeOf(home.Region, home.Zone), Scenery.BiomeOf(far.Region, far.Zone), beast.Name, beast.Icon, treasure.Name, treasure.Icon, god, title, pages, hair, cloak, skin, peopleName, scion);
     }
 
     private static string NextTitle(StoryStock s, int episode) => Compose(s, episode).Title;
@@ -353,6 +367,12 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
 
     private void DrawPicture(Span<uint> span, Story story, int page, double seconds, DateTime now, in BitmapFont.Clip all)
     {
+        if (story.Scion is { } scion)
+        {
+            this.DrawColourPlate(span, story, scion, page, seconds, now, all);
+            return;
+        }
+
         // A shadow play: a paper screen lit from behind, the light warmest at the middle and
         // flickering a little, in a wooden frame; every figure a black cutout on it.
         var atHome = page is 0 or 1 or 5;
@@ -421,6 +441,69 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
     }
 
     private static readonly uint WoodDark = Canvas.Rgb(0x3A, 0x24, 0x10);
+
+    /// <summary>
+    /// A plate in colour, for a tale about someone whose face the listener knows: the country
+    /// painted, the Scion's sprite standing in it, the beast's portrait and the treasure's icon as
+    /// themselves. The frame and the labels are the same as the shadow plates'.
+    /// </summary>
+    private void DrawColourPlate(Span<uint> span, Story story, ScionSprite scion, int page, double seconds, DateTime now, in BitmapFont.Clip all)
+    {
+        var atHome = page is 0 or 1 or 5;
+        var biome = atHome ? story.HomeBiome : story.FarBiome;
+        var hour = now.Hour + (now.Minute / 60f);
+        var daylight = page is 3 or 4 ? 0.25f : Math.Clamp(1f - (Math.Abs(hour - 13f) / 7.5f), 0f, 1f);
+        const int Top = 60, Bottom = 540, GroundY = 470;
+
+        Canvas.Fill(span, 0, 0, W, H, Wood);
+        Scenery.Paint(span, W, Top, 340, Bottom, biome, daylight, (page * 17) + 3, page == 2 ? seconds * 40.0 : seconds * 4.0);
+
+        // The Scion, walking on the road page, with a bob to the step.
+        var scale = 4;
+        var heroX = page == 2 ? 200 + (int)((seconds * 30.0) % 700) : 300;
+        var step = page == 2 ? (int)(Math.Abs(Math.Sin(seconds * 8.0)) * 6) : 0;
+        DrawSprite(span, scion, heroX, GroundY - (scion.Height * scale) + 12 - step, scale);
+
+        if (page is 3 or 4)
+        {
+            var bump = page == 4 ? (int)(Math.Sin(seconds * 10.0) * 8) : (int)(Math.Sin(seconds * 1.5) * 3);
+            Canvas.Disc(span, 900, GroundY + 10, 100, Canvas.Lerp(Canvas.Black, Canvas.Rgb(0x40, 0x40, 0x40), 0.5f));
+            this.DrawIcon(span, story.BeastIcon, 800 + bump, GroundY - 190, 200);
+        }
+
+        if (page is 1 or 3 or 5)
+        {
+            var glow = (int)(Math.Sin(seconds * 3.0) * 4);
+            var tx = page == 5 ? 560 : 700;
+            Canvas.Disc(span, tx + 45, GroundY - 40 - glow, 60, Canvas.Lerp(Gold, Page, 0.5f));
+            this.DrawIcon(span, story.TreasureIcon, tx, GroundY - 90 - glow, 90);
+        }
+
+        Canvas.Fill(span, 0, Top - 12, W, 12, WoodDark);
+        Canvas.Fill(span, 0, Bottom, W, 12, WoodDark);
+        Canvas.Fill(span, 0, Top, 12, Bottom - Top, WoodDark);
+        Canvas.Fill(span, W - 12, Top, 12, Bottom - Top, WoodDark);
+        var caption = Canvas.Cut(atHome ? story.Home.ToUpperInvariant() : story.Far.ToUpperInvariant(), 30);
+        font.Draw(span, W, caption, W - 30 - font.Measure(caption), 10, Cream, 1, all);
+        var plate = $"PLATE {page + 1}";
+        font.Draw(span, W, plate, 30, 10, Cream, 1, all);
+    }
+
+    /// <summary>A sprite scaled up whole, its transparent cells left alone.</summary>
+    private static void DrawSprite(Span<uint> span, ScionSprite sprite, int x, int y, int scale)
+    {
+        for (var sy = 0; sy < sprite.Height; sy++)
+        {
+            for (var sx = 0; sx < sprite.Width; sx++)
+            {
+                var p = sprite.Pixels[(sy * sprite.Width) + sx];
+                if (p >> 24 == 0)
+                    continue;
+
+                Canvas.Fill(span, x + (sx * scale), y + (sy * scale), scale, scale, p | 0xFF000000u);
+            }
+        }
+    }
 
     private static void ShadowHills(Span<uint> span, int ground, uint ink, int seed, double freq, int height, double shift)
     {
