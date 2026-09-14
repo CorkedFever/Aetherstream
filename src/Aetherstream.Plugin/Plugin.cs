@@ -93,14 +93,15 @@ public sealed partial class Plugin : IDalamudPlugin
         // thousands of lines a minute.
         this.vlc.Log += this.OnVlcLog;
 
+        var images = Path.Combine(
+            pluginInterface.AssemblyLocation.Directory?.FullName ?? AppContext.BaseDirectory,
+            "images");
+
         this.session = new StreamSession(this.vlc, textures, log, this.config)
         {
-            IdleCard = new TestCard(
-                Path.Combine(
-                    pluginInterface.AssemblyLocation.Directory?.FullName ?? AppContext.BaseDirectory,
-                    "images",
-                    "testcard.rgba.gz"),
-                log),
+            IdleCard = new TestCard(Path.Combine(images, "testcard.rgba.gz"), log),
+            Guide = new GuideChannel(new BitmapFont(Path.Combine(images, "guidefont.a8.gz"), log)),
+            GuideData = this.GuideSnapshot,
         };
         this.screen = new WorldScreen(gameGui);
         this.gameGuiRef = gameGui;

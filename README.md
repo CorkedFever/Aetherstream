@@ -242,6 +242,21 @@ authority whenever there is an audio track. libvlc's own log is now forwarded at
 (`Plugin.VlcLog.cs`), rate-limited and with the routine start-up messages filtered, so the next
 stream failure names itself instead of being reproduced in a desktop harness.
 
+## The guide channel
+
+The list button on the remote puts up a listings channel in the style of the 90s TV Guide
+Channel: whatever is playing shrinks into the top-left corner, the time and what is on sit
+beside it, and a grid of everything you could be watching scrolls up underneath on its own —
+pinned channels by number, live parties, then recent films and videos. Channel up and down
+still work while it is up, and the current row is highlighted. With nothing playing the test
+card takes the corner.
+
+It is drawn straight into the frame buffer, so it shows in the window and on a painted
+furnishing alike and costs nothing while it is off. The text comes from `images/guidefont.a8.gz`,
+VT323 rasterised at build time by `tools/make_guidefont.py` (needs Pillow); re-run that after
+changing the size in the script. Glyphs are ASCII only — names are folded to plain letters
+before drawing.
+
 ## Running the harness
 
 ```

@@ -88,6 +88,15 @@ internal sealed class Remote(UiContext ui, ChannelDial dial, Screen screen)
         if (Ui.IconButton(FontAwesomeIcon.History, "Last channel", "##last", dial.HasLast))
             dial.Last();
 
+        // The guide channel. Lit while it is up; works with or without something playing.
+        ImGui.SameLine();
+        var guideUp = session.GuideActive;
+        using (ImRaii.PushColor(ImGuiCol.Button, Theme.GlassLit, guideUp).Push(ImGuiCol.Border, Theme.Accent, guideUp))
+        {
+            if (Ui.IconButton(FontAwesomeIcon.ThList, guideUp ? "Put the guide away" : "Guide channel", "##guide", session.Guide is { Available: true }))
+                session.GuideActive = !guideUp;
+        }
+
         if (dial.NumberOf(ui.Config.Source) is > 0 and var number)
         {
             ImGui.SameLine();

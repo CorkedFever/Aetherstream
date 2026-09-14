@@ -268,6 +268,12 @@ internal sealed class StreamSession(
             this.Start(request, resumeAt);
         }
 
+        if (this.GuideActive && this.Guide is { Available: true } guide && this.GuideData is { } guideData)
+        {
+            this.ShowGuide(guide, guideData);
+            return;
+        }
+
         if (this.source is null)
         {
             this.ShowIdleCard();
@@ -277,11 +283,43 @@ internal sealed class StreamSession(
         if (this.uploader is null)
             return;
 
-        // RenderFrame repeats the last picture when nothing new has been presented, so this is
-        // cheap but not free; only upload when the decoder has actually moved on.
+        if (!this.PullVideo())
+            return;
+
+        if (config.RetroMode)
+            this.Retro(this.frame);
+
+        if (config.PaintOnSurface)
+            this.MakeOpaque(this.frame);
+
+        try
+        {
+            this.uploader.Upload(config.HasFit ? this.Fit(this.frame) : this.frame);
+        }
+        catch (Exception ex)
+        {
+            this.Error = $"Frame upload failed: {ex.Message}";
+            log.Error(ex, "Frame upload failed.");
+            this.TearDown();
+        }
+    }
+
+    /// <summary>
+    /// Pulls the newest decoded picture into the frame buffer, with the housekeeping that goes
+    /// with a fresh frame. False when the decoder has not moved on since last time.
+    /// <para>
+    /// RenderFrame repeats the last picture when nothing new has been presented, so this is
+    /// cheap but not free; the frame is only uploaded when the decoder has actually moved on.
+    /// </para>
+    /// </summary>
+    private bool PullVideo()
+    {
+        if (this.source is null)
+            return false;
+
         var presented = this.source.Stats.FramesPresented;
         if (presented == this.lastPresented)
-            return;
+            return false;
 
         this.lastPresented = presented;
 
@@ -298,25 +336,8 @@ internal sealed class StreamSession(
         this.ApplyAudioPreference();
 
         this.source.RenderFrame(this.frame);
-
-        if (config.RetroMode)
-            this.Retro(this.frame);
-
         this.ReportSync();
-
-        if (config.PaintOnSurface)
-            this.MakeOpaque(this.frame);
-
-        try
-        {
-            this.uploader.Upload(config.HasFit ? this.Fit(this.frame) : this.frame);
-        }
-        catch (Exception ex)
-        {
-            this.Error = $"Frame upload failed: {ex.Message}";
-            log.Error(ex, "Frame upload failed.");
-            this.TearDown();
-        }
+        return true;
     }
 
     private long resumeTargetMs;
@@ -642,6 +663,80 @@ internal sealed class StreamSession(
         catch (Exception ex)
         {
             log.Warning(ex, "Could not show the test card.");
+            this.TearDown();
+        }
+    }
+
+    // -- the guide channel ---------------------------------------------------------------------
+
+    /// <summary>The guide renderer. Set by the plugin; null when its font is missing.</summary>
+    public GuideChannel? Guide { get; set; }
+
+    /// <summary>Whether the guide is up. It composes over whatever else is on, or over nothing.</summary>
+    public bool GuideActive { get; set; }
+
+    /// <summary>Asked for what to list, once per repaint. Render thread.</summary>
+    public Func<GuideSnapshot>? GuideData { get; set; }
+
+    private uint[]? composed;
+    private readonly System.Diagnostics.Stopwatch guideClock = new();
+    private long guidePaintedMs = -1;
+
+    /// <summary>
+    /// Paints the guide over the live picture, or over the test card when nothing is on.
+    /// Repainted about thirty times a second so the rows and the ticker move, and whenever the
+    /// decoder presents a new picture for the corner.
+    /// </summary>
+    private void ShowGuide(GuideChannel guide, Func<GuideSnapshot> data)
+    {
+        if (!this.guideClock.IsRunning)
+            this.guideClock.Restart();
+
+        if (this.uploader is null)
+        {
+            this.uploader = this.CreateUploader();
+            this.guidePaintedMs = -1;
+        }
+
+        // The test card path must repaint from scratch once the guide comes down.
+        this.idleStamp = (-1, false, false, false);
+        this.IdleShowing = this.source is null;
+
+        var moved = this.PullVideo();
+        var now = this.guideClock.ElapsedMilliseconds;
+        if (!moved && this.guidePaintedMs >= 0 && now - this.guidePaintedMs < 33)
+            return;
+
+        this.guidePaintedMs = now;
+
+        uint[]? picture = null;
+        if (this.source is not null)
+        {
+            picture = this.frame;
+        }
+        else if (this.IdleCard is { Available: true } card)
+        {
+            card.Render(this.frame, DateTime.Now);
+            picture = this.frame;
+        }
+
+        this.composed ??= new uint[Width * Height];
+        guide.Render(this.composed, picture, data(), DateTime.Now, now / 1000.0);
+
+        if (config.RetroMode)
+            this.Retro(this.composed);
+
+        if (config.PaintOnSurface)
+            this.MakeOpaque(this.composed);
+
+        try
+        {
+            this.uploader.Upload(config.HasFit ? this.Fit(this.composed) : this.composed);
+        }
+        catch (Exception ex)
+        {
+            log.Warning(ex, "Could not show the guide.");
+            this.GuideActive = false;
             this.TearDown();
         }
     }

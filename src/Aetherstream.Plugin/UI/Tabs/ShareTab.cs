@@ -46,6 +46,9 @@ internal sealed class ShareTab(UiContext ui)
 
     public void SetParties(List<PartyDirectory.Group> value) => this.groups = value;
 
+    /// <summary>The parties as last heard from the service. For the guide channel.</summary>
+    public IReadOnlyList<PartyDirectory.Group> Parties => this.groups;
+
     public void SetStatus(string value) => this.status = value;
 
     private bool Connected => ui.Config.PartyApiHost.Length > 0;

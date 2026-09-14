@@ -134,6 +134,13 @@ they would change the experience.
 ## Odd but cheap
 
 - **Teletext page.** A 1980s teletext page of Eorzea news, weather and market prices on channel 100.
+- **Prevue-style guide channel.** *Built (the guide button on the remote); music, EPG cells and
+  a promo loop still to do.* The 90s TV Guide Channel: a grid of channels and half-hour
+  slots scrolling up slowly on the bottom two thirds, the current channel or a promo loop in the
+  top third, a weather and party ticker along the bottom, smooth jazz throughout. Rows come from
+  the Live TV playlist and the party schedule; cells fill from EPG data where a playlist has it.
+  Probably the better first build of the two: it answers "what's on right now" and reuses the
+  guide's data, while teletext is the deeper joke.
 - **Test card variations** by time of day, or a sign-off at midnight.
 - **Remote batteries.** After a thousand presses the remote gets slow until you "change the
   batteries". A joke, behind a toggle.
