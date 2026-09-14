@@ -109,7 +109,7 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
 
                 var rule = y + RowHeight - 6;
                 if (rule >= RowTop && rule < RowsBottom)
-                    Canvas.Fill(span, Left, rule, Split - Left - 24, 2, Canvas.Edge);
+                    Canvas.Fill(span, Left, rule, Split - Left - 24, 3, Canvas.Edge);
             }
         }
 
@@ -146,9 +146,9 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
                 break;
 
             // A box, ticked when done; the value dim beside or under the name.
-            Canvas.Rect(span, Split + 16, ry + 9, 22, 22, done ? Canvas.Good : Canvas.Dim);
+            Canvas.Rect(span, Split + 14, ry + 8, 26, 26, done ? Canvas.Good : Canvas.Dim);
             if (done)
-                Canvas.Fill(span, Split + 21, ry + 14, 12, 12, Canvas.Good);
+                Canvas.Fill(span, Split + 20, ry + 14, 14, 14, Canvas.Good);
 
             // A wider right margin than the rest of the board: a painted surface crops its edges.
             var columns = font.Fit(W - Split - 72 - 40);
