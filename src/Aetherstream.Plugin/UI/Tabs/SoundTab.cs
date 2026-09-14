@@ -27,36 +27,6 @@ internal sealed class SoundTab(UiContext ui)
         this.plexStatus = status;
     }
 
-    /// <summary>Output, Radio, Podcasts and Music, drawn the way the input strip is.</summary>
-    private void DrawPartStrip()
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var labels = new[] { "OUTPUT", "RADIO", "PODCASTS", "MUSIC" };
-        using (Theme.PushDisplay())
-        {
-            for (var i = 0; i < labels.Length; i++)
-            {
-                if (i > 0)
-                    ImGui.SameLine(0f, 14f);
-                var size = ImGui.CalcTextSize(labels[i]);
-                var active = i == this.part;
-                if (ImGui.InvisibleButton($"##soundpart{i}", size + new System.Numerics.Vector2(6f, 6f)))
-                    this.part = i;
-                var min = ImGui.GetItemRectMin();
-                var max = ImGui.GetItemRectMax();
-                var hovered = ImGui.IsItemHovered();
-                drawList.AddText(min + new System.Numerics.Vector2(3f, 3f), Theme.U32(active ? Theme.Accent : hovered ? Theme.Text : Theme.TextDim), labels[i]);
-                if (active)
-                    drawList.AddRectFilled(new System.Numerics.Vector2(min.X, max.Y - 1f), new System.Numerics.Vector2(max.X, max.Y + 1f), Theme.U32(Theme.Accent));
-            }
-        }
-
-        var y = ImGui.GetItemRectMax().Y + 5f;
-        var left = ImGui.GetCursorScreenPos().X;
-        drawList.AddLine(new System.Numerics.Vector2(left, y), new System.Numerics.Vector2(left + ImGui.GetContentRegionAvail().X, y), Theme.U32(Theme.Edge), 1f);
-        ImGui.Dummy(new System.Numerics.Vector2(0f, 8f));
-    }
-
     /// <summary>
     /// What plays under the guide and the weather. Bundled tracks by default, so it works out of
     /// the box; your own folder or a Plex playlist when you would rather it were your music.
@@ -257,16 +227,21 @@ internal sealed class SoundTab(UiContext ui)
         ui.Session.ReopenAudio();
     }
 
+    /// <summary>The Music input: the music under the channels, the radio, and the podcasts.</summary>
     public void Draw()
     {
-        this.DrawPartStrip();
+        Ui.Strip("music", ["MUSIC", "RADIO", "PODCASTS"], ref this.part);
         switch (this.part)
         {
-            case 1: this.Radio.Draw(); return;
-            case 2: this.Podcasts.Draw(); return;
-            case 3: this.DrawMusic(); return;
+            case 1: this.Radio.Draw(); break;
+            case 2: this.Podcasts.Draw(); break;
+            default: this.DrawMusic(); break;
         }
+    }
 
+    /// <summary>The sound output: on or off, volume, the device, the engine, and sync. Drawn on Setup.</summary>
+    public void DrawOutput()
+    {
         Ui.Section("Sound");
 
         var enabled = ui.Config.AudioEnabled;

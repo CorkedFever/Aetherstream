@@ -53,7 +53,7 @@ internal sealed class ControlWindow : Window
         this.Sound = new SoundTab(context);
         this.Channels = new ChannelsTab(context);
         this.Share = new ShareTab(context);
-        this.Setup = new SetupTab(context) { LineupChoices = () => this.LiveTv.Choices };
+        this.Setup = new SetupTab(context) { LineupChoices = () => this.LiveTv.Choices, DrawScreen = screen.Draw, DrawSound = this.Sound.DrawOutput };
 
         this.inputs =
         [
@@ -61,8 +61,7 @@ internal sealed class ControlWindow : Window
             ("Library", this.Library.Draw),
             ("Live TV", this.LiveTv.Draw),
             ("Channels", this.Channels.Draw),
-            ("Screen", screen.Draw),
-            ("Sound", this.Sound.Draw),
+            ("Music", this.Sound.Draw),
             ("Share", this.Share.Draw),
             ("Setup", this.Setup.Draw),
         ];
@@ -252,7 +251,7 @@ internal sealed class ControlWindow : Window
 
     /// <summary>
     /// The inputs, as the strip on the front of a set: the display face, the selected one lit with
-    /// a line under it. Same seven, same order as the tabs they replace.
+    /// a line under it. Screen and the sound output live on Setup; Music holds the music, radio and podcasts.
     /// </summary>
     private void DrawInputStrip()
     {

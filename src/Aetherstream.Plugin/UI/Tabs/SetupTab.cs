@@ -33,16 +33,28 @@ internal sealed class SetupTab(UiContext ui)
     /// <summary>Set by the window: what the playlist offers to pick a lineup from.</summary>
     public Func<(IReadOnlyList<string> Countries, IReadOnlyList<string> Groups)>? LineupChoices;
 
+    private int part;
+
+    /// <summary>Set by the window: the screen input's whole panel, now a part of Setup.</summary>
+    public Action? DrawScreen;
+
+    /// <summary>Set by the window: the sound output, from the music tab's old home.</summary>
+    public Action? DrawSound;
+
     private string itemInput = string.Empty;
     private string itemStatus = string.Empty;
 
     public void Draw()
     {
-        this.DrawChannelSettings();
-        this.DrawTools();
-        this.DrawPlex();
-        this.DrawDecoding();
-        this.DrawDiagnostics();
+        Ui.Strip("setup", ["SCREEN", "SOUND", "CHANNELS", "SOURCES", "SYSTEM"], ref this.part);
+        switch (this.part)
+        {
+            case 0: this.DrawScreen?.Invoke(); break;
+            case 1: this.DrawSound?.Invoke(); break;
+            case 2: this.DrawChannelSettings(); break;
+            case 3: this.DrawTools(); this.DrawPlex(); break;
+            default: this.DrawDecoding(); this.DrawDiagnostics(); break;
+        }
     }
 
     /// <summary>

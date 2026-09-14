@@ -28,7 +28,7 @@ If a YouTube link does nothing, the screen says why: `NO PICTURE — yt-dlp is n
 
 ### First five minutes
 
-- **Screen tab → Known screens → Everkeep Monitor.** Stand next to your monitor and click it; the
+- **Setup → Screen → Known screens → Everkeep Monitor.** Stand next to your monitor and click it; the
   picture lands on the nearest one. Recolour the wall behind it black in-game — the panel is an
   additive effect, and a black wall is the single biggest quality win.
 - **Live TV.** Right-click a channel to give it a number; channel ▲/▼ and last-channel on the remote
@@ -52,7 +52,7 @@ zip; **external** has to be on the user's machine; **server** runs on the party 
 | [NAudio](https://github.com/naudio/NAudio) / `NAudio.Wasapi` | 2.2.1 / 2.3.0 | MIT | Audio output. Dalamud has no audio API, so the plugin opens its own shared-mode WASAPI render stream. |
 | [VT323](https://fonts.google.com/specimen/VT323) | Google Fonts, 2011 | SIL OFL 1.1 | The display face — headings, the on-screen display, the input strip. `Fonts\OFL.txt` ships beside it, as the licence requires. |
 | [ImageSharp](https://github.com/SixLabors/ImageSharp) 3.1 | Six Labors | Six Labors Split License (Apache 2.0 terms for open source) | Decodes venue banners, which are WebP, into pixels for the venues channel. |
-| Bossa Antigua, Lobby Time, Backbay Lounge, Airport Lounge, Deuces | [Kevin MacLeod](https://incompetech.com), incompetech.com | CC BY 4.0 | The music under the guide and weather channels, re-encoded at 112 kbps. `music\CREDITS.txt` ships beside them; the Sound tab can swap in your own folder or a Plex playlist. |
+| Bossa Antigua, Lobby Time, Backbay Lounge, Airport Lounge, Deuces | [Kevin MacLeod](https://incompetech.com), incompetech.com | CC BY 4.0 | The music under the guide and weather channels, re-encoded at 112 kbps. `music\CREDITS.txt` ships beside them; the Music tab can swap in your own folder, a Plex playlist, a radio station or a podcast. |
 | [Dalamud](https://github.com/goatcorp/Dalamud) (`Dalamud.NET.Sdk`) | 15.0.0 / API level 15 | AGPL 3.0 | The plugin host: ImGui, textures, the game object table, logging. Not in the zip — every user already has it. |
 
 libvlc's own plugin set is shipped unpruned. It is the safest choice — pruning it is what produced
@@ -78,8 +78,8 @@ a plugin that fetches executables is not something to ask people to trust.
 | --- | --- | --- |
 | [iptv-org](https://github.com/iptv-org/iptv) | The default live TV playlist (`index.m3u`) | Volunteer-maintained index of publicly available streams. Cached locally for 12 hours; any other extended M3U can be used instead or alongside it. |
 | Local files | The library's Local shelf | Your Videos folder and any folders you add, scanned for the usual formats; a picture with the file's name, or a poster.jpg in its folder, is the tile. Played as a file URI. |
-| [Radio Browser](https://www.radio-browser.info/) | The Sound tab's Radio part: internet radio stations | A community directory of some thirty thousand stations with stream addresses, logos and tags, on public mirrors. A station plays as the music under the drawn channels; the Radio channel shows its logo and what the stream says is on. |
-| Apple's podcast directory, and RSS | The Sound tab's Podcasts part | Shows are found by name through Apple's free search, or a feed address is pasted in; episodes are read from the feed's RSS and play as the music, in order from the one chosen. |
+| [Radio Browser](https://www.radio-browser.info/) | The Music tab's Radio part: internet radio stations | A community directory of some thirty thousand stations with stream addresses, logos and tags, on public mirrors. A station plays as the music under the drawn channels; the Radio channel shows its logo and what the stream says is on. |
+| Apple's podcast directory, and RSS | The Music tab's Podcasts part | Shows are found by name through Apple's free search, or a feed address is pasted in; episodes are read from the feed's RSS and play as the music, in order from the one chosen. |
 | [Internet Archive](https://archive.org/details/movies) | The library's Archive shelf: public domain and freely licensed films | Searched through the advanced search API by collection and title, most downloaded first; a film's best MP4 is picked from its metadata and played straight from archive.org's download links, which redirect to a storage node and support ranges. No account. Quality varies with the transfer. |
 | [PaissaDB](https://zhu.codes/paissa) | Open housing plots for the housing channel | The game never lists open plots; PaissaDB is crowd-sourced from players running PaissaHouse who open a ward. Fetched every five minutes while the channel is up, for the character's current world. Every listing shows how long ago it was last seen. |
 | [iptv-org API](https://github.com/iptv-org/api) | Other addresses for a channel whose listed one has died (`streams.json`) | The playlist lists one address per channel and the free services move theirs without notice; when a lineup channel dies, the index's other addresses for the same channel id are probed and the first that answers stands in for it, with the channel still listed under its own number. Read once per session, only when something dies. |
@@ -334,7 +334,7 @@ know what the Shroud's sky is doing.
 
 ## Channel music
 
-The guide and the weather play music underneath, the way the real ones did. The Sound tab's
+The guide and the weather play music underneath, the way the real ones did. The Music tab's
 "Channel music" section picks the source: the bundled tracks (five Kevin MacLeod lounge pieces,
 CC BY 4.0, in `music\`), a folder of your own (mp3, flac, ogg, m4a, wav, opus, subfolders
 included), or an audio playlist on the Plex server you are signed in to. It is shuffled, looped,

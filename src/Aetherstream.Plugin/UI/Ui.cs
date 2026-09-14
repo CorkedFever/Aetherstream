@@ -27,6 +27,35 @@ internal static class Ui
 
     public static readonly Vector4 Faint = Theme.TextDim;
 
+    /// <summary>A strip of parts, drawn the way the input strip is: the display face, the chosen one underlined.</summary>
+    public static void Strip(string id, string[] labels, ref int selected)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        using (Theme.PushDisplay())
+        {
+            for (var i = 0; i < labels.Length; i++)
+            {
+                if (i > 0)
+                    ImGui.SameLine(0f, 14f);
+                var size = ImGui.CalcTextSize(labels[i]);
+                var active = i == selected;
+                if (ImGui.InvisibleButton($"##{id}{i}", size + new Vector2(6f, 6f)))
+                    selected = i;
+                var min = ImGui.GetItemRectMin();
+                var max = ImGui.GetItemRectMax();
+                var hovered = ImGui.IsItemHovered();
+                drawList.AddText(min + new Vector2(3f, 3f), Theme.U32(active ? Theme.Accent : hovered ? Theme.Text : Theme.TextDim), labels[i]);
+                if (active)
+                    drawList.AddRectFilled(new Vector2(min.X, max.Y - 1f), new Vector2(max.X, max.Y + 1f), Theme.U32(Theme.Accent));
+            }
+        }
+
+        var y = ImGui.GetItemRectMax().Y + 5f;
+        var left = ImGui.GetCursorScreenPos().X;
+        drawList.AddLine(new Vector2(left, y), new Vector2(left + ImGui.GetContentRegionAvail().X, y), Theme.U32(Theme.Edge), 1f);
+        ImGui.Dummy(new Vector2(0f, 8f));
+    }
+
     /// <summary>A heading in the display face with a rule under it.</summary>
     public static void Section(string title) => Theme.Heading(title);
 
