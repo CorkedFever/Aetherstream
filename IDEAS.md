@@ -222,6 +222,26 @@ Party and estate:
 More atmosphere: **rain on the window**, **lava lamp** (metaballs), **Matrix rain** in VT323,
 **test card variations** by hour with a midnight sign-off, **Flying Toasters**.
 
+The cable lineup, as channels a set would actually have:
+
+- **Shopping channel.** QVC for the market board: one item at a time, low and average price, a
+  BUY NOW flash when it is under average, a countdown per item.
+- **Cooking channel.** A recipe from the crafting log every couple of minutes: ingredients with
+  market prices, and the food's buffs.
+- **Travel channel.** A postcard per zone: weather and time of day there, aetherytes, flavour.
+- **Real estate.** The housing lottery phase and countdown, districts and price bands, a plot of the week.
+- **Sports.** A results ticker: Fashion Report, the cactpot draw, Triple Triad tournaments, MGP events.
+- **Music channel.** The jukebox as a channel: track in the corner, a visualiser from the audio
+  ring, Plex cover art.
+- **Public access.** The party stream with a channel number, a LIVE bug, a viewer count, and an
+  off-air card when nobody is broadcasting.
+- **Emergency broadcast.** The EAS card over whatever is on when maintenance is within the hour.
+- **Late night sign-off.** After a set hour the test card, "we now conclude our broadcast day",
+  a fade to static, and the set turns itself off.
+- **Horoscope.** An Astrologian arcana card a day with a fortune and your guardian deity.
+- **Nature documentary.** A zone's creatures one at a time, from the bestiary, with a slow pan.
+- **History channel.** "On this day": patches and events that landed on today's date.
+
 A page dial on the remote is shared by teletext, trivia and the jukebox, so it is the piece to
 build first. Picks: the aquarium for delight, the Eorzea clock for utility, the "ON AIR" card
 because it finishes watch-together.
