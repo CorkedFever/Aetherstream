@@ -943,8 +943,7 @@ internal sealed class StreamSession(
                     width: Width,
                     height: Height,
                     callbackAudio: wantsAudio,
-                    muteOutput: !wantsAudio,
-                    ringSeconds: (config.NetworkCachingMs / 1000) + 4);
+                    muteOutput: !wantsAudio);
 
                 if (wantsAudio && created.Audio is { } ring)
                 {
