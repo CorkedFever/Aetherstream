@@ -1,4 +1,5 @@
 using Aetherstream.Playback;
+using Aetherstream.Plugin.UI;
 
 namespace Aetherstream.Plugin;
 
