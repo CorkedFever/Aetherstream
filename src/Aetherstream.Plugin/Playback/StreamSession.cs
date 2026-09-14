@@ -704,7 +704,11 @@ internal sealed class StreamSession(
             this.channelClock.Restart();
 
         // Music first, every frame, so a finished track moves on even while the paint is throttled.
-        if (channel.WantsMusic && config.ChannelMusic && config.AudioEnabled && this.MusicTracks is { } tracks)
+        // A channel that keeps the picture in view keeps its sound too: the guide over a film is
+        // the film with a listing on it, not a listing with a film in the corner. Music fills in
+        // only when there is nothing to hear, or the channel covers the picture entirely.
+        var musicWanted = channel.WantsMusic && (this.source is null || !channel.WantsPicture);
+        if (musicWanted && config.ChannelMusic && config.AudioEnabled && this.MusicTracks is { } tracks)
         {
             this.music ??= new Jukebox(vlc, log);
             this.music.Ensure(tracks(), config.AudioDeviceId);

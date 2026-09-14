@@ -276,8 +276,9 @@ The guide and the weather play music underneath, the way the real ones did. The 
 "Channel music" section picks the source: the bundled tracks (five Kevin MacLeod lounge pieces,
 CC BY 4.0, in `music\`), a folder of your own (mp3, flac, ogg, m4a, wav, opus, subfolders
 included), or an audio playlist on the Plex server you are signed in to. It is shuffled, looped,
-placed in the room like the picture's own sound, and ducks that sound to nothing while a channel
-is up. `Playback\Jukebox.cs` is the second, audio-only decoder that plays it.
+placed in the room like the picture's own sound. The weather covers the picture, so it takes the
+sound too; the guide keeps the picture in its corner, so a film playing keeps its own sound and the
+music only fills in when nothing is on. `Playback\Jukebox.cs` is the second, audio-only decoder that plays it.
 
 ## Running the harness
 

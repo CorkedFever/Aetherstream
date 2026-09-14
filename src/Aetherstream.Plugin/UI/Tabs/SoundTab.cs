@@ -37,7 +37,7 @@ internal sealed class SoundTab(UiContext ui)
             ui.SaveConfig();
         }
 
-        Ui.Tip("The smooth jazz under the forecast. The picture's own sound goes quiet while a channel is up.");
+        Ui.Tip("The smooth jazz under the forecast. The weather covers the picture, so its sound gives way to the music; the guide keeps the picture in the corner, so a film playing keeps its sound and the music only fills in when nothing is on.");
 
         if (!on)
             return;
