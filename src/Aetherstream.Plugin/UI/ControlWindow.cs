@@ -24,12 +24,13 @@ internal sealed class ControlWindow : Window
     private readonly UiContext ui;
     private readonly Action saveConfig;
     private readonly Remote remote;
+    private readonly RemoteWidget widget;
     private readonly (string Label, Action Draw)[] inputs;
     private int input;
     private Vector2 unfoldedSize = new(560f, 720f);
 
     /// <summary>The folded widget's content width. Fixed, or auto-resize would keep whatever width the window had.</summary>
-    private const float FoldedWidth = 400f;
+    private const float FoldedWidth = RemoteWidget.Width;
     private Vector2? sizeToRestore;
     private bool loggedDrawFailure;
 
@@ -42,6 +43,7 @@ internal sealed class ControlWindow : Window
         this.Dial = new ChannelDial(context);
         this.Screen = new Screen(context);
         this.remote = new Remote(context, this.Dial, this.Screen);
+        this.widget = new RemoteWidget(context, this.Dial) { Unfold = this.ToggleFold };
 
         var watch = new WatchTab(context);
         this.Library = new LibraryTab(context);
@@ -190,9 +192,9 @@ internal sealed class ControlWindow : Window
             ImGui.TextColored(Theme.Text, Caption);
 
             // What is on, right-aligned against the buttons — the folded bar's whole reason to exist.
-            if (this.ui.Session.IsPlaying)
+            if (this.ui.Session.IsPlaying && !this.ui.Config.WindowMinimised)
             {
-                var title = Ui.Ellipsis(this.Screen.Title(), this.ui.Config.WindowMinimised ? 16 : 34).ToUpperInvariant();
+                var title = Ui.Ellipsis(this.Screen.Title(), 34).ToUpperInvariant();
                 var titleSize = ImGui.CalcTextSize(title);
                 ImGui.SetCursorScreenPos(origin + new Vector2(width - titleSize.X - buttonsWidth - 8f, (TitleBarHeight - titleSize.Y) / 2f));
                 ImGui.TextColored(Theme.TextDim, title);
@@ -200,21 +202,11 @@ internal sealed class ControlWindow : Window
 
             ImGui.SetCursorScreenPos(origin + new Vector2(width - buttonsWidth, (TitleBarHeight - buttonHeight) / 2f));
             if (ImGui.InvisibleButton("##fold", new Vector2(foldWidth, buttonHeight)))
-            {
-                // Folding lets the window shrink to the bar, which is the size ImGui would then
-                // remember; the size before folding is kept and put back on unfolding.
-                if (!this.ui.Config.WindowMinimised)
-                    this.unfoldedSize = ImGui.GetWindowSize();
-                else
-                    this.sizeToRestore = this.unfoldedSize;
-
-                this.ui.Config.WindowMinimised = !this.ui.Config.WindowMinimised;
-                this.saveConfig();
-            }
+                this.ToggleFold();
 
             var foldHovered = ImGui.IsItemHovered();
             if (foldHovered)
-                ImGui.SetTooltip(this.ui.Config.WindowMinimised ? "Unfold" : "Fold down to a small remote; the picture keeps playing");
+                ImGui.SetTooltip(this.ui.Config.WindowMinimised ? "Unfold" : "Fold down to a remote; the picture keeps playing");
 
             ImGui.SetCursorScreenPos(origin + new Vector2(width - buttonsWidth + 6f, (TitleBarHeight - captionSize.Y) / 2f - 4f));
             ImGui.TextColored(foldHovered ? Theme.Text : Theme.TextFaint, this.ui.Config.WindowMinimised ? "^" : "_");
@@ -235,67 +227,20 @@ internal sealed class ControlWindow : Window
     /// Folded: the LED, the state, and a thumbnail of the picture, so the window can live in a
     /// corner while the furnishing does the showing and still say at a glance that all is well.
     /// </summary>
-    private void DrawFolded()
+    /// <summary>Folded: the remote itself. See <see cref="RemoteWidget"/>.</summary>
+    private void DrawFolded() => this.widget.Draw();
+
+    private void ToggleFold()
     {
-        var session = this.ui.Session;
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = FoldedWidth;
+        // Folding lets the window shrink to the remote, which is the size ImGui would then
+        // remember; the size before folding is kept and put back on unfolding.
+        if (!this.ui.Config.WindowMinimised)
+            this.unfoldedSize = ImGui.GetWindowSize();
+        else
+            this.sizeToRestore = this.unfoldedSize;
 
-        const float StatusHeight = 20f;
-        const float RemoteHeight = 30f;
-        const float Height = StatusHeight + 4f + RemoteHeight;
-
-        // The picture, small, on the right; everything else sits to its left.
-        var thumb = new Vector2(Height * 16f / 9f, Height);
-        var hasThumb = session.Uploader is { HasFrame: true };
-        var left = width - (hasThumb ? thumb.X + 10f : 0f);
-
-        var led = session.Error is not null ? Theme.Bad
-            : session.StalledAtMs > 0 ? Theme.Warn
-            : session.IsPlaying ? Theme.Good
-            : Theme.Edge;
-
-        drawList.AddCircleFilled(origin + new Vector2(8f, StatusHeight / 2f), 3f, Theme.U32(led), 12);
-
-        var state = session.Error is not null ? "NO PICTURE"
-            : session.StalledAtMs > 0 ? "SIGNAL LOST"
-            : session.IsPaused ? "PAUSED"
-            : session.IsPlaying ? (session.DurationMs <= 0 ? "LIVE" : Ui.Clock(session.PositionMs))
-            : session.Channel is not null ? "CHANNEL"
-            : "NO SIGNAL";
-
-        ImGui.SetCursorScreenPos(origin + new Vector2(20f, 0f));
-        Theme.Displayed(session.IsPlaying ? Theme.Accent : Theme.TextFaint, state);
-
-        // The channel number, when on one, and the music under a channel, when there is any.
-        var note = this.Dial.NumberOf(this.ui.Config.Source) is > 0 and var number ? $"CH {number}"
-            : session.MusicNowPlaying is { Length: > 0 } track ? Ui.Ellipsis(track, 22)
-            : string.Empty;
-
-        if (note.Length > 0)
-        {
-            ImGui.SameLine(0f, 10f);
-            ImGui.TextColored(Theme.TextDim, note);
-        }
-
-        if (hasThumb && session.Uploader is { } uploader)
-        {
-            var at = origin + new Vector2(width - thumb.X, 0f);
-            drawList.AddImage(uploader.Handle, at, at + thumb);
-            drawList.AddRect(at, at + thumb, Theme.U32(Theme.GlassEdge), 2f);
-        }
-
-        // The remote, under the status. A widget rather than a bar: the reason to fold the window
-        // is to keep watching, and the buttons you want while watching are these.
-        ImGui.SetCursorScreenPos(origin + new Vector2(0f, StatusHeight + 4f));
-        using (ImRaii.Child("##foldedremote", new Vector2(Math.Max(1f, left), RemoteHeight), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
-        {
-            this.remote.DrawCompact();
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, Height));
+        this.ui.Config.WindowMinimised = !this.ui.Config.WindowMinimised;
+        this.saveConfig();
     }
 
     /// <summary>

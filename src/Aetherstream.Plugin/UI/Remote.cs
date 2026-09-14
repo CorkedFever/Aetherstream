@@ -149,62 +149,9 @@ internal sealed class Remote(UiContext ui, ChannelDial dial, Screen screen)
         }
     }
 
-    /// <summary>
-    /// The remote for the folded window: the buttons a hand reaches for without looking. Same
-    /// actions as the full row, smaller targets, nothing that needs a menu.
-    /// </summary>
-    public void DrawCompact()
+    private void ChannelButton(Playback.StreamSession session, Video.IFrameChannel? channel, FontAwesomeIcon icon, string name, string id)
     {
-        var session = ui.Session;
-        var playing = session.IsPlaying;
-
-        using var padding = ImRaii.PushStyle(ImGuiStyleVar.FramePadding, new Vector2(6f, 4f));
-        using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(4f, 4f));
-
-        if (playing)
-        {
-            var paused = session.IsPaused;
-            using var lit = ImRaii.PushColor(ImGuiCol.Button, Theme.GlassLit).Push(ImGuiCol.Border, Theme.Accent);
-            if (Ui.IconButton(paused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause, paused ? "Resume" : "Pause", "##cpause"))
-                session.TrySetPaused(!paused);
-        }
-        else if (Ui.IconButton(FontAwesomeIcon.Play, "Play the current source", "##cplay", ui.Config.Source.Length > 0))
-        {
-            ui.Play(ui.Config.Source);
-        }
-
         ImGui.SameLine();
-        if (Ui.IconButton(FontAwesomeIcon.Stop, "Stop", "##cstop", playing))
-            session.RequestStop();
-
-        ImGui.SameLine(0f, 12f);
-        var canStep = dial.CanStep;
-        if (Ui.IconButton(FontAwesomeIcon.ChevronDown, "Previous pinned channel", "##cchdown", canStep))
-            dial.Step(-1);
-
-        ImGui.SameLine();
-        if (Ui.IconButton(FontAwesomeIcon.ChevronUp, "Next pinned channel", "##cchup", canStep))
-            dial.Step(+1);
-
-        ImGui.SameLine();
-        if (Ui.IconButton(FontAwesomeIcon.History, "Last channel", "##clast", dial.HasLast))
-            dial.Last();
-
-        ImGui.SameLine(0f, 12f);
-        var muted = session.Muted || !ui.Config.AudioEnabled;
-        if (Ui.IconButton(muted ? FontAwesomeIcon.VolumeMute : FontAwesomeIcon.VolumeUp, muted ? "Unmute" : "Mute", "##cmute", ui.Config.AudioEnabled))
-            session.Muted = !session.Muted;
-
-        ImGui.SameLine(0f, 12f);
-        this.ChannelButton(session, ui.Guide, FontAwesomeIcon.ThList, "Guide channel", "##cguide", sameLine: false);
-        this.ChannelButton(session, ui.Weather, FontAwesomeIcon.CloudSun, "Weather channel", "##cweather");
-    }
-
-    private void ChannelButton(Playback.StreamSession session, Video.IFrameChannel? channel, FontAwesomeIcon icon, string name, string id, bool sameLine = true)
-    {
-        if (sameLine)
-            ImGui.SameLine();
-
         var up = channel is not null && ReferenceEquals(session.Channel, channel);
         using var lit = ImRaii.PushColor(ImGuiCol.Button, Theme.GlassLit, up).Push(ImGuiCol.Border, Theme.Accent, up);
         if (Ui.IconButton(icon, up ? "Put it away" : name, id, channel is { Available: true }))
