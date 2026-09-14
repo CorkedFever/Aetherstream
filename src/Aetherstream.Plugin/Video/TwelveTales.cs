@@ -261,12 +261,12 @@ internal static class TwelveTales
     /// </summary>
     public static readonly Tale Egg = new(0, "THE OGRE OF THE SWAMP", Biome.Marsh, 0,
     [
-        ("Once, in a swamp at the edge of the Twelveswood, there lived an ogre who liked mud, and quiet, and being left alone, and who had put up a sign to that effect. Nobody read it.", Scene.WoodEdge),
-        ("One morning every fairy creature in the realm was dumped on his doorstep by order of a lord, and with them came a chocobo who could talk and would not stop. The ogre asked it to. It did not.", Scene.MarshTown),
-        ("The lord was very short and his castle very tall, and he wanted a princess so he could be a king, and he wanted the ogre to fetch her, and in return he would take the fairy creatures back. The ogre agreed. It was the quiet he wanted.", Scene.Gate),
-        ("The princess was in a tower, and the tower was in a keep, and the keep was in a lake of fire, and the lake was guarded by a dragon. The dragon, in the telling, took one look at the chocobo and fell in love. Nobody was more surprised than the chocobo.", Scene.DragonComes),
-        ("On the road home the ogre explained that ogres have layers, like a popoto, and the chocobo said nobody likes popotoes, and the princess, who had a secret of her own that came out at sundown, said nothing and laughed at the wrong moments.", Scene.WindingRoads),
-        ("At the wedding the ogre said the thing he should have said on the road, and the princess said it back, and in the light of it she turned into what she had been every night: an ogre. She had thought that was the bad ending. It was not. And the swamp was never quiet again, and he found he did not mind.", Scene.Shrine),
+        ("Once, in a swamp at the edge of the Twelveswood, there lived an ogre who liked mud, and quiet, and being left alone, and who had put up a sign to that effect. Nobody read it.", Scene.SwampSign),
+        ("One morning every fairy creature in the realm was dumped on his doorstep by order of a lord, and with them came a chocobo who could talk and would not stop. The ogre asked it to. It did not.", Scene.Doorstep),
+        ("The lord was very short and his castle very tall, and he wanted a princess so he could be a king, and he wanted the ogre to fetch her, and in return he would take the fairy creatures back. The ogre agreed. It was the quiet he wanted.", Scene.ShortLord),
+        ("The princess was in a tower, and the tower was in a keep, and the keep was in a lake of fire, and the lake was guarded by a dragon. The dragon, in the telling, took one look at the chocobo and fell in love. Nobody was more surprised than the chocobo.", Scene.TowerDragon),
+        ("On the road home the ogre explained that ogres have layers, like a popoto, and the chocobo said nobody likes popotoes, and the princess, who had a secret of her own that came out at sundown, said nothing and laughed at the wrong moments.", Scene.RoadHome),
+        ("At the wedding the ogre said the thing he should have said on the road, and the princess said it back, and in the light of it she turned into what she had been every night: an ogre. She had thought that was the bad ending. It was not. And the swamp was never quiet again, and he found he did not mind.", Scene.Wedding),
     ]);
 
     /// <summary>The god's name, epithet, symbol and element by row id; row zero is the ogre.</summary>
