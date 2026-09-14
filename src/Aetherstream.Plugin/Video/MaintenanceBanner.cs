@@ -73,8 +73,6 @@ internal sealed class MaintenanceBanner(BitmapFont font)
     public static string Message(MaintenanceNotice notice, DateTime now)
     {
         var worlds = notice.Worlds.Length > 0 ? notice.Worlds.ToUpperInvariant() : string.Empty;
-        var kind = notice.Emergency ? "EMERGENCY MAINTENANCE" : "MAINTENANCE";
-
         if (notice.Start is not { } start)
             return Canvas.Plain(notice.Raw).ToUpperInvariant();
 
@@ -91,8 +89,10 @@ internal sealed class MaintenanceBanner(BitmapFont font)
                 ? $"UNDER WAY, ENDS IN {Span(e - utc)}"
                 : "UNDER WAY";
 
+        // The tag beside the crawl already says EMERGENCY or MAINTENANCE, so the line itself is
+        // the worlds, the window and the countdown: short enough to sit still.
         var where = worlds.Length > 0 ? $"{worlds}  " : string.Empty;
-        return $"{where}{kind}  {window.ToUpperInvariant()}  {state}";
+        return $"{where}{window.ToUpperInvariant()}  {state}";
     }
 
     private static string Span(TimeSpan t) =>
@@ -204,11 +204,11 @@ internal sealed class MaintenanceBanner(BitmapFont font)
     {
         var title = item.Title;
         var emergency = title.Contains("emergency", StringComparison.OrdinalIgnoreCase);
-        var worlds = Regex.Replace(title, @"\s*\(.*?\)\s*", " ", RegexOptions.IgnoreCase);
+        // "[Aether] Gilgamesh World Emergency Maintenance (Sep. 14)" -> "Gilgamesh".
+        var worlds = Regex.Replace(title, @"\s*[\(\[].*?[\)\]]\s*", " ", RegexOptions.IgnoreCase);
         worlds = Regex.Replace(worlds, @"\b(emergency|maintenance|scheduled|companion app|lodestone|mog station|website|square enix account|patch [\d.]+)\b", string.Empty, RegexOptions.IgnoreCase);
         worlds = Regex.Replace(worlds, @"\s+", " ").Trim();
-        if (worlds.Equals("all worlds", StringComparison.OrdinalIgnoreCase))
-            worlds = "All Worlds";
+        worlds = worlds.Equals("all worlds", StringComparison.OrdinalIgnoreCase) ? "All Worlds" : TidyWorlds(worlds);
 
         return new MaintenanceNotice(worlds, emergency, item.Start, item.End, title, item.Time);
     }
