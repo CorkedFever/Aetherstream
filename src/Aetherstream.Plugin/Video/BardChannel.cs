@@ -34,17 +34,56 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
     private static readonly uint Ink = Canvas.Rgb(0x1E, 0x16, 0x12);
     private static readonly uint Page = Canvas.Rgb(0xF2, 0xE8, 0xD0);
 
-    private static readonly (string Race, string[] Names)[] Peoples =
-    [
-        ("Hyur", ["Aldric", "Mira", "Tobin", "Elsabet", "Corwin"]),
-        ("Elezen", ["Aurelais", "Ysolde", "Laurentin", "Cerise", "Fournevaux"]),
-        ("Lalafell", ["Popoto", "Nanamo", "Tataru", "Kokoro", "Wawalago"]),
-        ("Miqo'te", ["Y'shtola", "M'naago", "R'kaji", "U'lani", "H'sabo"]),
-        ("Roegadyn", ["Broenbhar", "Merlwyb", "Skaenyg", "Rhoswen", "Gruenlyng"]),
-        ("Au Ra", ["Sadu", "Cirina", "Magnai", "Hien", "Yugiri"]),
-        ("Hrothgar", ["Radovan", "Wuk Lamat", "Bakool", "Rurudo", "Gulool"]),
-        ("Viera", ["Fran", "Cadence", "Ilsa", "Yasmin", "Lyra"]),
-    ];
+    private static readonly string[] PeopleNames = ["Hyur", "Elezen", "Lalafell", "Miqo'te", "Roegadyn", "Au Ra", "Hrothgar", "Viera"];
+
+    // Names are built, not listed, in each people's own fashion, so the hero is never someone
+    // the listener already knows. The pieces are made up; the patterns are the game's.
+    private static readonly string[] HyurFirst = ["Ald", "Bran", "Cor", "Ed", "Gar", "Hal", "Jos", "Mar", "Ros", "Wil", "Elsa", "Mira", "Tess", "Wyn", "Isa"];
+    private static readonly string[] HyurEnd = ["ric", "wen", "bert", "mund", "lyn", "ith", "ard", "ella", "ine", "ott"];
+    private static readonly string[] HyurSur = ["Ashcroft", "Brightwater", "Colt", "Fairbairn", "Greywood", "Hollin", "Marsh", "Pell", "Stone", "Thorne", "Wellby"];
+    private static readonly string[] ElezenFirst = ["Aur", "Ber", "Cla", "Dur", "Fren", "Gil", "Jan", "Lau", "Mel", "Ser", "Vau", "Ysa"];
+    private static readonly string[] ElezenEnd = ["elais", "emont", "ienne", "ivard", "oise", "eaux", "ette", "ault", "ine", "oux"];
+    private static readonly string[] ElezenSur = ["de Fontaine", "Beaumarais", "Clairvaux", "Dumont", "Laurencin", "Montfort", "Rousseaux", "Varlineau"];
+    private static readonly string[] LalaSyl = ["po", "ko", "mi", "ta", "ru", "na", "lo", "chi", "wa", "yu", "no", "ka"];
+    private static readonly string[] MiqoTribe = ["A", "B", "D", "F", "G", "H", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "U", "V", "W", "X", "Y", "Z"];
+    private static readonly string[] MiqoName = ["nhaza", "rhito", "shtara", "laire", "kabi", "nolo", "sahl", "tamu", "zahi", "moli", "rhika", "wumi"];
+    private static readonly string[] RoeFirst = ["Skael", "Broen", "Rhos", "Grun", "Ahl", "Wyrn", "Syhr", "Hael", "Merl", "Bryn"];
+    private static readonly string[] RoeEnd = ["wyn", "bhar", "syn", "lyng", "gar", "thota", "brida", "loef", "swys", "mund"];
+    private static readonly string[] RoeSur = ["Merlwybsyn", "Bhaldwynsyn", "Ahtwyda", "Rhotanwyn", "Skaenwyn", "Guldweorsyn"];
+    private static readonly string[] AuraFirst = ["Arau", "Chaka", "Daidu", "Hoto", "Kiri", "Nabu", "Sada", "Tsubu", "Yoto", "Mira", "Kaga", "Sura"];
+    private static readonly string[] AuraSur = ["Dotharl", "Kagon", "Malaguld", "Oronir", "Buduga", "Iriq", "Ura", "Goro", "Himaa", "Qestir"];
+    private static readonly string[] HrothFirst = ["Bakh", "Gor", "Ruv", "Thal", "Vok", "Zar", "Mok", "Drun", "Har", "Kol"];
+    private static readonly string[] HrothEnd = ["arn", "ogh", "ul", "aan", "ek", "oss", "amund", "ir", "ath", "unn"];
+    private static readonly string[] HrothSur = ["Corun", "Vanwyr", "Kavolaj", "Boldh", "Kazu", "Harrek", "Tavas"];
+    private static readonly string[] VieraFirst = ["Cel", "Lyn", "Mjr", "Njr", "Ysa", "Ren", "Sae", "Thil", "Ael", "Vir"];
+    private static readonly string[] VieraEnd = ["ys", "a", "la", "in", "ith", "ra", "ette", "ia", "en", "wyn"];
+    private static readonly string[] VieraSur = ["Ambraeva", "Lhesenwe", "Ryqeo", "Vinnicas", "Mhalwe", "Thoraeda"];
+
+    private static string NameFor(string people, int episode)
+    {
+        static string P(string[] a, int e, int salt) => a[Pick(e, salt, a.Length)];
+        return people switch
+        {
+            "Hyur" => $"{P(HyurFirst, episode, 40)}{P(HyurEnd, episode, 41)} {P(HyurSur, episode, 42)}",
+            "Elezen" => $"{P(ElezenFirst, episode, 43)}{P(ElezenEnd, episode, 44)} {P(ElezenSur, episode, 45)}",
+            "Lalafell" => Lalafell(episode),
+            "Miqo'te" => $"{P(MiqoTribe, episode, 48)}'{P(MiqoName, episode, 49)}",
+            "Roegadyn" => $"{P(RoeFirst, episode, 50)}{P(RoeEnd, episode, 51)} {P(RoeSur, episode, 52)}",
+            "Au Ra" => $"{P(AuraFirst, episode, 53)} {P(AuraSur, episode, 54)}",
+            "Hrothgar" => $"{P(HrothFirst, episode, 55)}{P(HrothEnd, episode, 56)} {P(HrothSur, episode, 57)}",
+            _ => $"{P(VieraFirst, episode, 58)}{P(VieraEnd, episode, 59)} {P(VieraSur, episode, 60)}",
+        };
+    }
+
+    /// <summary>A Plainsfolk name: two syllables, then the second doubled back as the surname.</summary>
+    private static string Lalafell(int episode)
+    {
+        var a = LalaSyl[Pick(episode, 46, LalaSyl.Length)];
+        var b = LalaSyl[Pick(episode, 47, LalaSyl.Length)];
+        var first = char.ToUpperInvariant(a[0]) + a[1..] + b + a;
+        var last = char.ToUpperInvariant(b[0]) + b[1..] + a;
+        return $"{first} {last}";
+    }
 
     private static readonly string[] Callings = ["a fisher", "a miner", "a dancer", "a cook", "a sellsword", "a scholar", "a retainer", "a chocobo keeper", "an astrologian", "a weaver"];
 
@@ -58,9 +97,9 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
     private static readonly string[][] PageLines =
     [
         [
-            "Once, in {home}, there lived {race} named {hero}, who was {calling} and content to be one.",
-            "This is the story of {hero}, {race} of {home}, {calling} by trade, and by nothing else until the day it began.",
-            "In {home} there was {calling} called {hero}. Nobody thought much of {hero}. That was about to change.",
+            "Once, in {home}, there lived {race} named {full}, who was {calling} and content to be one.",
+            "This is the story of {full}, {race} of {home}, {calling} by trade, and by nothing else until the day it began.",
+            "In {home} there was {calling} called {full}. Nobody thought much of {hero}. That was about to change.",
         ],
         [
             "One morning a stranger came through {home} with a rumour: a {treasure}, lost long ago in {far}, and a {beast} sitting on it.",
@@ -185,9 +224,9 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
 
     private static Story Compose(StoryStock s, int episode)
     {
-        var people = Peoples[Pick(episode, 1, Peoples.Length)];
-        var hero = people.Names[Pick(episode, 2, people.Names.Length)];
-        var race = people.Race switch { "Au Ra" or "Elezen" => $"an {people.Race}", _ => $"a {people.Race}" };
+        var peopleName = PeopleNames[Pick(episode, 1, PeopleNames.Length)];
+        var hero = NameFor(peopleName, episode);
+        var race = peopleName switch { "Au Ra" or "Elezen" => $"an {peopleName}", _ => $"a {peopleName}" };
         var calling = Callings[Pick(episode, 3, Callings.Length)];
         var home = s.Places[Pick(episode, 4, s.Places.Count)];
         var far = s.Places[Pick(episode, 5, s.Places.Count)];
@@ -197,11 +236,12 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         var treasure = s.Treasures[Pick(episode, 7, s.Treasures.Count)];
         var god = Deities[Pick(episode, 8, Deities.Length)];
 
+        var first = hero.Split(' ')[0];
         string Fill(string text) => text
-            .Replace("{hero}", hero).Replace("{race}", race).Replace("{calling}", calling)
+            .Replace("{full}", hero).Replace("{hero}", first).Replace("{race}", race).Replace("{calling}", calling)
             .Replace("{home}", home.Zone).Replace("{far}", far.Zone)
             .Replace("{beast}", Canvas.Plain(beast.Name)).Replace("{treasure}", Canvas.Plain(treasure.Name)).Replace("{god}", god)
-            .Replace("{HERO}", hero.ToUpperInvariant()).Replace("{HOME}", home.Zone.ToUpperInvariant()).Replace("{FAR}", far.Zone.ToUpperInvariant())
+            .Replace("{HERO}", first.ToUpperInvariant()).Replace("{HOME}", home.Zone.ToUpperInvariant()).Replace("{FAR}", far.Zone.ToUpperInvariant())
             .Replace("{BEAST}", Canvas.Plain(beast.Name).ToUpperInvariant()).Replace("{TREASURE}", Canvas.Plain(treasure.Name).ToUpperInvariant());
 
         var pages = new string[Pages];
@@ -212,7 +252,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
         var hair = Hairs[Pick(episode, 20, Hairs.Length)];
         var cloak = Cloaks[Pick(episode, 21, Cloaks.Length)];
         var skin = Skins[Pick(episode, 22, Skins.Length)];
-        return new Story(hero, race, calling, home.Zone, far.Zone, Scenery.BiomeOf(home.Region, home.Zone), Scenery.BiomeOf(far.Region, far.Zone), beast.Name, beast.Icon, treasure.Name, treasure.Icon, god, title, pages, hair, cloak, skin, people.Race);
+        return new Story(hero, race, calling, home.Zone, far.Zone, Scenery.BiomeOf(home.Region, home.Zone), Scenery.BiomeOf(far.Region, far.Zone), beast.Name, beast.Icon, treasure.Name, treasure.Icon, god, title, pages, hair, cloak, skin, peopleName);
     }
 
     private static string NextTitle(StoryStock s, int episode) => Compose(s, episode).Title;
