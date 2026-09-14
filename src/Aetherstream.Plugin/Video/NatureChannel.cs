@@ -119,6 +119,14 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var episode = (int)((unix - 1_700_000_000) / (long)EpisodeFor);
         var into = (unix - 1_700_000_000) % (long)EpisodeFor;
+        this.RenderAt(target, list, episode, into, now, seconds);
+    }
+
+    /// <summary>One frame of a given episode at a given moment into it. The clock is Render's business.</summary>
+    internal void RenderAt(uint[] target, IReadOnlyList<Creature> list, int episode, double into, DateTime now, double seconds)
+    {
+        var span = target.AsSpan();
+        var all = new BitmapFont.Clip(0, 0, W, H);
         var creature = list[Pick(episode, list.Count)];
         var next = list[Pick(episode + 1, list.Count)];
         var biome = Scenery.BiomeOf(creature.Region, creature.Zone);

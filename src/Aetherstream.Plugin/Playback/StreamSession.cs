@@ -965,8 +965,11 @@ internal sealed class StreamSession(
             return;
 
         this.disposed = true;
+        log.Information("[unload] session: tearing down the source");
         this.TearDown();
+        log.Information("[unload] session: stopping the music");
         this.music?.Dispose();
+        log.Information("[unload] session: music stopped");
 
         // Deliberately NOT disposed. On unload there are no further frames in which queued GPU work
         // could drain, so freeing these textures here races the driver — and losing that race is an

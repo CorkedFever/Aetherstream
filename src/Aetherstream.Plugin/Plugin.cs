@@ -241,6 +241,7 @@ public sealed partial class Plugin : IDalamudPlugin
         // would call into a log this unload is about to invalidate.
         this.vlc.Log -= this.OnVlcLog;
         this.chat.ChatMessage -= this.OnChatMessage;
+        this.log.Information("[unload] hooks off");
 
         this.pluginInterface.UiBuilder.Draw -= this.OnDraw;
         this.pluginInterface.UiBuilder.OpenMainUi -= this.OpenMainUi;
@@ -248,16 +249,19 @@ public sealed partial class Plugin : IDalamudPlugin
 
         this.commands.RemoveHandler(CommandName);
         this.windows.RemoveAllWindows();
+        this.log.Information("[unload] windows down");
 
         this.resolving?.Cancel();
         this.resolving?.Dispose();
 
         // Put the object's own texture back before anything else goes away, while the object and
         // our texture are both still alive.
+        this.log.Information("[unload] unbinding the surface");
         this.binding.Unbind(this.SurfaceAnchorPosition());
         this.binding.Dispose();
         this.maskBinding.Unbind(this.SurfaceAnchorPosition());
         this.maskBinding.Dispose();
+        this.log.Information("[unload] surface unbound");
 
         // Ends the push before anything else goes away. A child process outlives its parent on
         // Windows, so skipping this would leave ffmpeg broadcasting after the plugin unloaded.
@@ -265,8 +269,10 @@ public sealed partial class Plugin : IDalamudPlugin
         this.partyLoop?.Dispose();
 
         this.broadcast.Dispose();
+        this.log.Information("[unload] broadcast down");
 
         this.session.Dispose();
+        this.log.Information("[unload] session down");
 
         // Poster textures are ours alone — the game never sees them, only our own draw lists — so
         // unlike the video texture they can be released outright once drawing has stopped.
@@ -283,6 +289,7 @@ public sealed partial class Plugin : IDalamudPlugin
         this.http.Dispose();
 
         this.pluginInterface.SavePluginConfig(this.config);
+        this.log.Information("[unload] done");
     }
 
     private void OnDraw()
