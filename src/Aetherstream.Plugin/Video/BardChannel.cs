@@ -7,7 +7,8 @@ internal sealed record StoryStock(
     IReadOnlyList<(string Name, uint Icon)> Treasures);
 
 /// <summary>
-/// The story hour. A bard in a high-backed chair by a fire, a book on his knee, and a tale a
+/// The story hour. A tonberry in a high-backed chair by a fire, a book on his knee, a lantern in
+/// his hand, and a tale a
 /// time: a hero of one of the peoples, a road through places that exist, a beast from the
 /// bestiary, a treasure from the game's own tables, a god from the Twelve. Six pages, each
 /// read from the chair and then shown as a picture. The bard's rule at the end is his own:
@@ -134,7 +135,7 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
             Canvas.Fill(span, (W - tw) / 2, 150, tw, 6, Gold);
             Canvas.Fill(span, (W - tw) / 2, 256, tw, 6, Gold);
             font.Draw(span, W, Show, (W - font.Measure(Show, 2)) / 2, 166, Cream, 2, all);
-            const string With = "WITH LEVARR BURTAINE";
+            const string With = "WITH LEVARR BURTONBERRY";
             font.Draw(span, W, With, (W - font.Measure(With)) / 2, 300, Gold, 1, all);
             if (into > 2.5)
             {

@@ -4,7 +4,7 @@ namespace Aetherstream.Plugin.Video;
 internal sealed record Creature(string Name, string Zone, string Region, uint Icon, int Rank);
 
 /// <summary>
-/// The wildlife show. A ranger in khaki with a bush hat, more enthusiasm than sense, and a
+/// The wildlife show. A moogle in a bush hat and a khaki vest, more enthusiasm than sense, and a
 /// creature from the hunting log every episode: the approach through its country, the close-up,
 /// the moment he gets far too close, and the sign-off. Backdrops by the creature's region;
 /// the sky by the local hour. On a schedule from the clock.
@@ -199,7 +199,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             var tw = font.Measure(Title, 2) + 64;
             Canvas.Fill(span, (W - tw) / 2, 160, tw, 112, Khaki);
             font.Draw(span, W, Title, (W - font.Measure(Title, 2)) / 2, 176, Ink, 2, all);
-            const string With = "WITH STEPPE IRWYN, THE WIVRE WRANGLER";
+            const string With = "WITH STEPPE IRWYN, THE WIVRE WRANGLER, KUPO";
             font.Draw(span, W, With, (W - font.Measure(With)) / 2, 300, Cream, 1, all);
             if (t > 2.5)
             {
