@@ -123,7 +123,8 @@ public sealed partial class Plugin
         using var document = JsonDocument.Parse(json);
         foreach (var v in document.RootElement.EnumerateArray())
         {
-            if (this.config.VenuesSfwOnly && v.TryGetProperty("sfw", out var sfw) && sfw.ValueKind == JsonValueKind.False)
+            var isSfw = !(v.TryGetProperty("sfw", out var sfw) && sfw.ValueKind == JsonValueKind.False);
+            if (this.config.VenuesSfwOnly && !isSfw)
                 continue;
 
             if (v.TryGetProperty("approved", out var approved) && approved.ValueKind == JsonValueKind.False)
@@ -194,7 +195,7 @@ public sealed partial class Plugin
             var bannerUri = Str(v, "bannerUri");
             this.banners.TryGetValue(id, out var banner);
 
-            var row = new VenueRow(id, name, location, world, description, tags, openNow, start, end, banner);
+            var row = new VenueRow(id, name, location, world, description, tags, openNow, start, end, banner, isSfw);
 
             if (openNow)
             {

@@ -11,7 +11,8 @@ internal sealed record VenueRow(
     bool OpenNow,
     DateTime? OpensUtc,
     DateTime? ClosesUtc,
-    uint[]? Banner);
+    uint[]? Banner,
+    bool Sfw = true);
 
 internal sealed record VenuesSnapshot(
     string DataCenter,
@@ -118,6 +119,8 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
             ? venue.ClosesUtc is { } c ? $"OPEN NOW UNTIL {c.ToLocalTime():h:mm tt}" : "OPEN NOW"
             : venue.OpensUtc is { } o ? $"OPENS {WhenText(o, now)}" : "HOURS NOT LISTED";
         font.Draw(span, W, hours.ToUpperInvariant(), Left, ty, venue.OpenNow ? Canvas.Good : Canvas.Amber, 1, all);
+        if (!venue.Sfw)
+            font.Draw(span, W, "18+", Left + font.Measure(hours) + 24, ty, Canvas.Bad, 1, all);
         ty += 40;
 
         // The description, or the tags when there is none; the space fits two lines either way.
@@ -134,18 +137,18 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
         var region = new BitmapFont.Clip(ListLeft, 72, W, 636);
 
         // Two lines a venue: the name and its time, then where it is.
-        var entries = new List<(string Text, string Detail, string Time, uint Colour, bool Featured, bool Heading)>();
-        entries.Add(("OPEN NOW", string.Empty, string.Empty, Canvas.Amber, false, true));
+        var entries = new List<(string Text, string Detail, string Time, uint Colour, bool Featured, bool Heading, bool Adult)>();
+        entries.Add(("OPEN NOW", string.Empty, string.Empty, Canvas.Amber, false, true, false));
         if (open.Count == 0)
-            entries.Add(("nobody yet", string.Empty, string.Empty, Canvas.Faint, false, true));
+            entries.Add(("nobody yet", string.Empty, string.Empty, Canvas.Faint, false, true, false));
         foreach (var v in open)
-            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.ClosesUtc is { } closes ? $"til {closes.ToLocalTime():h:mm tt}" : string.Empty, Canvas.Good, ReferenceEquals(v, venue), false));
+            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.ClosesUtc is { } closes ? $"til {closes.ToLocalTime():h:mm tt}" : string.Empty, Canvas.Good, ReferenceEquals(v, venue), false, !v.Sfw));
 
-        entries.Add(("COMING UP", string.Empty, string.Empty, Canvas.Amber, false, true));
+        entries.Add(("COMING UP", string.Empty, string.Empty, Canvas.Amber, false, true, false));
         if (soon.Count == 0)
-            entries.Add(("nothing in the next day", string.Empty, string.Empty, Canvas.Faint, false, true));
+            entries.Add(("nothing in the next day", string.Empty, string.Empty, Canvas.Faint, false, true, false));
         foreach (var v in soon)
-            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.OpensUtc is { } opens ? WhenText(opens, now) : string.Empty, Canvas.White, ReferenceEquals(v, venue), false));
+            entries.Add((v.Name, $"{v.Location}  /  {v.World}", v.OpensUtc is { } opens ? WhenText(opens, now) : string.Empty, Canvas.White, ReferenceEquals(v, venue), false, !v.Sfw));
 
         // Headings take one line, venues two; the list climbs when it does not fit.
         var heights = entries.Select(e => e.Heading ? 44 : 76).ToList();
@@ -164,14 +167,18 @@ internal sealed class VenuesChannel(BitmapFont font, Func<VenuesSnapshot?> data)
                 if (top + height <= 72 || top >= 636)
                     continue;
 
-                var (text, detail, time, colour, isFeatured, heading) = entries[i];
+                var (text, detail, time, colour, isFeatured, heading, adult) = entries[i];
 
                 if (isFeatured)
                     Canvas.Fill(span, ListLeft - 8, Math.Max(72, top), 4, Math.Min(636, top + height - 8) - Math.Max(72, top), Canvas.Rgb(0xED, 0x93, 0xB1));
 
                 var timeText = time.ToUpperInvariant();
                 var timeWidth = timeText.Length > 0 ? font.Measure(timeText) + 16 : 0;
-                font.Draw(span, W, Canvas.Cut(text.ToUpperInvariant(), font.Fit(W - ListLeft - 40 - timeWidth)), ListLeft, top, colour, 1, region);
+                var tagWidth = adult ? font.Measure("18+") + 12 : 0;
+                var nameText = Canvas.Cut(text.ToUpperInvariant(), font.Fit(W - ListLeft - 40 - timeWidth - tagWidth));
+                font.Draw(span, W, nameText, ListLeft, top, colour, 1, region);
+                if (adult)
+                    font.Draw(span, W, "18+", ListLeft + font.Measure(nameText) + 12, top, Canvas.Bad, 1, region);
                 if (timeText.Length > 0)
                     font.Draw(span, W, timeText, W - 40 - font.Measure(timeText), top, Canvas.Dim, 1, region);
 
