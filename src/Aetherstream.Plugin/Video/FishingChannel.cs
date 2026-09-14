@@ -73,13 +73,15 @@ internal sealed class FishingChannel(BitmapFont font, Func<FishingSnapshot?> dat
             var head = boarding ? "BOAT BOARDING NOW" : $"NEXT BOAT IN {Countdown((int)until.TotalSeconds)}";
             font.Draw(span, W, head, 24, 62, boarding ? Canvas.Good : Canvas.Accent, 1, all);
 
-            var routes = $"INDIGO {next.IndigoDestination.ToUpperInvariant()} ({next.IndigoTime.ToUpperInvariant()})   RUBY {next.RubyDestination.ToUpperInvariant()} ({next.RubyTime.ToUpperInvariant()})";
-            routes = Canvas.Cut(routes, font.Fit(W - 24 - 24 - font.Measure(head) - 24));
-            font.Draw(span, W, routes, W - 24 - font.Measure(routes), 62, Canvas.White, 1, all);
+            // Short names throughout: the face is eighty columns wide and the full names are not.
+            var routes = $"INDIGO {Short(next.IndigoDestination)} ({next.IndigoTime})   RUBY {Short(next.RubyDestination)} ({next.RubyTime})".ToUpperInvariant();
+            var routesLeft = 24 + font.Measure(head) + 48;
+            routes = Canvas.Cut(routes, font.Fit(W - routesLeft - 24));
+            font.Draw(span, W, routes, routesLeft, 62, Canvas.White, 1, all);
 
-            var later = string.Join("   ", s.Voyages.Skip(1).Select(v =>
-                $"{v.DepartsUtc.ToLocalTime():h:mm tt} {Short(v.IndigoDestination)}/{Short(v.RubyDestination)}".ToUpperInvariant()));
-            font.Draw(span, W, Canvas.Cut("THEN  " + later, font.Fit(W - 48)), 24, 100, Canvas.Faint, 1, all);
+            var later = string.Join("  ", s.Voyages.Skip(1).Select(v =>
+                $"{v.DepartsUtc.ToLocalTime():HH:mm} {Short(v.IndigoDestination)}/{Short(v.RubyDestination)}".ToUpperInvariant()));
+            font.Draw(span, W, Canvas.Cut("THEN " + later, font.Fit(W - 48)), 24, 100, Canvas.Faint, 1, all);
         }
 
         var rows = snapshot?.Rows ?? [];
@@ -155,7 +157,7 @@ internal sealed class FishingChannel(BitmapFont font, Func<FishingSnapshot?> dat
         font.Draw(span, W, "AETHERSTREAM FISHING", 24, 680, Canvas.Accent, 1, all);
 
         var right = snapshot is { } s
-            ? $"{s.UpCount} UP / {s.Caught} OF {s.Total} IN YOUR LOG / GOLD IS FOLKLORE / DATA: CARBUNCLE PLUSHY"
+            ? $"{s.Caught}/{s.Total} IN LOG / GOLD = FOLKLORE / DATA: CARBUNCLE PLUSHY"
             : "READING THE LOG";
         font.Draw(span, W, right, W - 24 - font.Measure(right), 680, Canvas.Faint, 1, all);
     }

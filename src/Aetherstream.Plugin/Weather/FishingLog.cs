@@ -135,7 +135,7 @@ internal sealed class FishingLog
             }
 
             this.Available = this.fish.Count > 0;
-            log.Information($"[fishing] {this.fish.Count} fish with windows, {unmatched} at spots the game does not list");
+            log.Information($"[fishing] {this.fish.Count} fish with windows, {unmatched} at spots the game does not list, {this.fish.Count(f => f.FishParameterId != 0)} with a log slot of {logSlots.Count} in the game's log");
         }
         catch (Exception ex)
         {
