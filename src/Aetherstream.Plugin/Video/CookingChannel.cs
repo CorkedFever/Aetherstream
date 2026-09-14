@@ -102,13 +102,13 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
         var ingredientsFor = dish.Ingredients.Count * IngredientFor;
 
         if (into < TitleFor)
-            this.DrawTitle(span, dish, episode, all);
+            this.DrawTitle(span, dish, episode, seconds, all);
         else if (into < TitleFor + ingredientsFor)
-            this.DrawIngredient(span, dish, (int)((into - TitleFor) / IngredientFor), episode, all);
+            this.DrawIngredient(span, dish, (int)((into - TitleFor) / IngredientFor), episode, seconds, all);
         else if (into < TitleFor + ingredientsFor + MethodFor)
-            this.DrawMethod(span, dish, episode, all);
+            this.DrawMethod(span, dish, episode, seconds, all);
         else
-            this.DrawPlate(span, dish, episode, all);
+            this.DrawPlate(span, dish, episode, seconds, all);
 
         // Progress along the bottom edge: how far through the episode.
         var length = TitleFor + ingredientsFor + MethodFor + PlateFor;
@@ -156,8 +156,9 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
         font.Draw(span, W, local, W - 24 - lw + 12, 8, Cream, 1, all);
     }
 
-    private void DrawTitle(Span<uint> span, Dish dish, int episode, in BitmapFont.Clip all)
+    private void DrawTitle(Span<uint> span, Dish dish, int episode, double seconds, in BitmapFont.Clip all)
     {
+        ChefSprite.Draw(span, ChefSprite.Action.Wave, seconds, 960, 190, 7);
         const string Today = "TODAY WE ARE MAKING";
         font.Draw(span, W, Today, (W - font.Measure(Today)) / 2, 120, Sage, 1, all);
 
@@ -173,8 +174,9 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
         font.Draw(span, W, eps, (W - font.Measure(eps)) / 2, 600, Sage, 1, all);
     }
 
-    private void DrawIngredient(Span<uint> span, Dish dish, int index, int episode, in BitmapFont.Clip all)
+    private void DrawIngredient(Span<uint> span, Dish dish, int index, int episode, double seconds, in BitmapFont.Clip all)
     {
+        ChefSprite.Draw(span, ChefSprite.Action.Chop, seconds, 1000, 452, 7);
         index = Math.Clamp(index, 0, dish.Ingredients.Count - 1);
         var (name, amount, iconId) = dish.Ingredients[index];
 
@@ -201,7 +203,7 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
             .Replace("{name}", Canvas.Plain(name).ToLowerInvariant())
             .Replace("{amount}", Amount(amount));
         y = 470;
-        foreach (var line in Canvas.Wrap(line0.ToUpperInvariant(), font.Fit(W - 80), 3))
+        foreach (var line in Canvas.Wrap(line0.ToUpperInvariant(), font.Fit(920), 3))
         {
             font.Draw(span, W, line, 40, y, Cream, 1, all);
             y += 40;
@@ -220,8 +222,9 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
         }
     }
 
-    private void DrawMethod(Span<uint> span, Dish dish, int episode, in BitmapFont.Clip all)
+    private void DrawMethod(Span<uint> span, Dish dish, int episode, double seconds, in BitmapFont.Clip all)
     {
+        ChefSprite.Draw(span, ChefSprite.Action.Stir, seconds, 870, 430, 7);
         font.Draw(span, W, "THE METHOD", 40, 84, Sage, 1, all);
 
         var y = 150;
@@ -231,7 +234,7 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
             var line = Method[Pick((episode * 7) + i, Method.Length)];
             var head = $"{i + 1}.";
             font.Draw(span, W, head, 40, y, Tomato, 1, all);
-            foreach (var wrapped in Canvas.Wrap(line.ToUpperInvariant(), font.Fit(W - 120), 3))
+            foreach (var wrapped in Canvas.Wrap(line.ToUpperInvariant(), font.Fit(760), 3))
             {
                 font.Draw(span, W, wrapped, 100, y, Cream, 1, all);
                 y += 40;
@@ -246,8 +249,9 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
         font.Draw(span, W, name, W - 40 - font.Measure(name), 640, Canvas.Rgb(0xC8, 0xB0, 0x90), 1, all);
     }
 
-    private void DrawPlate(Span<uint> span, Dish dish, int episode, in BitmapFont.Clip all)
+    private void DrawPlate(Span<uint> span, Dish dish, int episode, double seconds, in BitmapFont.Clip all)
     {
+        ChefSprite.Draw(span, ChefSprite.Action.Present, seconds, 1040, 490, 6);
         font.Draw(span, W, "PLATING", 40, 84, Sage, 1, all);
 
         // The plate: a big cream disc with the dish on it.
@@ -272,7 +276,7 @@ internal sealed class CookingChannel(BitmapFont font, Func<IReadOnlyList<Dish>> 
 
         var patter = PlatePatter[Pick(episode * 13, PlatePatter.Length)];
         y = Math.Max(y + 24, 520);
-        foreach (var line in Canvas.Wrap(patter.ToUpperInvariant(), font.Fit(W - 440 - 40), 3))
+        foreach (var line in Canvas.Wrap(patter.ToUpperInvariant(), font.Fit(580), 3))
         {
             font.Draw(span, W, line, 440, y, Sage, 1, all);
             y += 40;
