@@ -62,17 +62,15 @@ internal sealed class GatheringChannel(BitmapFont font, Func<GatheringSnapshot?>
             return;
         }
 
-        // Column heads.
-        const int ColType = 24, ColLevel = 104, ColPlace = 168, ColItems = 540, ColWindow = 916, ColLeft = 1112;
-        font.Draw(span, W, "JOB", ColType, 68, Canvas.Amber, 1, all);
-        font.Draw(span, W, "LV", ColLevel, 68, Canvas.Amber, 1, all);
-        font.Draw(span, W, "WHERE", ColPlace, 68, Canvas.Amber, 1, all);
-        font.Draw(span, W, "YIELDS", ColItems, 68, Canvas.Amber, 1, all);
-        font.Draw(span, W, "WINDOW", ColWindow, 68, Canvas.Amber, 1, all);
-        font.Draw(span, W, "IN", ColLeft, 68, Canvas.Amber, 1, all);
+        // Column heads. Two lines per node: where and when on the first, what and the window
+        // on the second, so nothing has to be squeezed into one.
+        const int ColType = 24, ColLevel = 96, ColPlace = 160, ColRight = 1064;
+        font.Draw(span, W, "JOB", ColType, 66, Canvas.Amber, 1, all);
+        font.Draw(span, W, "LV", ColLevel, 66, Canvas.Amber, 1, all);
+        font.Draw(span, W, "WHERE, AND WHAT IT YIELDS", ColPlace, 66, Canvas.Amber, 1, all);
+        font.Draw(span, W, "IN / WINDOW", ColRight, 66, Canvas.Amber, 1, all);
 
-        const int RowTop = 108, RowHeight = 40, RowsBottom = 680;
-        var region = new BitmapFont.Clip(0, RowTop, W, RowsBottom);
+        const int RowTop = 108, RowHeight = 68, RowsBottom = 680;
         var visible = (RowsBottom - RowTop) / RowHeight;
         var total = rows.Count * RowHeight;
         var offset = rows.Count <= visible ? 0 : (int)((seconds * RowSpeed) % total);
@@ -87,7 +85,7 @@ internal sealed class GatheringChannel(BitmapFont font, Func<GatheringSnapshot?>
 
                 var r = rows[i];
                 var top = Math.Max(y, RowTop);
-                var bottom = Math.Min(y + RowHeight, RowsBottom);
+                var bottom = Math.Min(y + RowHeight - 4, RowsBottom);
                 var bg = r.Up ? Canvas.Rgb(0x0F, 0x38, 0x2E) : i % 2 == 0 ? Canvas.Tube : Canvas.Glass;
                 Canvas.Fill(span, 0, top, W, bottom - top, bg);
 
@@ -99,20 +97,24 @@ internal sealed class GatheringChannel(BitmapFont font, Func<GatheringSnapshot?>
                     _ => Canvas.Accent,
                 };
 
-                font.Draw(span, W, Abbrev(r.Type), ColType, y, typeColour, 1, clip);
-                font.Draw(span, W, $"{r.Level}", ColLevel, y, Canvas.Dim, 1, clip);
+                // Line one: the job, the level, the place, and the countdown.
+                var line1 = y + 2;
+                font.Draw(span, W, Abbrev(r.Type), ColType, line1, typeColour, 1, clip);
+                font.Draw(span, W, $"{r.Level}", ColLevel, line1, Canvas.Dim, 1, clip);
 
-                var where = Canvas.Cut($"{r.Place}, {r.Zone}".ToUpperInvariant(), font.Fit(ColItems - ColPlace - 8));
-                font.Draw(span, W, where, ColPlace, y, Canvas.White, 1, clip);
-
-                var items = Canvas.Cut(r.Items.ToUpperInvariant(), font.Fit(ColWindow - ColItems - 8));
-                font.Draw(span, W, items, ColItems, y, Canvas.Dim, 1, clip);
-
-                var window = $"{r.WindowStart / 60:00}:{r.WindowStart % 60:00}-{r.WindowEnd / 60:00}:{r.WindowEnd % 60:00}";
-                font.Draw(span, W, window, ColWindow, y, Canvas.Faint, 1, clip);
+                var place = Canvas.Cut(r.Place.ToUpperInvariant(), font.Fit(ColRight - ColPlace - 16));
+                font.Draw(span, W, place, ColPlace, line1, Canvas.White, 1, clip);
 
                 var left = r.Up ? $"UP {Countdown(r.SecondsLeft)}" : Countdown(r.SecondsLeft);
-                font.Draw(span, W, left, ColLeft, y, r.Up ? Canvas.Good : Canvas.White, 1, clip);
+                font.Draw(span, W, left, ColRight, line1, r.Up ? Canvas.Good : Canvas.White, 1, clip);
+
+                // Line two: the zone and the yields, dim, and the Eorzean window under the countdown.
+                var line2 = y + 32;
+                var detail = Canvas.Cut($"{r.Zone}  /  {r.Items}".ToUpperInvariant(), font.Fit(ColRight - ColPlace - 16));
+                font.Draw(span, W, detail, ColPlace, line2, Canvas.Dim, 1, clip);
+
+                var window = $"{r.WindowStart / 60:00}:{r.WindowStart % 60:00}-{r.WindowEnd / 60:00}:{r.WindowEnd % 60:00}";
+                font.Draw(span, W, window, ColRight, line2, Canvas.Faint, 1, clip);
 
                 // Ephemeral and legendary nodes get a mark in the margin, so they are told apart at a glance.
                 if (r.Kind == "Ephemeral")
