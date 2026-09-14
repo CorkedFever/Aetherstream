@@ -23,6 +23,10 @@ internal sealed class LibraryTab(UiContext ui)
     private string sectionTitle = string.Empty;
     private string filter = string.Empty;
     private bool autoBrowsed;
+    private int shelf;
+
+    /// <summary>The other library: the Internet Archive's films, no account needed.</summary>
+    internal ArchiveTab Archive { get; } = new(ui);
 
     /// <summary>
     /// How deep into a show we are: empty at the library, one entry inside a show, two inside a
@@ -70,6 +74,13 @@ internal sealed class LibraryTab(UiContext ui)
 
     public void Draw()
     {
+        this.DrawShelfStrip();
+        if (this.shelf == 1)
+        {
+            this.Archive.Draw();
+            return;
+        }
+
         if (!this.Configured)
         {
             this.DrawSignIn();
@@ -91,6 +102,36 @@ internal sealed class LibraryTab(UiContext ui)
             ImGui.TextColored(Ui.Faint, this.status);
 
         this.DrawGrid();
+    }
+
+    /// <summary>Plex or the Archive, drawn the way the input strip is.</summary>
+    private void DrawShelfStrip()
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var labels = new[] { "PLEX", "ARCHIVE" };
+        using (Theme.PushDisplay())
+        {
+            for (var i = 0; i < labels.Length; i++)
+            {
+                if (i > 0)
+                    ImGui.SameLine(0f, 14f);
+                var size = ImGui.CalcTextSize(labels[i]);
+                var active = i == this.shelf;
+                if (ImGui.InvisibleButton($"##shelf{i}", size + new Vector2(6f, 6f)))
+                    this.shelf = i;
+                var min = ImGui.GetItemRectMin();
+                var max = ImGui.GetItemRectMax();
+                var hovered = ImGui.IsItemHovered();
+                drawList.AddText(min + new Vector2(3f, 3f), Theme.U32(active ? Theme.Accent : hovered ? Theme.Text : Theme.TextDim), labels[i]);
+                if (active)
+                    drawList.AddRectFilled(new Vector2(min.X, max.Y - 1f), new Vector2(max.X, max.Y + 1f), Theme.U32(Theme.Accent));
+            }
+        }
+
+        var y = ImGui.GetItemRectMax().Y + 5f;
+        var left = ImGui.GetCursorScreenPos().X;
+        drawList.AddLine(new Vector2(left, y), new Vector2(left + ImGui.GetContentRegionAvail().X, y), Theme.U32(Theme.Edge), 1f);
+        ImGui.Dummy(new Vector2(0f, 8f));
     }
 
     /// <summary>

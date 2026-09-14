@@ -42,7 +42,7 @@ internal static class PosterCard
         bool container,
         bool wide = false,
         float progress = 0f) =>
-        Draw(ui, id, () => ui.Art.Get(ui.Config.PlexServer, ui.Config.PlexToken, thumb),
+        Draw(ui, id, () => thumb.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? ui.Art.GetUrl(thumb) : ui.Art.Get(ui.Config.PlexServer, ui.Config.PlexToken, thumb),
              title, subtitle, container, wide, progress);
 
     /// <summary>
