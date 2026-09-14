@@ -1,0 +1,150 @@
+namespace Aetherstream.Plugin.Video;
+
+/// <summary>Something due at a time: a reset, a boat, a retainer coming home.</summary>
+internal sealed record TimerRow(string Name, string Detail, DateTime DueUtc, string Kind);
+
+/// <summary>A roulette and whether today's run is done.</summary>
+internal readonly record struct RouletteRow(string Name, bool Done);
+
+internal sealed record TimersSnapshot(
+    IReadOnlyList<TimerRow> Rows,
+    IReadOnlyList<RouletteRow> Roulettes,
+    string RetainerNote);
+
+/// <summary>
+/// The timers board: everything on a clock, soonest first, with a countdown that goes amber in
+/// the last hour and red in the last five minutes. Resets and the boat on the left; today's
+/// roulettes as a row of ticks on the right, with the retainers under them.
+/// </summary>
+internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data) : IFrameChannel
+{
+    private const int W = Canvas.Width;
+    private const int H = Canvas.Height;
+
+    public bool Available => font.Available;
+
+    public bool WantsPicture => false;
+
+    public bool WantsMusic => true;
+
+    public void Render(uint[] target, uint[]? picture, DateTime now, double seconds)
+    {
+        var span = target.AsSpan();
+        var all = new BitmapFont.Clip(0, 0, W, H);
+        var utc = DateTime.UtcNow;
+
+        Canvas.Fill(span, 0, 0, W, H, Canvas.Glass);
+
+        // Header.
+        Canvas.Fill(span, 0, 0, W, 56, Canvas.GlassLit);
+        Canvas.Fill(span, 0, 56, W, 2, Canvas.Edge);
+        font.Draw(span, W, "TIMERS", 24, 8, Canvas.Amber, 1, all);
+
+        var etMinutes = DateTimeOffset.UtcNow.ToUnixTimeSeconds() * 24 / 70;
+        var et = $"ET {etMinutes / 60 % 24:00}:{etMinutes % 60:00}";
+        font.Draw(span, W, et, (W - font.Measure(et)) / 2, 8, Canvas.White, 1, all);
+
+        var local = now.ToString("ddd h:mm:ss tt").ToUpperInvariant();
+        font.Draw(span, W, local, W - 24 - font.Measure(local), 8, Canvas.White, 1, all);
+
+        var snapshot = data();
+        if (snapshot is null)
+        {
+            const string Wait = "WINDING THE CLOCKS";
+            font.Draw(span, W, Wait, (W - font.Measure(Wait, 2)) / 2, 330, Canvas.Faint, 2, all);
+            this.DrawFooter(span, all);
+            return;
+        }
+
+        // -- the left: what is due, soonest first ----------------------------------------------------
+        const int Left = 24, Split = 800;
+        var y = 76;
+        foreach (var row in snapshot.Rows.OrderBy(r => r.DueUtc))
+        {
+            if (y > 600)
+                break;
+
+            var remaining = row.DueUtc - utc;
+            var colour = remaining < TimeSpan.FromMinutes(5) ? Canvas.Bad
+                : remaining < TimeSpan.FromHours(1) ? Canvas.Amber
+                : Canvas.White;
+
+            var kindColour = row.Kind switch
+            {
+                "reset" => Canvas.Accent,
+                "boat" => Canvas.Rgb(0x6B, 0xC7, 0xFF),
+                "retainer" => Canvas.Good,
+                "cactpot" => Canvas.Rgb(0xFF, 0xD6, 0x4F),
+                _ => Canvas.Dim,
+            };
+
+            font.Draw(span, W, Canvas.Cut(row.Name.ToUpperInvariant(), 26), Left, y, kindColour, 1, all);
+            var countdown = Countdown(remaining);
+            font.Draw(span, W, countdown, Split - 24 - font.Measure(countdown), y, colour, 1, all);
+
+            var when = row.DueUtc.ToLocalTime();
+            var whenText = when.Date == now.Date ? when.ToString("h:mm tt") : when.ToString("ddd h:mm tt");
+            var detail = Canvas.Cut($"{whenText.ToUpperInvariant()}   {Canvas.Plain(row.Detail).ToUpperInvariant()}", font.Fit(Split - Left - 16));
+            font.Draw(span, W, detail, Left, y + 32, Canvas.Dim, 1, all);
+
+            y += 72;
+            Canvas.Fill(span, Left, y - 6, Split - Left - 24, 1, Canvas.Edge);
+        }
+
+        // -- the right: roulettes and retainers ----------------------------------------------------
+        Canvas.Fill(span, Split - 8, 72, 2, 590, Canvas.Edge);
+        var ry = 76;
+        font.Draw(span, W, "ROULETTES TODAY", Split + 16, ry, Canvas.Amber, 1, all);
+        ry += 40;
+
+        if (snapshot.Roulettes.Count == 0)
+        {
+            font.Draw(span, W, "NOT LOGGED IN", Split + 16, ry, Canvas.Faint, 1, all);
+            ry += 40;
+        }
+
+        foreach (var (name, done) in snapshot.Roulettes)
+        {
+            if (ry > 440)
+                break;
+
+            // A box, ticked when done.
+            Canvas.Rect(span, Split + 16, ry + 10, 20, 20, done ? Canvas.Good : Canvas.Dim);
+            if (done)
+            {
+                Canvas.Fill(span, Split + 20, ry + 14, 12, 12, Canvas.Good);
+            }
+
+            var label = Canvas.Cut(name.Replace("Duty Roulette: ", string.Empty).ToUpperInvariant(), font.Fit(W - Split - 72));
+            font.Draw(span, W, label, Split + 48, ry, done ? Canvas.Faint : Canvas.White, 1, all);
+            ry += 36;
+        }
+
+        ry = Math.Max(ry + 12, 460);
+        font.Draw(span, W, "RETAINERS", Split + 16, ry, Canvas.Amber, 1, all);
+        ry += 40;
+        font.Draw(span, W, Canvas.Cut(snapshot.RetainerNote.ToUpperInvariant(), font.Fit(W - Split - 40)), Split + 16, ry, Canvas.Dim, 1, all);
+
+        this.DrawFooter(span, all);
+    }
+
+    private void DrawFooter(Span<uint> span, in BitmapFont.Clip all)
+    {
+        Canvas.Fill(span, 0, 680, W, 40, Canvas.GlassLit);
+        Canvas.Fill(span, 0, 680, W, 2, Canvas.Edge);
+        font.Draw(span, W, "AETHERSTREAM TIMERS", 24, 680, Canvas.Accent, 1, all);
+        const string Note = "RESETS IN YOUR LOCAL TIME";
+        font.Draw(span, W, Note, W - 24 - font.Measure(Note), 680, Canvas.Faint, 1, all);
+    }
+
+    private static string Countdown(TimeSpan t)
+    {
+        if (t <= TimeSpan.Zero)
+            return "NOW";
+        if (t.TotalDays >= 1)
+            return $"{(int)t.TotalDays}D {t.Hours:00}H {t.Minutes:00}M";
+        if (t.TotalHours >= 1)
+            return $"{(int)t.TotalHours}H {t.Minutes:00}M {t.Seconds:00}S";
+        return $"{t.Minutes:00}:{t.Seconds:00}";
+    }
+}
