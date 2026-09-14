@@ -188,7 +188,7 @@ Pure atmosphere:
 
 - **Aquarium.** *Built.* Pixel-art fish drifting across, the odd Namazu.
 - **Fireplace** *(built)*, **rain on a window.** Procedural.
-- **Starfield, Mystify** *(built)*, **Pipes, Flying Toasters.** The screensavers.
+- **Starfield, Mystify, Pipes, 3D Maze** *(built)*, **Flying Toasters.** The screensavers.
 - **Colour bars with a tone**, the sign-off, "PLEASE STAND BY".
 - **Demoscene channel.** *Plasma built*; a rotozoomer and a scrolling greeting to come.
 - **Fake ad breaks.** Bumpers for in-game things: "Visit the Gold Saucer".

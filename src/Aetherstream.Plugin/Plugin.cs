@@ -129,6 +129,8 @@ public sealed partial class Plugin : IDalamudPlugin
             ("Starfield", "The screensaver everyone had.", new StarfieldChannel(face)),
             ("Plasma", "The demoscene's favourite, in the set's colours.", new PlasmaChannel(face)),
             ("Mystify", "Two polygons and their ghosts.", new MystifyChannel(face)),
+            ("3D Maze", "Brick corridors, walked forever. Windows 95.", new MazeChannel(face)),
+            ("Pipes", "Plumbing fills the room, then starts over. Windows NT.", new PipesChannel(face)),
         ];
         this.screen = new WorldScreen(gameGui);
         this.gameGuiRef = gameGui;
