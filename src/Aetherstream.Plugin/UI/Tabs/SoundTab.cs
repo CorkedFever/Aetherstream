@@ -14,12 +14,47 @@ internal sealed class SoundTab(UiContext ui)
     public Action? MusicChanged;
 
     private List<Aetherstream.Playback.PlexLibrary.Playlist> plexPlaylists = [];
+    private int part;
+
+    internal RadioTab Radio { get; } = new(ui);
+
+    internal PodcastsTab Podcasts { get; } = new(ui);
     private string plexStatus = string.Empty;
 
     public void SetPlexPlaylists(List<Aetherstream.Playback.PlexLibrary.Playlist> value, string status)
     {
         this.plexPlaylists = value;
         this.plexStatus = status;
+    }
+
+    /// <summary>Output, Radio, Podcasts and Music, drawn the way the input strip is.</summary>
+    private void DrawPartStrip()
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var labels = new[] { "OUTPUT", "RADIO", "PODCASTS", "MUSIC" };
+        using (Theme.PushDisplay())
+        {
+            for (var i = 0; i < labels.Length; i++)
+            {
+                if (i > 0)
+                    ImGui.SameLine(0f, 14f);
+                var size = ImGui.CalcTextSize(labels[i]);
+                var active = i == this.part;
+                if (ImGui.InvisibleButton($"##soundpart{i}", size + new System.Numerics.Vector2(6f, 6f)))
+                    this.part = i;
+                var min = ImGui.GetItemRectMin();
+                var max = ImGui.GetItemRectMax();
+                var hovered = ImGui.IsItemHovered();
+                drawList.AddText(min + new System.Numerics.Vector2(3f, 3f), Theme.U32(active ? Theme.Accent : hovered ? Theme.Text : Theme.TextDim), labels[i]);
+                if (active)
+                    drawList.AddRectFilled(new System.Numerics.Vector2(min.X, max.Y - 1f), new System.Numerics.Vector2(max.X, max.Y + 1f), Theme.U32(Theme.Accent));
+            }
+        }
+
+        var y = ImGui.GetItemRectMax().Y + 5f;
+        var left = ImGui.GetCursorScreenPos().X;
+        drawList.AddLine(new System.Numerics.Vector2(left, y), new System.Numerics.Vector2(left + ImGui.GetContentRegionAvail().X, y), Theme.U32(Theme.Edge), 1f);
+        ImGui.Dummy(new System.Numerics.Vector2(0f, 8f));
     }
 
     /// <summary>
@@ -52,7 +87,7 @@ internal sealed class SoundTab(UiContext ui)
         Ui.Tip("Relative to the main volume, so turning the set down turns this down with it.");
 
         var source = ui.Config.ChannelMusicSource;
-        var label = source switch { "folder" => "A folder of my own", "plex" => "A Plex playlist", _ => "The bundled tracks" };
+        var label = source switch { "folder" => "A folder of my own", "plex" => "A Plex playlist", "radio" => $"Radio: {ui.Config.ChannelMusicRadioName}", "podcast" => "A podcast", _ => "The bundled tracks" };
 
         ImGui.SetNextItemWidth(260);
         using (var combo = ImRaii.Combo("##musicsource", label))
@@ -80,6 +115,12 @@ internal sealed class SoundTab(UiContext ui)
                 break;
             case "plex":
                 this.DrawMusicPlex();
+                break;
+            case "radio":
+                Ui.Hint("An internet radio station, chosen on the Radio part of this tab.");
+                break;
+            case "podcast":
+                Ui.Hint("A podcast, chosen on the Podcasts part of this tab.");
                 break;
             default:
                 Ui.Hint("A few royalty-free lounge tracks that ship with the plugin. Credits are in the music folder.");
@@ -218,6 +259,14 @@ internal sealed class SoundTab(UiContext ui)
 
     public void Draw()
     {
+        this.DrawPartStrip();
+        switch (this.part)
+        {
+            case 1: this.Radio.Draw(); return;
+            case 2: this.Podcasts.Draw(); return;
+            case 3: this.DrawMusic(); return;
+        }
+
         Ui.Section("Sound");
 
         var enabled = ui.Config.AudioEnabled;
@@ -287,8 +336,6 @@ internal sealed class SoundTab(UiContext ui)
         Ui.Tip(
             "A set on your left sounds like it is on your left. It follows the camera, not your " +
             "character, and it only ever turns the far side down — nothing gets louder.");
-
-        this.DrawMusic();
 
         Ui.Section("Sync");
 

@@ -1,14 +1,14 @@
 namespace Aetherstream.Plugin.Video;
 
 /// <summary>What the music channel needs from the set: what is on, what is next, and the sound itself.</summary>
-internal sealed record MusicState(bool Playing, string NowPlaying, string UpNext, int Index, int Count);
+internal sealed record MusicState(bool Playing, string NowPlaying, string UpNext, int Index, int Count, string LiveTitle = "", string CoverUrl = "");
 
 /// <summary>
 /// Aether FM: the jukebox as a channel. The track in big letters with a generated sleeve beside
 /// it, what is up next, a spectrum that moves with the sound, a waveform under it, and a pair of
 /// VU meters. Something to leave on. The sleeve is drawn from the title, so every track has one.
 /// </summary>
-internal sealed class MusicChannel(BitmapFont font, Func<MusicState> state, Action<float[]> tap) : IFrameChannel
+internal sealed class MusicChannel(BitmapFont font, Func<MusicState> state, Action<float[]> tap, Func<string, IconPixels?>? cover = null) : IFrameChannel
 {
     private const int W = Canvas.Width;
     private const int H = Canvas.Height;
@@ -59,7 +59,17 @@ internal sealed class MusicChannel(BitmapFont font, Func<MusicState> state, Acti
 
         // The sleeve, generated from the title.
         var title = s.NowPlaying.Length > 0 ? s.NowPlaying : "NOTHING ON";
-        this.DrawSleeve(span, 40, 90, 300, title, seconds, s.Playing);
+        var art = s.CoverUrl.Length > 0 ? cover?.Invoke(s.CoverUrl) : null;
+        if (art is { Width: > 0 })
+        {
+            this.DrawRecord(span, 40, 90, 300, title, seconds, s.Playing);
+            Blit(span, art, 40, 90, 300, 300);
+            Canvas.Rect(span, 40, 90, 300, 300, Canvas.Lerp(Panel, Cream, 0.3f), 4);
+        }
+        else
+        {
+            this.DrawSleeve(span, 40, 90, 300, title, seconds, s.Playing);
+        }
 
         // The title, the next, the position.
         const int TextX = 500;
@@ -78,7 +88,12 @@ internal sealed class MusicChannel(BitmapFont font, Func<MusicState> state, Acti
         }
         else
         {
-            if (s.UpNext.Length > 0)
+            if (s.LiveTitle.Length > 0)
+            {
+                font.Draw(span, W, "ON NOW", TextX, y + 12, Dim, 1, all);
+                font.Draw(span, W, Canvas.Cut(Canvas.Plain(s.LiveTitle).ToUpperInvariant(), font.Fit(W - TextX - 40)), TextX, y + 52, Lime, 1, all);
+            }
+            else if (s.UpNext.Length > 0)
             {
                 font.Draw(span, W, "UP NEXT", TextX, y + 12, Dim, 1, all);
                 font.Draw(span, W, Canvas.Cut(Canvas.Plain(s.UpNext).ToUpperInvariant(), font.Fit(W - TextX - 40)), TextX, y + 52, Cyan, 1, all);
@@ -225,6 +240,45 @@ internal sealed class MusicChannel(BitmapFont font, Func<MusicState> state, Acti
         }
 
         Canvas.Rect(span, x, y, size, size, Canvas.Lerp(a, Canvas.Black, 0.5f), 4);
+    }
+
+    /// <summary>The turning record behind the sleeve, on its own, for when the sleeve is real art.</summary>
+    private void DrawRecord(Span<uint> span, int x, int y, int size, string title, double seconds, bool playing)
+    {
+        var seed = 0;
+        foreach (var ch in title)
+            seed = (seed * 31) + ch;
+        var a = Hue(seed);
+        var spin = playing ? seconds * 2.0 : 0.0;
+        var rx = x + size + 40;
+        var ry = y + (size / 2);
+        Canvas.Disc(span, rx, ry, size / 2 - 10, Canvas.Rgb(0x14, 0x12, 0x1A));
+        for (var r = size / 2 - 20; r > size / 8; r -= 10)
+            Canvas.Disc(span, rx, ry, r, (r / 10) % 2 == 0 ? Canvas.Rgb(0x1E, 0x1A, 0x26) : Canvas.Rgb(0x14, 0x12, 0x1A));
+        Canvas.Disc(span, rx, ry, size / 8, a);
+        Canvas.Disc(span, rx, ry, 5, Night);
+        Canvas.Line(span, rx, ry, rx + (int)(Math.Cos(spin) * (size / 8)), ry + (int)(Math.Sin(spin) * (size / 8)), a);
+    }
+
+    private static void Blit(Span<uint> span, IconPixels art, int x, int y, int w, int h)
+    {
+        for (var ty = 0; ty < h; ty++)
+        {
+            var yy = y + ty;
+            if (yy < 0 || yy >= H)
+                continue;
+            var sy = ty * art.Height / h;
+            for (var tx = 0; tx < w; tx++)
+            {
+                var xx = x + tx;
+                if (xx < 0 || xx >= W)
+                    continue;
+                var p = art.Pixels[(sy * art.Width) + (tx * art.Width / w)];
+                if ((p >> 24) == 0)
+                    continue;
+                span[(yy * W) + xx] = p | 0xFF000000u;
+            }
+        }
     }
 
     private static uint Hue(int seed)

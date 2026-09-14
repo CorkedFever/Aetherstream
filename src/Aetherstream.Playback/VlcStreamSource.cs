@@ -52,6 +52,22 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
 
     private Media? media;
 
+    /// <summary>What the stream says is on, from its ICY metadata, or null. Radio stations set it per song.</summary>
+    public string? NowPlayingMeta
+    {
+        get
+        {
+            try
+            {
+                return this.media?.Meta(MetadataType.NowPlaying);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+    }
+
     /// <summary>
     /// Serialises transport control against teardown. Every member below takes it, and so does
     /// Dispose — so a seek can never land on a player that is being stopped underneath it.

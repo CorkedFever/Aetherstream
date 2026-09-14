@@ -40,7 +40,15 @@ internal sealed class Jukebox(LibVLC vlc, IPluginLog log) : IDisposable
     public string NowPlaying { get; private set; } = string.Empty;
 
     /// <summary>The track after this one, by name, or empty.</summary>
-    public string UpNext => this.queue.Count > 1 ? TitleOf(this.queue[(this.index + 1) % this.queue.Count]) : string.Empty;
+    public string UpNext => this.queue.Count > 1 ? this.TitleOf(this.queue[(this.index + 1) % this.queue.Count]) : string.Empty;
+
+    /// <summary>A better name for a track than its file name, when the plugin has one.</summary>
+    public Func<string, string?>? Titles { get; set; }
+
+    /// <summary>What the stream itself says is on, for a radio station: the song, from its metadata.</summary>
+    public string LiveTitle { get; private set; } = string.Empty;
+
+    private long liveCheckedAtMs;
 
     /// <summary>Which track of how many, one-based.</summary>
     public (int Index, int Count) Position => (this.index + 1, this.queue.Count);
@@ -54,13 +62,13 @@ internal sealed class Jukebox(LibVLC vlc, IPluginLog log) : IDisposable
             into.Clear();
     }
 
-    private static string TitleOf(string track) => Path.GetFileNameWithoutExtension(Uri.UnescapeDataString(track.Split('?')[0]));
+    private string TitleOf(string track) => this.Titles?.Invoke(track) ?? Path.GetFileNameWithoutExtension(Uri.UnescapeDataString(track.Split('?')[0]));
 
     /// <summary>
     /// Makes sure this list is playing. The same list twice is a no-op; a different one starts
     /// over, shuffled. Render thread.
     /// </summary>
-    public void Ensure(IReadOnlyList<string> list, string device)
+    public void Ensure(IReadOnlyList<string> list, string device, bool shuffle = true)
     {
         if (this.disposed)
             return;
@@ -80,7 +88,7 @@ internal sealed class Jukebox(LibVLC vlc, IPluginLog log) : IDisposable
 
         // Shuffled once per list, then looped in that order, so the same track never follows itself.
         this.queue = [.. list];
-        for (var i = this.queue.Count - 1; i > 0; i--)
+        for (var i = shuffle ? this.queue.Count - 1 : 0; i > 0; i--)
         {
             var j = Random.Shared.Next(i + 1);
             (this.queue[i], this.queue[j]) = (this.queue[j], this.queue[i]);
@@ -95,6 +103,13 @@ internal sealed class Jukebox(LibVLC vlc, IPluginLog log) : IDisposable
     {
         if (this.disposed || !this.Playing)
             return;
+
+        var now = Environment.TickCount64;
+        if (now - this.liveCheckedAtMs > 2000)
+        {
+            this.liveCheckedAtMs = now;
+            this.LiveTitle = this.source?.NowPlayingMeta?.Trim() ?? string.Empty;
+        }
 
         if (this.failedPending)
         {
@@ -148,7 +163,8 @@ internal sealed class Jukebox(LibVLC vlc, IPluginLog log) : IDisposable
     private void Open(string track)
     {
         var mrl = ToMrl(track);
-        this.NowPlaying = Path.GetFileNameWithoutExtension(Uri.UnescapeDataString(track.Split('?')[0]));
+        this.NowPlaying = this.TitleOf(track);
+        this.LiveTitle = string.Empty;
 
         if (this.source is null)
         {

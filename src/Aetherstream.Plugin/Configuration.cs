@@ -131,6 +131,26 @@ public sealed class MarketItem
 
 /// <summary>Something played before, so it can be started again without being typed again.</summary>
 [Serializable]
+/// <summary>A radio station kept as a favourite.</summary>
+public sealed class RadioStationRef
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string Url { get; set; } = string.Empty;
+
+    public string Logo { get; set; } = string.Empty;
+}
+
+/// <summary>A podcast the user follows: its feed, and its name and picture for the chip.</summary>
+public sealed class PodcastRef
+{
+    public string Title { get; set; } = string.Empty;
+
+    public string Url { get; set; } = string.Empty;
+
+    public string Image { get; set; } = string.Empty;
+}
+
 public sealed class Recent
 {
     public string Source { get; set; } = string.Empty;
@@ -341,6 +361,22 @@ public sealed class Configuration : IPluginConfiguration
     public string ChannelMusicPlexPlaylist { get; set; } = string.Empty;
 
     public string ChannelMusicPlexPlaylistName { get; set; } = string.Empty;
+
+    /// <summary>The internet radio station playing as the music, when the source is "radio".</summary>
+    public string ChannelMusicRadioUrl { get; set; } = string.Empty;
+
+    public string ChannelMusicRadioName { get; set; } = string.Empty;
+
+    public string ChannelMusicRadioLogo { get; set; } = string.Empty;
+
+    /// <summary>The podcast playing as the music, when the source is "podcast": its feed, and the episode it started from.</summary>
+    public string ChannelMusicPodcastFeed { get; set; } = string.Empty;
+
+    public string ChannelMusicPodcastEpisode { get; set; } = string.Empty;
+
+    public List<RadioStationRef> RadioFavourites { get; set; } = [];
+
+    public List<PodcastRef> PodcastFeeds { get; set; } = [];
 
     /// <summary>Live channels found dead — no answer, or a black picture — with when to try them again, as unix seconds.</summary>
     public Dictionary<string, long> LiveTvDead { get; set; } = new(StringComparer.OrdinalIgnoreCase);

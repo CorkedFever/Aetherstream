@@ -752,6 +752,15 @@ internal sealed class StreamSession(
     /// <summary>What to play under a channel that wants music. Set by the plugin; asked once a frame.</summary>
     public Func<IReadOnlyList<string>>? MusicTracks { get; set; }
 
+    /// <summary>A name for a track, when the plugin knows a better one than its file name.</summary>
+    public Func<string, string?>? MusicTitles { get; set; }
+
+    /// <summary>Whether the list should be shuffled: yes for music, no for a podcast's episodes.</summary>
+    public Func<bool>? MusicShuffle { get; set; }
+
+    /// <summary>What a radio stream says is playing, or empty.</summary>
+    public string MusicLiveTitle => this.music?.LiveTitle ?? string.Empty;
+
     private Jukebox? music;
 
     public bool MusicPlaying => this.music is { Playing: true };
@@ -794,8 +803,8 @@ internal sealed class StreamSession(
         var musicWanted = channel.WantsMusic && (this.source is null || !channel.WantsPicture);
         if (musicWanted && config.ChannelMusic && config.AudioEnabled && this.MusicTracks is { } tracks)
         {
-            this.music ??= new Jukebox(vlc, log);
-            this.music.Ensure(tracks(), config.AudioDeviceId);
+            this.music ??= new Jukebox(vlc, log) { Titles = this.MusicTitles };
+            this.music.Ensure(tracks(), config.AudioDeviceId, this.MusicShuffle?.Invoke() ?? true);
             this.music.Update();
         }
         else

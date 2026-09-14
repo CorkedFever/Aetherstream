@@ -18,6 +18,9 @@ public sealed partial class Plugin
         this.window.Sound.LoadPlexPlaylists = this.LoadPlexPlaylists;
         this.window.Sound.MusicChanged = this.MusicChanged;
         this.session.MusicTracks = this.MusicTracks;
+        this.session.MusicTitles = this.MusicTitle;
+        this.session.MusicShuffle = () => this.config.ChannelMusicSource != "podcast";
+        this.WireRadio();
 
         // A Plex playlist chosen last time is fetched now, so the first forecast has its music.
         if (this.config.ChannelMusicSource == "plex" && this.config.ChannelMusicPlexPlaylist.Length > 0)
@@ -30,7 +33,7 @@ public sealed partial class Plugin
     /// </summary>
     private IReadOnlyList<string> MusicTracks()
     {
-        var key = $"{this.config.ChannelMusicSource}|{this.config.ChannelMusicFolder}|{this.config.ChannelMusicPlexPlaylist}|{this.plexMusicTracks.Count}";
+        var key = $"{this.config.ChannelMusicSource}|{this.config.ChannelMusicFolder}|{this.config.ChannelMusicPlexPlaylist}|{this.plexMusicTracks.Count}|{this.config.ChannelMusicRadioUrl}|{this.config.ChannelMusicPodcastFeed}|{this.config.ChannelMusicPodcastEpisode}|{this.podcastOpen?.Episodes.Count ?? 0}";
         var now = Environment.TickCount64;
         if (key == this.musicKey && now - this.musicScannedAtMs < 60_000)
             return this.musicTracks;
@@ -50,6 +53,11 @@ public sealed partial class Plugin
 
                 case "plex":
                     found.AddRange(this.plexMusicTracks);
+                    break;
+
+                case "radio":
+                case "podcast":
+                    found.AddRange(this.RadioOrPodcastTracks());
                     break;
 
                 default:
