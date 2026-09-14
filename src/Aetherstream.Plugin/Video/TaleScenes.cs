@@ -1092,35 +1092,43 @@ internal static class TaleScenes
 
             // -- the ogre ------------------------------------------------------------------------------------------------
             case Scene.SwampSign:
+                Mist(span, c.Paper, s);
+                DeadTree(span, ink, 160, Ground);
                 Reeds(span, ink, s);
-                Mud(span, ink, 300, Ground, s);
+                Mud(span, ink, 330, Ground, s);
+                LilyPads(span, ink, 330, Ground - 18, s);
+                Frog(span, ink, 250, Ground - 22, s);
                 Sign(span, ink, 880, Ground);
-                Ogre(span, ink, 600, Ground, s, arms: false);
+                Ogre(span, ink, 600, Ground, s, arms: false, paper: c.Paper);
                 break;
             case Scene.Doorstep:
+                Mist(span, c.Paper, s);
                 Reeds(span, ink, s);
-                Hut(span, ink, 900, Ground);
-                Ogre(span, ink, 760, Ground, s, arms: true);
-                for (var i = 0; i < 6; i++)
-                    Mortal(span, ink, 160 + (i * 70), Ground, 0.22f + (0.06f * (i % 3)), i % 2 == 0);
-                Chocobo(span, ink, 520 + (int)(Math.Sin(s * 5.0) * 6), Ground, s, talking: true);
+                Hut(span, ink, 900, Ground, c.Paper);
+                Ogre(span, ink, 760, Ground, s, arms: true, paper: c.Paper);
+                Creatures(span, ink, c.Paper, 110, Ground, s);
+                Chocobo(span, ink, 560 + (int)(Math.Sin(s * 5.0) * 6), Ground, s, talking: true, paper: c.Paper);
                 break;
             case Scene.ShortLord:
-                Castle(span, ink, 760, Ground);
-                King(span, ink, 560, Ground, s, small: true);
-                Ogre(span, ink, 240, Ground, s, arms: false);
-                Chocobo(span, ink, 420, Ground, s, talking: true);
+                Castle(span, ink, 760, Ground, c.Paper);
+                Lord(span, ink, 600, Ground, s);
+                Ogre(span, ink, 240, Ground, s, arms: false, paper: c.Paper);
+                Chocobo(span, ink, 430, Ground, s, talking: true, paper: c.Paper);
                 break;
             case Scene.TowerDragon:
             {
                 Dark(span, 0.2f);
                 Lava(span, s);
-                Tower(span, ink, 900, Ground - 60);
+                Bridge(span, ink, 560, Ground - 60);
+                Tower(span, ink, 940, Ground - 60, c.Paper);
+                Princess(span, ink, 940, Ground - 60 - 220, s, small: true);
                 var swoon = (int)(Math.Sin(s * 2.0) * 10);
                 Dragon(span, ink, 700, 130 + swoon, s);
+                if ((int)(s * 2) % 3 == 0)
+                    Fire(span, 540, 150 + swoon, s);
                 Heart(span, Canvas.Rgb(0xE0, 0x50, 0x80), 560, 200 - (int)(t * 10 % 60), 10 + (int)(Math.Sin(s * 6.0) * 3));
-                Chocobo(span, ink, 420, Ground - 60, s, talking: false);
-                Ogre(span, ink, 200, Ground - 60, s, arms: true);
+                Chocobo(span, ink, 420, Ground - 60, s, talking: false, paper: c.Paper);
+                Ogre(span, ink, 200, Ground - 60, s, arms: true, paper: c.Paper);
                 break;
             }
 
@@ -1128,29 +1136,31 @@ internal static class TaleScenes
             {
                 Ridge(span, ink, 90);
                 Roads(span, c.Paper, s);
+                Signpost(span, ink, 1100, Ground);
                 var walk = (int)(t * 40);
-                Ogre(span, ink, 160 + walk, Ground, s, arms: false);
-                Chocobo(span, ink, 360 + walk + (int)(Math.Sin(s * 5.0) * 4), Ground, s, talking: true);
-                Mortal(span, ink, 500 + walk, Ground, 0.5f, false);
+                Ogre(span, ink, 160 + walk, Ground, s, arms: false, paper: c.Paper);
+                Chocobo(span, ink, 370 + walk + (int)(Math.Sin(s * 5.0) * 4), Ground, s, talking: true, paper: c.Paper);
+                Princess(span, ink, 540 + walk, Ground, s, small: false);
                 Canvas.Disc(span, 1000, 160, 34, Canvas.Rgb(0xFF, 0xB0, 0x60));
                 break;
             }
 
             case Scene.Wedding:
             {
-                Chapel(span, ink, 200, Ground);
+                Church(span, ink, 160, Ground, c.Paper);
                 Canvas.Disc(span, 1000, 140, 34, MoonWhite);
+                Bunting(span, ink, c.Paper, 420, 200, 1180, 240, s);
+                Cake(span, ink, c.Paper, 1040, Ground);
                 var turned = t > 4.0;
                 if (t is > 4.0 and < 4.3)
                     Flash(span, c.Paper);
-                Ogre(span, ink, 520, Ground, s, arms: true);
+                Ogre(span, ink, 520, Ground, s, arms: true, paper: c.Paper);
                 if (turned)
-                    Ogre(span, ink, 700, Ground, s, arms: true, small: true);
+                    Ogre(span, ink, 700, Ground, s, arms: true, paper: c.Paper, small: true, bride: true);
                 else
-                    Mortal(span, ink, 720, Ground, 0.5f, false);
-                Chocobo(span, ink, 900, Ground, s, talking: true);
-                for (var i = 0; i < 4; i++)
-                    Mortal(span, ink, 1000 + (i * 50), Ground, 0.22f + (0.05f * (i % 2)), false);
+                    Princess(span, ink, 700, Ground, s, small: false, veil: true);
+                Chocobo(span, ink, 900, Ground, s, talking: true, paper: c.Paper);
+                Creatures(span, ink, c.Paper, 1080, Ground, s, few: true);
                 for (var i = 0; i < 6; i++)
                     Heart(span, Canvas.Rgb(0xE0, 0x50, 0x80), 560 + (i * 60), 200 - (int)((t * 30 + (i * 40)) % 120), 6);
                 break;
@@ -1160,43 +1170,98 @@ internal static class TaleScenes
 
     // -- the ogre's pieces ---------------------------------------------------------------------------------
 
-    private static void Ogre(Span<uint> span, uint ink, int x, int ground, double s, bool arms, bool small = false)
+    private static void Ogre(Span<uint> span, uint ink, int x, int ground, double s, bool arms, uint paper, bool small = false, bool bride = false)
     {
         var sc = small ? 0.8f : 1f;
+        var line = Canvas.Lerp(paper, Canvas.White, 0.2f);
         var bob = (int)(Math.Sin(s * 1.6) * 3);
         var bodyR = (int)(70 * sc);
         var headR = (int)(44 * sc);
         var by = ground - bodyR - 10 + bob;
         var hy = by - bodyR - headR + (int)(20 * sc);
+
+        // The body: a round belly, legs under it, boots.
         Canvas.Disc(span, x, by, bodyR, ink);
         Canvas.Fill(span, x - bodyR, by, bodyR * 2, ground - by, ink);
+        Canvas.Fill(span, x - bodyR + (int)(10 * sc), ground - (int)(14 * sc), (int)(50 * sc), (int)(14 * sc), ink);
+        Canvas.Fill(span, x + bodyR - (int)(60 * sc), ground - (int)(14 * sc), (int)(50 * sc), (int)(14 * sc), ink);
+        Canvas.Fill(span, x - (int)(8 * sc), by + (int)(30 * sc), (int)(16 * sc), ground - by - (int)(44 * sc), Canvas.Lerp(ink, paper, 0.12f));
+
+        // The vest: two lapels in a lighter line; the belt with a buckle.
+        Canvas.Line(span, x - (int)(30 * sc), by - bodyR + (int)(10 * sc), x - (int)(12 * sc), by + (int)(10 * sc), line);
+        Canvas.Line(span, x + (int)(30 * sc), by - bodyR + (int)(10 * sc), x + (int)(12 * sc), by + (int)(10 * sc), line);
+        Canvas.Fill(span, x - bodyR + (int)(8 * sc), by + (int)(34 * sc), (bodyR * 2) - (int)(16 * sc), (int)(5 * sc), line);
+        Canvas.Fill(span, x - (int)(8 * sc), by + (int)(31 * sc), (int)(16 * sc), (int)(11 * sc), line);
+
+        // The head: tube ears, a heavy brow, pale eyes, a wide grin.
         Canvas.Disc(span, x, hy, headR, ink);
-        // The ears: two little trumpets.
-        Canvas.Fill(span, x - headR - (int)(8 * sc), hy - (int)(20 * sc), (int)(10 * sc), (int)(6 * sc), ink);
-        Canvas.Disc(span, x - headR - (int)(10 * sc), hy - (int)(18 * sc), (int)(7 * sc), ink);
-        Canvas.Fill(span, x + headR - (int)(2 * sc), hy - (int)(20 * sc), (int)(10 * sc), (int)(6 * sc), ink);
-        Canvas.Disc(span, x + headR + (int)(10 * sc), hy - (int)(18 * sc), (int)(7 * sc), ink);
-        // Eyes, so he reads as a face and not a boulder.
-        Canvas.Disc(span, x - (int)(14 * sc), hy - (int)(4 * sc), (int)(4 * sc), Canvas.Rgb(0xF0, 0xE8, 0xD0));
-        Canvas.Disc(span, x + (int)(14 * sc), hy - (int)(4 * sc), (int)(4 * sc), Canvas.Rgb(0xF0, 0xE8, 0xD0));
+        for (var side = -1; side <= 1; side += 2)
+        {
+            var ex = x + (side * (headR + (int)(4 * sc)));
+            var wig = (int)(Math.Sin(s * 2.0 + side) * 2);
+            Canvas.Line(span, ex, hy - (int)(10 * sc), ex + (side * (int)(26 * sc)), hy - (int)(26 * sc) + wig, ink);
+            for (var k = 1; k < (int)(9 * sc); k++)
+                Canvas.Line(span, ex, hy - (int)(10 * sc) + k, ex + (side * (int)(26 * sc)), hy - (int)(26 * sc) + wig + k, ink);
+            Canvas.Disc(span, ex + (side * (int)(27 * sc)), hy - (int)(22 * sc) + wig, (int)(7 * sc), ink);
+            Canvas.Disc(span, ex + (side * (int)(27 * sc)), hy - (int)(22 * sc) + wig, (int)(3 * sc), Canvas.Lerp(ink, paper, 0.3f));
+        }
+
+        Canvas.Fill(span, x - (int)(26 * sc), hy - (int)(14 * sc), (int)(20 * sc), (int)(3 * sc), line);
+        Canvas.Fill(span, x + (int)(6 * sc), hy - (int)(14 * sc), (int)(20 * sc), (int)(3 * sc), line);
+        Canvas.Disc(span, x - (int)(15 * sc), hy - (int)(4 * sc), (int)(5 * sc), Canvas.Rgb(0xF0, 0xE8, 0xD0));
+        Canvas.Disc(span, x + (int)(15 * sc), hy - (int)(4 * sc), (int)(5 * sc), Canvas.Rgb(0xF0, 0xE8, 0xD0));
+        Canvas.Disc(span, x - (int)(14 * sc), hy - (int)(4 * sc), (int)(2 * sc), ink);
+        Canvas.Disc(span, x + (int)(16 * sc), hy - (int)(4 * sc), (int)(2 * sc), ink);
+        Canvas.Disc(span, x, hy + (int)(6 * sc), (int)(6 * sc), Canvas.Lerp(ink, paper, 0.15f));
+        for (var k = 0; k < (int)(30 * sc); k++)
+            Canvas.Fill(span, x - (int)(15 * sc) + k, hy + (int)(18 * sc) + (int)(Math.Sin(k / (30.0 * sc) * Math.PI) * 5 * sc), 1, 2, line);
+
+        if (bride)
+        {
+            // A circlet and a veil, since she has just walked out of a wedding.
+            Canvas.Fill(span, x - (int)(20 * sc), hy - headR - (int)(2 * sc), (int)(40 * sc), (int)(4 * sc), Canvas.Rgb(0xE0, 0xB8, 0x4A));
+            for (var k = 0; k < (int)(60 * sc); k++)
+                Canvas.Fill(span, x + headR - (int)(6 * sc) + (k / 3), hy - headR + k, (int)(14 * sc) + (k / 2), 1, Canvas.Lerp(paper, Canvas.White, 0.5f));
+        }
+
         if (arms)
         {
-            Canvas.Line(span, x - bodyR, by, x - bodyR - (int)(40 * sc), by - (int)(30 * sc) + bob, ink);
-            for (var i = 1; i < (int)(12 * sc); i++)
-                Canvas.Line(span, x - bodyR, by + i, x - bodyR - (int)(40 * sc), by - (int)(30 * sc) + bob + i, ink);
-            Canvas.Line(span, x + bodyR, by, x + bodyR + (int)(40 * sc), by - (int)(30 * sc) + bob, ink);
-            for (var i = 1; i < (int)(12 * sc); i++)
-                Canvas.Line(span, x + bodyR, by + i, x + bodyR + (int)(40 * sc), by - (int)(30 * sc) + bob + i, ink);
+            for (var side = -1; side <= 1; side += 2)
+            {
+                var ax = x + (side * bodyR);
+                for (var i = 0; i < (int)(14 * sc); i++)
+                    Canvas.Line(span, ax, by + i, ax + (side * (int)(44 * sc)), by - (int)(34 * sc) + bob + i, ink);
+                Canvas.Disc(span, ax + (side * (int)(46 * sc)), by - (int)(30 * sc) + bob, (int)(11 * sc), ink);
+            }
         }
     }
 
-    private static void Chocobo(Span<uint> span, uint ink, int x, int ground, double s, bool talking)
+    private static void Chocobo(Span<uint> span, uint ink, int x, int ground, double s, bool talking, uint paper)
     {
+        var line = Canvas.Lerp(paper, Canvas.White, 0.2f);
         var bob = (int)(Math.Sin(s * 4.0) * 3);
         Canvas.Disc(span, x, ground - 60 + bob, 34, ink);
-        Canvas.Fill(span, x - 12, ground - 30, 8, 30, ink);
-        Canvas.Fill(span, x + 8, ground - 30, 8, 30, ink);
-        // The neck, up and forward; the head with a beak; a tuft.
+
+        // Legs with toes, a wing folded on the flank, three tail feathers.
+        for (var leg = 0; leg < 2; leg++)
+        {
+            var lx = x - 12 + (leg * 20);
+            Canvas.Fill(span, lx, ground - 30, 8, 30, ink);
+            Canvas.Fill(span, lx - 8, ground - 4, 24, 4, ink);
+            Canvas.Fill(span, lx - 10, ground - 6, 4, 6, ink);
+            Canvas.Fill(span, lx + 14, ground - 6, 4, 6, ink);
+        }
+
+        for (var i = 0; i < 26; i++)
+            Canvas.Fill(span, x - 26 + i, ground - 66 + bob + (i / 2), 1, 20 - (i / 2), Canvas.Lerp(ink, paper, 0.12f));
+        Canvas.Line(span, x - 26, ground - 66 + bob, x - 2, ground - 54 + bob, line);
+        for (var f = 0; f < 3; f++)
+        {
+            Canvas.Line(span, x - 30, ground - 70 + bob + (f * 6), x - 62 - (f * 6), ground - 100 + bob + (f * 12), ink);
+            Canvas.Line(span, x - 30, ground - 69 + bob + (f * 6), x - 62 - (f * 6), ground - 99 + bob + (f * 12), ink);
+        }
+
+        // The neck, the head, the beak that flaps when it talks, a tuft, an eye.
         for (var i = 0; i < 70; i++)
             Canvas.Fill(span, x + 20 + (i / 3), ground - 70 - i + bob, 16, 1, ink);
         var hx = x + 50;
@@ -1204,14 +1269,298 @@ internal static class TaleScenes
         Canvas.Disc(span, hx, hy, 18, ink);
         var beak = talking ? (int)(Math.Abs(Math.Sin(s * 10.0)) * 8) : 0;
         for (var i = 0; i < 26; i++)
-            Canvas.Fill(span, hx + 14 + i, hy - 4 + (i / 3) - beak / 2, 1, 6 + beak - (i / 3), ink);
+            Canvas.Fill(span, hx + 14 + i, hy - 4 + (i / 3) - (beak / 2), 1, 6 + beak - (i / 3), ink);
+        Canvas.Fill(span, hx + 14, hy + 1, 18, 1, line);
         Canvas.Line(span, hx - 4, hy - 16, hx - 10, hy - 34, ink);
         Canvas.Line(span, hx + 4, hy - 17, hx + 2, hy - 36, ink);
-        Canvas.Disc(span, hx + 4, hy - 4, 3, Canvas.Rgb(0xF0, 0xE8, 0xD0));
-        // The tail feathers.
-        Canvas.Line(span, x - 30, ground - 66 + bob, x - 60, ground - 96 + bob, ink);
-        Canvas.Line(span, x - 30, ground - 60 + bob, x - 64, ground - 80 + bob, ink);
+        Canvas.Line(span, hx, hy - 17, hx - 4, hy - 38, ink);
+        Canvas.Disc(span, hx + 4, hy - 4, 4, Canvas.Rgb(0xF0, 0xE8, 0xD0));
+        Canvas.Disc(span, hx + 5, hy - 4, 2, ink);
     }
+
+    private static void Princess(Span<uint> span, uint ink, int x, int ground, double s, bool small, bool veil = false)
+    {
+        var sc = small ? 0.5f : 1f;
+        var bob = (int)(Math.Sin(s * 1.6 + 1.0) * 2);
+        var headR = (int)(18 * sc);
+        var hy = ground - (int)(150 * sc) + bob;
+        // The gown: a bell to the ground; the bodice; the head with a braid down the back and a circlet.
+        for (var y = 0; y < (int)(100 * sc); y++)
+            Canvas.Fill(span, x - (int)(14 * sc) - (y * 32 / (int)(100 * sc)), ground - (int)(100 * sc) + y, ((int)(14 * sc) + (y * 32 / (int)(100 * sc))) * 2, 1, ink);
+        Canvas.Fill(span, x - (int)(12 * sc), hy + headR, (int)(24 * sc), (int)(36 * sc), ink);
+        Canvas.Disc(span, x, hy, headR, ink);
+        for (var k = 0; k < (int)(70 * sc); k++)
+            Canvas.Fill(span, x - headR - (int)(2 * sc) + (int)(Math.Sin(k * 0.3) * 3 * sc), hy + k, (int)(7 * sc), 1, ink);
+        Canvas.Fill(span, x - (int)(10 * sc), hy - headR - (int)(2 * sc), (int)(20 * sc), (int)(3 * sc), Canvas.Rgb(0xE0, 0xB8, 0x4A));
+        Canvas.Disc(span, x, hy - headR - (int)(4 * sc), (int)(3 * sc), Canvas.Rgb(0xE0, 0xB8, 0x4A));
+        Canvas.Disc(span, x - (int)(6 * sc), hy, (int)(2 * sc), Canvas.Rgb(0xF0, 0xE8, 0xD0));
+        Canvas.Disc(span, x + (int)(6 * sc), hy, (int)(2 * sc), Canvas.Rgb(0xF0, 0xE8, 0xD0));
+        if (veil)
+        {
+            for (var k = 0; k < (int)(90 * sc); k++)
+                Canvas.Fill(span, x + headR - (int)(4 * sc) + (k / 4), hy - headR + k, (int)(10 * sc) + (k / 2), 1, Canvas.Lerp(Canvas.White, ink, 0.15f));
+        }
+    }
+
+    private static void Lord(Span<uint> span, uint ink, int x, int ground, double s)
+    {
+        // Very short, very grand: a crown too big for him, a cape that flares, a chin held high.
+        var bob = (int)(Math.Sin(s * 3.0) * 2);
+        Canvas.Fill(span, x - 10, ground - 34, 20, 34, ink);
+        Canvas.Disc(span, x, ground - 44 + bob, 12, ink);
+        for (var k = 0; k < 30; k++)
+            Canvas.Fill(span, x + 8 + (k / 2), ground - 40 + k, 6 + (k / 2), 1, ink);
+        Canvas.Fill(span, x - 14, ground - 60 + bob, 28, 6, Canvas.Rgb(0xE0, 0xB8, 0x4A));
+        for (var i = 0; i < 4; i++)
+            Canvas.Fill(span, x - 13 + (i * 8), ground - 76 + bob, 5, 18, Canvas.Rgb(0xE0, 0xB8, 0x4A));
+        Canvas.Disc(span, x - 4, ground - 46 + bob, 2, Canvas.Rgb(0xF0, 0xE8, 0xD0));
+        Canvas.Disc(span, x + 4, ground - 46 + bob, 2, Canvas.Rgb(0xF0, 0xE8, 0xD0));
+    }
+
+    private static void Creatures(Span<uint> span, uint ink, uint paper, int x, int ground, double s, bool few = false)
+    {
+        var line = Canvas.Lerp(paper, Canvas.White, 0.2f);
+        // Three small pigs: round, with ears and a snout.
+        for (var i = 0; i < 3; i++)
+        {
+            var px = x + (i * 44);
+            var hop = (int)(Math.Abs(Math.Sin(s * 4.0 + i)) * 4);
+            Canvas.Disc(span, px, ground - 20 - hop, 16, ink);
+            Canvas.Disc(span, px + 12, ground - 30 - hop, 10, ink);
+            Canvas.Fill(span, px + 6, ground - 44 - hop, 4, 8, ink);
+            Canvas.Fill(span, px + 14, ground - 44 - hop, 4, 8, ink);
+            Canvas.Disc(span, px + 20, ground - 30 - hop, 4, Canvas.Lerp(ink, paper, 0.2f));
+            Canvas.Fill(span, px - 8, ground - 6, 4, 6, ink);
+            Canvas.Fill(span, px + 4, ground - 6, 4, 6, ink);
+        }
+
+        if (few)
+            return;
+
+        // The puppet: a jointed figure with a long nose and a pointed hat.
+        var qx = x + 160;
+        Canvas.Fill(span, qx - 8, ground - 60, 16, 30, ink);
+        Canvas.Fill(span, qx - 6, ground - 30, 4, 30, ink);
+        Canvas.Fill(span, qx + 2, ground - 30, 4, 30, ink);
+        Canvas.Disc(span, qx, ground - 72, 12, ink);
+        Canvas.Fill(span, qx + 10, ground - 74 + (int)(Math.Sin(s * 2.0) * 2), 30 + (int)(Math.Abs(Math.Sin(s * 0.7)) * 20), 3, ink);
+        for (var k = 0; k < 20; k++)
+            Canvas.Fill(span, qx - 10 + (k / 2), ground - 84 - k, 20 - k, 1, ink);
+        Canvas.Line(span, qx - 8, ground - 52, qx - 22, ground - 40, ink);
+        Canvas.Line(span, qx + 8, ground - 52, qx + 22, ground - 44, ink);
+
+        // The fairy: small, with wings that beat, a wand with a star.
+        var fx = x + 220;
+        var fy = ground - 110 + (int)(Math.Sin(s * 3.0) * 8);
+        Canvas.Disc(span, fx, fy, 8, ink);
+        Canvas.Fill(span, fx - 5, fy + 8, 10, 22, ink);
+        var beat = (int)(Math.Abs(Math.Sin(s * 12.0)) * 10);
+        Canvas.Disc(span, fx - 10 - beat, fy + 8, 9, Canvas.Lerp(ink, paper, 0.5f));
+        Canvas.Disc(span, fx + 10 + beat, fy + 8, 9, Canvas.Lerp(ink, paper, 0.5f));
+        Canvas.Line(span, fx + 6, fy + 16, fx + 20, fy + 4, ink);
+        Canvas.Disc(span, fx + 21, fy + 3, 3, Canvas.Rgb(0xFF, 0xE0, 0x60));
+
+        // The wolf, small and sulking; the cookie man, arms out.
+        Canvas.Fill(span, x + 260, ground - 34, 60, 26, ink);
+        Canvas.Disc(span, x + 250, ground - 42, 12, ink);
+        Canvas.Line(span, x + 244, ground - 50, x + 240, ground - 62, ink);
+        Canvas.Line(span, x + 254, ground - 52, x + 256, ground - 64, ink);
+        Canvas.Fill(span, x + 264, ground - 8, 6, 8, ink);
+        Canvas.Fill(span, x + 306, ground - 8, 6, 8, ink);
+        Canvas.Line(span, x + 320, ground - 30, x + 340, ground - 46, ink);
+        var cx = x + 370;
+        Canvas.Disc(span, cx, ground - 66, 12, ink);
+        Canvas.Fill(span, cx - 10, ground - 56, 20, 30, ink);
+        Canvas.Line(span, cx - 10, ground - 50, cx - 26, ground - 60, ink);
+        Canvas.Line(span, cx + 10, ground - 50, cx + 26, ground - 60, ink);
+        Canvas.Fill(span, cx - 10, ground - 26, 8, 26, ink);
+        Canvas.Fill(span, cx + 2, ground - 26, 8, 26, ink);
+        Canvas.Disc(span, cx - 4, ground - 68, 2, line);
+        Canvas.Disc(span, cx + 4, ground - 68, 2, line);
+        Canvas.Disc(span, cx, ground - 48, 2, line);
+        Canvas.Disc(span, cx, ground - 38, 2, line);
+    }
+
+    private static void Mist(Span<uint> span, uint paper, double s)
+    {
+        for (var i = 0; i < 5; i++)
+        {
+            var x = (int)(((s * 12) + (i * 300)) % (W + 400)) - 200;
+            var y = Ground - 40 - (i * 18);
+            for (var k = 0; k < 8; k++)
+                Canvas.Fill(span, x + (k * 30), y + (int)(Math.Sin(k + s) * 3), 40, 6, Canvas.Lerp(paper, Canvas.White, 0.45f));
+        }
+    }
+
+    private static void DeadTree(Span<uint> span, uint ink, int x, int ground)
+    {
+        Canvas.Fill(span, x - 10, ground - 180, 20, 180, ink);
+        Canvas.Line(span, x, ground - 150, x - 60, ground - 210, ink);
+        Canvas.Line(span, x, ground - 120, x + 50, ground - 190, ink);
+        Canvas.Line(span, x - 30, ground - 180, x - 50, ground - 230, ink);
+        for (var i = 1; i < 6; i++)
+        {
+            Canvas.Line(span, x + i, ground - 150, x - 60 + i, ground - 210, ink);
+            Canvas.Line(span, x + i, ground - 120, x + 50 + i, ground - 190, ink);
+        }
+    }
+
+    private static void LilyPads(Span<uint> span, uint ink, int x, int y, double s)
+    {
+        for (var i = 0; i < 4; i++)
+        {
+            var px = x - 120 + (i * 70) + (int)(Math.Sin(s * 0.8 + i) * 4);
+            for (var k = -6; k <= 6; k++)
+                Canvas.Fill(span, px - 22 + Math.Abs(k) * 2, y + k, 44 - Math.Abs(k) * 4, 1, Canvas.Lerp(ink, Canvas.Rgb(0x4A, 0x7A, 0x3A), 0.5f));
+            Canvas.Fill(span, px + 6, y - 6, 12, 6, Canvas.Lerp(ink, Canvas.Rgb(0x6A, 0x52, 0x2A), 0.5f));
+        }
+    }
+
+    private static void Frog(Span<uint> span, uint ink, int x, int y, double s)
+    {
+        var hop = (int)(Math.Abs(Math.Sin(s * 1.5)) * 6);
+        Canvas.Disc(span, x, y - 6 - hop, 10, ink);
+        Canvas.Disc(span, x - 6, y - 14 - hop, 4, ink);
+        Canvas.Disc(span, x + 6, y - 14 - hop, 4, ink);
+        Canvas.Disc(span, x - 6, y - 15 - hop, 2, Canvas.Rgb(0xF0, 0xE8, 0xD0));
+        Canvas.Disc(span, x + 6, y - 15 - hop, 2, Canvas.Rgb(0xF0, 0xE8, 0xD0));
+    }
+
+    private static void Hut(Span<uint> span, uint ink, int x, int ground, uint paper)
+    {
+        Canvas.Fill(span, x, ground - 90, 130, 90, ink);
+        for (var k = 0; k < 44; k++)
+            Canvas.Fill(span, x - 10 + k, ground - 90 - k, 150 - (k * 2), 1, ink);
+        Canvas.Fill(span, x + 50, ground - 60, 30, 60, Canvas.Lerp(ink, paper, 0.4f));
+        Canvas.Fill(span, x + 16, ground - 70, 20, 18, Canvas.Lerp(paper, Canvas.Rgb(0xFF, 0xD8, 0x80), 0.6f));
+        Canvas.Fill(span, x + 96, ground - 70, 20, 18, Canvas.Lerp(paper, Canvas.Rgb(0xFF, 0xD8, 0x80), 0.6f));
+        Canvas.Fill(span, x + 100, ground - 134, 16, 30, ink);
+        for (var i = 0; i < 3; i++)
+            Canvas.Disc(span, x + 108 + (i * 6), ground - 150 - (i * 12), 5 + i, Canvas.Lerp(paper, Canvas.White, 0.5f));
+    }
+
+    private static void Castle(Span<uint> span, uint ink, int x, int ground, uint paper)
+    {
+        Canvas.Fill(span, x, ground - 200, 60, 200, ink);
+        Canvas.Fill(span, x + 200, ground - 200, 60, 200, ink);
+        Canvas.Fill(span, x, ground - 220, 260, 30, ink);
+        for (var i = 0; i < 40; i++)
+            Canvas.Fill(span, x + 60 + (i / 2), ground - 190 + i, 140 - i, 1, Canvas.Lerp(ink, paper, 0.35f));
+        for (var m = 0; m < 5; m++)
+            Canvas.Fill(span, x + (m * 56), ground - 236, 24, 16, ink);
+        for (var w = 0; w < 2; w++)
+        {
+            Canvas.Fill(span, x + 20, ground - 170 + (w * 60), 20, 28, Canvas.Lerp(ink, paper, 0.4f));
+            Canvas.Fill(span, x + 220, ground - 170 + (w * 60), 20, 28, Canvas.Lerp(ink, paper, 0.4f));
+        }
+
+        // The keep behind, far too tall, with windows all the way up and a banner.
+        Canvas.Fill(span, x + 90, ground - 440, 80, 240, ink);
+        for (var k = 0; k < 40; k++)
+            Canvas.Fill(span, x + 90 + k, ground - 440 - k, 80 - (k * 2), 1, ink);
+        for (var w = 0; w < 5; w++)
+            Canvas.Fill(span, x + 122, ground - 420 + (w * 44), 16, 24, Canvas.Lerp(ink, paper, 0.4f));
+        Canvas.Fill(span, x + 128, ground - 520, 4, 80, ink);
+        for (var k = 0; k < 24; k++)
+            Canvas.Fill(span, x + 132, ground - 518 + k, 40 - (k * 40 / 24), 1, Canvas.Rgb(0xC0, 0x30, 0x30));
+    }
+
+    private static void Tower(Span<uint> span, uint ink, int x, int ground, uint paper)
+    {
+        Canvas.Fill(span, x - 40, ground - 260, 80, 260, ink);
+        for (var m = 0; m < 4; m++)
+            Canvas.Fill(span, x - 40 + (m * 22), ground - 276, 14, 16, ink);
+        for (var k = 0; k < 50; k++)
+            Canvas.Fill(span, x - 50 + k, ground - 320 - k, 100 - (k * 2), 1, ink);
+        for (var w = 0; w < 3; w++)
+            Canvas.Fill(span, x - 8, ground - 120 + (w * 40) - 100, 16, 22, Canvas.Lerp(ink, paper, 0.35f));
+        Canvas.Fill(span, x - 14, ground - 240, 28, 34, Canvas.Rgb(0xFF, 0xD8, 0x80));
+        for (var k = 0; k < 14; k++)
+            Canvas.Fill(span, x - 14 + k, ground - 254 + Math.Abs(k - 7), 28 - (k * 2), 1, ink);
+    }
+
+    private static void Bridge(Span<uint> span, uint ink, int x, int ground)
+    {
+        for (var i = 0; i < 12; i++)
+            Canvas.Fill(span, x + (i * 28), ground - 6 - (i % 2 * 3), 26, 6, ink);
+        Canvas.Line(span, x, ground - 30, x + 330, ground - 30, ink);
+        for (var i = 0; i < 12; i++)
+            Canvas.Fill(span, x + (i * 28) + 12, ground - 30, 2, 24, ink);
+    }
+
+    private static void Fire(Span<uint> span, int x, int y, double s)
+    {
+        for (var i = 0; i < 10; i++)
+        {
+            var t = i / 10.0;
+            var fx = x - (int)(t * 160);
+            var fy = y + (int)(t * 40) + (int)(Math.Sin(s * 20.0 + i) * 8);
+            Canvas.Disc(span, fx, fy, Math.Max(2, (int)((1.0 - t) * 18)), Canvas.Lerp(Canvas.Rgb(0xFF, 0xE0, 0x80), Canvas.Rgb(0xFF, 0x60, 0x20), (float)t));
+        }
+    }
+
+    private static void Signpost(Span<uint> span, uint ink, int x, int ground)
+    {
+        Canvas.Fill(span, x - 3, ground - 130, 6, 130, ink);
+        for (var i = 0; i < 2; i++)
+        {
+            var y = ground - 120 + (i * 28);
+            var dir = i == 0 ? 1 : -1;
+            Canvas.Fill(span, x - (dir < 0 ? 60 : 0), y, 60, 18, ink);
+            for (var k = 0; k < 9; k++)
+                Canvas.Fill(span, x + (dir * 60) + (dir * k), y + k, 1, 18 - (k * 2), ink);
+        }
+    }
+
+    private static void Church(Span<uint> span, uint ink, int x, int ground, uint paper)
+    {
+        Canvas.Fill(span, x, ground - 130, 160, 130, ink);
+        for (var k = 0; k < 50; k++)
+            Canvas.Fill(span, x - 10 + k, ground - 130 - k, 180 - (k * 2), 1, ink);
+        Canvas.Fill(span, x + 70, ground - 230, 20, 60, ink);
+        Canvas.Fill(span, x + 60, ground - 216, 40, 6, ink);
+        Canvas.Fill(span, x + 66, ground - 70, 28, 70, Canvas.Lerp(ink, paper, 0.4f));
+        Canvas.Disc(span, x + 80, ground - 100, 18, Canvas.Lerp(paper, Canvas.Rgb(0xE0, 0x50, 0x80), 0.5f));
+        for (var r = 0; r < 6; r++)
+        {
+            var rad = r * Math.PI / 3.0;
+            Canvas.Line(span, x + 80, ground - 100, x + 80 + (int)(Math.Cos(rad) * 18), ground - 100 + (int)(Math.Sin(rad) * 18), ink);
+        }
+
+        Canvas.Fill(span, x + 20, ground - 100, 14, 30, Canvas.Lerp(paper, Canvas.Rgb(0x80, 0xB0, 0xE0), 0.5f));
+        Canvas.Fill(span, x + 126, ground - 100, 14, 30, Canvas.Lerp(paper, Canvas.Rgb(0x80, 0xB0, 0xE0), 0.5f));
+    }
+
+    private static void Bunting(Span<uint> span, uint ink, uint paper, int x0, int y0, int x1, int y1, double s)
+    {
+        for (var i = 0; i < 14; i++)
+        {
+            var t = i / 14.0;
+            var x = x0 + (int)((x1 - x0) * t);
+            var y = y0 + (int)((y1 - y0) * t) + (int)(Math.Sin(t * Math.PI) * 40) + (int)(Math.Sin(s * 2.0 + i) * 2);
+            Canvas.Line(span, x, y, x + ((x1 - x0) / 14), y0 + (int)((y1 - y0) * (i + 1) / 14.0) + (int)(Math.Sin((i + 1) / 14.0 * Math.PI) * 40), ink);
+            var colour = i % 3 == 0 ? Canvas.Rgb(0xE0, 0x50, 0x80) : i % 3 == 1 ? Canvas.Rgb(0x80, 0xB0, 0xE0) : Canvas.Rgb(0xE0, 0xB8, 0x4A);
+            for (var k = 0; k < 14; k++)
+                Canvas.Fill(span, x + 8 + (k / 2), y + k, 14 - k, 1, colour);
+        }
+    }
+
+    private static void Cake(Span<uint> span, uint ink, uint paper, int x, int ground)
+    {
+        Canvas.Fill(span, x - 60, ground - 50, 120, 6, ink);
+        Canvas.Fill(span, x - 4, ground - 44, 8, 44, ink);
+        var cream = Canvas.Lerp(paper, Canvas.White, 0.6f);
+        Canvas.Fill(span, x - 44, ground - 80, 88, 30, cream);
+        Canvas.Fill(span, x - 30, ground - 104, 60, 24, cream);
+        Canvas.Fill(span, x - 16, ground - 122, 32, 18, cream);
+        Canvas.Rect(span, x - 44, ground - 80, 88, 30, ink, 1);
+        Canvas.Rect(span, x - 30, ground - 104, 60, 24, ink, 1);
+        Canvas.Rect(span, x - 16, ground - 122, 32, 18, ink, 1);
+        Canvas.Disc(span, x - 6, ground - 130, 4, ink);
+        Canvas.Disc(span, x + 6, ground - 130, 4, ink);
+    }
+
+
 
     private static void Reeds(Span<uint> span, uint ink, double s)
     {
@@ -1249,36 +1598,8 @@ internal static class TaleScenes
             Canvas.Fill(span, x - 38, ground - 148 + (l * 14), 76 - (l * 20), 4, Canvas.Rgb(0xF0, 0xE8, 0xD0));
     }
 
-    private static void Hut(Span<uint> span, uint ink, int x, int ground)
-    {
-        Canvas.Fill(span, x, ground - 90, 130, 90, ink);
-        for (var k = 0; k < 44; k++)
-            Canvas.Fill(span, x - 10 + k, ground - 90 - k, 150 - (k * 2), 1, ink);
-        Canvas.Fill(span, x + 50, ground - 60, 30, 60, Canvas.Lerp(ink, Canvas.White, 0.4f));
-    }
 
-    private static void Castle(Span<uint> span, uint ink, int x, int ground)
-    {
-        Canvas.Fill(span, x, ground - 200, 60, 200, ink);
-        Canvas.Fill(span, x + 200, ground - 200, 60, 200, ink);
-        Canvas.Fill(span, x, ground - 220, 260, 30, ink);
-        for (var i = 0; i < 40; i++)
-            Canvas.Fill(span, x + 60 + (i / 2), ground - 190 + i, 140 - i, 1, Canvas.Lerp(ink, Canvas.White, 0.35f));
-        // Far too tall a keep behind it.
-        Canvas.Fill(span, x + 90, ground - 420, 80, 220, ink);
-        for (var k = 0; k < 40; k++)
-            Canvas.Fill(span, x + 90 + k, ground - 420 - k, 80 - (k * 2), 1, ink);
-        for (var m = 0; m < 5; m++)
-            Canvas.Fill(span, x + (m * 56), ground - 236, 24, 16, ink);
-    }
 
-    private static void Tower(Span<uint> span, uint ink, int x, int ground)
-    {
-        Canvas.Fill(span, x - 40, ground - 260, 80, 260, ink);
-        for (var k = 0; k < 50; k++)
-            Canvas.Fill(span, x - 50 + k, ground - 260 - k, 100 - (k * 2), 1, ink);
-        Canvas.Fill(span, x - 12, ground - 220, 24, 30, Canvas.Rgb(0xFF, 0xD8, 0x80));
-    }
 
     private static void Lava(Span<uint> span, double s)
     {
