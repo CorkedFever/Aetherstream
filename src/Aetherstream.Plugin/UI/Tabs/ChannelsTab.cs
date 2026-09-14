@@ -37,7 +37,7 @@ internal sealed class ChannelsTab(UiContext ui)
         ImGui.Dummy(new Vector2(0f, 4f));
 
         var columns = Math.Max(1, (int)(ImGui.GetContentRegionAvail().X / 250f));
-        var tile = new Vector2((ImGui.GetContentRegionAvail().X - ((columns - 1) * 8f)) / columns, 84f);
+        var tile = new Vector2((ImGui.GetContentRegionAvail().X - ((columns - 1) * 8f)) / columns, 92f);
 
         var i = 0;
         foreach (var (name, blurb, g, channel) in ui.Channels)
