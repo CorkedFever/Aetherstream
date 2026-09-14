@@ -339,7 +339,35 @@ internal sealed class StreamSession(
 
         this.source.RenderFrame(this.frame);
         this.ReportSync();
+        this.SampleBrightness();
         return true;
+    }
+
+    /// <summary>
+    /// Mean brightness of the picture, 0 to 255, sampled once a second from every 64th pixel;
+    /// -1 until the first sample. What the black-screen watch reads.
+    /// </summary>
+    public float SampledBrightness { get; private set; } = -1f;
+
+    private long brightnessSampledMs = -1;
+
+    private void SampleBrightness()
+    {
+        var now = Environment.TickCount64;
+        if (now - this.brightnessSampledMs < 1000)
+            return;
+
+        this.brightnessSampledMs = now;
+        long total = 0;
+        var count = 0;
+        for (var i = 0; i < this.frame.Length; i += 64)
+        {
+            var p = this.frame[i];
+            total += (p & 0xFF) + ((p >> 8) & 0xFF) + ((p >> 16) & 0xFF);
+            count += 3;
+        }
+
+        this.SampledBrightness = count == 0 ? -1f : total / (float)count;
     }
 
     private long resumeTargetMs;

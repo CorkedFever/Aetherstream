@@ -21,6 +21,12 @@ internal sealed class SetupTab(UiContext ui)
     /// <summary>Set by the plugin: the watch list changed, fetch again.</summary>
     public Action? WatchListChanged;
 
+    /// <summary>Set by the plugin: checks every lineup channel's link in the background.</summary>
+    public Action? CheckChannels;
+
+    /// <summary>Set by the plugin: the last check's verdict.</summary>
+    public Func<string>? HealthStatus;
+
     /// <summary>Set by the window: what the playlist offers to pick a lineup from.</summary>
     public Func<(IReadOnlyList<string> Countries, IReadOnlyList<string> Groups)>? LineupChoices;
 
@@ -420,6 +426,29 @@ internal sealed class SetupTab(UiContext ui)
         }
 
         Ui.Tip("Countries are the playlist's two-letter codes. \"My region\" follows the character: US, UK, JP or AU. Up to 120 channels are listed.");
+
+        if (ImGui.Button("Check the lineup's links"))
+            this.CheckChannels?.Invoke();
+
+        Ui.Tip("Asks each channel for its headers and drops the ones that do not answer for a day. Runs on its own once per lineup; a channel that plays black for fifteen seconds is dropped the same way.");
+
+        if (this.HealthStatus?.Invoke() is { Length: > 0 } verdict)
+        {
+            ImGui.SameLine();
+            ImGui.TextColored(Theme.TextDim, verdict);
+        }
+
+        var dead = ui.Config.LiveTvDead.Count;
+        if (dead > 0)
+        {
+            ImGui.TextColored(Theme.TextFaint, $"{dead} channel{(dead == 1 ? string.Empty : "s")} on the dead list");
+            ImGui.SameLine();
+            if (ImGui.SmallButton("Forgive them"))
+            {
+                ui.Config.LiveTvDead.Clear();
+                ui.SaveConfig();
+            }
+        }
 
         Ui.Section("Market watch");
         Ui.Hint("What the market channel lists. Prices come from Universalis for the world you are on.");

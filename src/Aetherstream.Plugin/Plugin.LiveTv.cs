@@ -166,6 +166,7 @@ public sealed partial class Plugin
         // Stalled and nothing left to try: the guide marks it so nobody keeps clicking it. The
         // origin, not the relay's loopback address, is what the guide knows the channel by.
         this.window.Dial.MarkOffline(current.Origin ?? current.PlaylistUrl);
+        this.MarkDead(current.Origin ?? current.PlaylistUrl, "stalled and would not come back");
     }
 
     /// <summary>Starts something already resolved, bypassing resolution.</summary>

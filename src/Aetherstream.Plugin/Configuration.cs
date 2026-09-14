@@ -339,6 +339,9 @@ public sealed class Configuration : IPluginConfiguration
 
     public string ChannelMusicPlexPlaylistName { get; set; } = string.Empty;
 
+    /// <summary>Live channels found dead — no answer, or a black picture — with when to try them again, as unix seconds.</summary>
+    public Dictionary<string, long> LiveTvDead { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// What the guide lists after the pins: channels of this country (the playlist's two-letter
     /// code; empty means the character's region) and, when set, only this group.

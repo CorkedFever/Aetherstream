@@ -27,6 +27,9 @@ public sealed partial class Plugin
         var dial = this.window.Dial;
         var utc = DateTime.UtcNow;
 
+        this.PruneDead();
+        this.CheckLineupHealth(force: false);
+
         // What is on right now, first, wherever it came from: its remaining run, then whatever is
         // queued after it, laid end to end from each one's length. A schedule computed, not looked up.
         // A live channel you are on but have not pinned still gets a row, at the top, with its listings.

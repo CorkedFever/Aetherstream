@@ -271,6 +271,17 @@ the tables and the zone list are read from the game's own data through Dalamud, 
 expansion's zones appear on their own. The maths lives in `Weather/EorzeaWeather.cs`; the icons
 are 16x16 pixel art in `Video/WeatherChannel.cs`.
 
+## Dead channels
+
+Public playlists are full of channels that no longer answer, or answer with a black picture.
+Two things find them. A link check asks each lineup channel for its headers in the background,
+four at a time, once per lineup per session or from the "Check the lineup's links" button in
+Setup, and marks the ones that fail. While a channel plays, the session samples the picture's
+brightness once a second; black for fifteen seconds with frames still arriving marks it too, as
+does a stall nothing could fix. Marks last a day, survive restarts, and clear themselves when a
+channel plays properly. The guide, the lineup and channel up and down skip marked channels;
+pinned ones stay on the guide reading OFF AIR. "Forgive them" in Setup clears the list.
+
 ## The other channels
 
 The Channels tab is a dial of everything the set can draw for itself. Each is one class

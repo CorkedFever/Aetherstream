@@ -194,6 +194,9 @@ public sealed partial class Plugin : IDalamudPlugin
         this.WireParty();
         this.WireLiveTv();
         this.WireMusic();
+        this.window.Dial.IsDead = this.IsDead;
+        this.window.Setup.CheckChannels = () => this.CheckLineupHealth(force: true);
+        this.window.Setup.HealthStatus = () => this.healthStatus;
         this.window.Setup.FindItem = this.FindMarketItem;
         this.window.Setup.WatchListChanged = this.WatchListChanged;
 
@@ -273,6 +276,7 @@ public sealed partial class Plugin : IDalamudPlugin
 
         // Checked here so a stall is noticed whether or not the control window is open.
         this.RetryStalledThroughRelay();
+        this.WatchForBlack();
 
         this.ApplyVolumeForFrame();
         this.RecordProgress();

@@ -29,6 +29,9 @@ internal sealed class ChannelDial(UiContext ui)
     /// </summary>
     public Func<IReadOnlyList<M3uPlaylist.Channel>>? Lineup;
 
+    /// <summary>Set by the plugin: whether a channel is on the dead list.</summary>
+    public Func<string, bool>? IsDead;
+
     /// <summary>Every numbered channel: the pins, then the lineup without them.</summary>
     public List<(int Number, M3uPlaylist.Channel Channel)> Numbered()
     {
@@ -36,6 +39,9 @@ internal sealed class ChannelDial(UiContext ui)
         var seen = new HashSet<string>(result.Select(p => p.Channel.Url), StringComparer.OrdinalIgnoreCase);
         foreach (var channel in this.Lineup?.Invoke() ?? [])
         {
+            if (this.IsDead?.Invoke(channel.Url) == true)
+                continue;
+
             if (seen.Add(channel.Url))
                 result.Add((result.Count + 1, channel));
         }
@@ -176,5 +182,5 @@ internal sealed class ChannelDial(UiContext ui)
     public void MarkOnline(string url) => this.offline.Remove(url);
 
     public bool IsOffline(string url) =>
-        this.offline.TryGetValue(url, out var until) && until > DateTime.UtcNow;
+        (this.offline.TryGetValue(url, out var until) && until > DateTime.UtcNow) || this.IsDead?.Invoke(url) == true;
 }
