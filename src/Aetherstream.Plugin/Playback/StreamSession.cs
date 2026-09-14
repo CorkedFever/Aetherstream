@@ -274,6 +274,8 @@ internal sealed class StreamSession(
             return;
         }
 
+        this.music?.Stop();
+
         if (this.source is null)
         {
             this.ShowIdleCard();
@@ -573,6 +575,8 @@ internal sealed class StreamSession(
     /// </summary>
     public void ReopenAudio()
     {
+        this.music?.Reopen(config.AudioDeviceId);
+
         if (this.source is not { } playing || this.ring is null || this.current is null)
             return;
 
@@ -675,6 +679,16 @@ internal sealed class StreamSession(
     /// </summary>
     public IFrameChannel? Channel { get; set; }
 
+    /// <summary>What to play under a channel that wants music. Set by the plugin; asked once a frame.</summary>
+    public Func<IReadOnlyList<string>>? MusicTracks { get; set; }
+
+    private Jukebox? music;
+
+    public bool MusicPlaying => this.music is { Playing: true };
+
+    /// <summary>The track under the channel, or empty. For the screen's corner.</summary>
+    public string MusicNowPlaying => this.music?.NowPlaying ?? string.Empty;
+
     private uint[]? composed;
     private readonly System.Diagnostics.Stopwatch channelClock = new();
     private long channelPaintedMs = -1;
@@ -688,6 +702,18 @@ internal sealed class StreamSession(
     {
         if (!this.channelClock.IsRunning)
             this.channelClock.Restart();
+
+        // Music first, every frame, so a finished track moves on even while the paint is throttled.
+        if (channel.WantsMusic && config.ChannelMusic && config.AudioEnabled && this.MusicTracks is { } tracks)
+        {
+            this.music ??= new Jukebox(vlc, log);
+            this.music.Ensure(tracks(), config.AudioDeviceId);
+            this.music.Update();
+        }
+        else
+        {
+            this.music?.Stop();
+        }
 
         if (this.uploader is null)
         {
@@ -806,7 +832,22 @@ internal sealed class StreamSession(
     public void ApplyVolume(float distanceYalms, float pan = 0f)
     {
         if (this.audio is null)
+        {
+            // No picture sound, but music may still be on — the guide over nothing, say.
+            if (this.music is { Playing: true })
+            {
+                var alone = 1f;
+                if (config.AudioFalloffYalms > 0.01f)
+                {
+                    var ta = Math.Clamp(distanceYalms / config.AudioFalloffYalms, 0f, 1f);
+                    alone = (1f - ta) * (1f - ta);
+                }
+
+                this.music.ApplyVolume(this.Muted ? 0f : config.Volume * config.ChannelMusicVolume * alone, pan);
+            }
+
             return;
+        }
 
         var falloff = 1f;
         if (config.AudioFalloffYalms > 0.01f)
@@ -817,8 +858,14 @@ internal sealed class StreamSession(
         }
 
         this.DistanceGain = falloff;
-        this.audio.Volume = this.Muted ? 0f : config.Volume * falloff;
+        var gain = this.Muted ? 0f : config.Volume * falloff;
+        var musicOn = this.music is { Playing: true };
+
+        // Under the guide or the forecast the film goes silent; the music takes its place at the
+        // same spot in the room, a little quieter.
+        this.audio.Volume = musicOn ? 0f : gain;
         this.audio.Pan = pan;
+        this.music?.ApplyVolume(gain * config.ChannelMusicVolume, pan);
     }
 
     public void Dispose()
@@ -828,6 +875,7 @@ internal sealed class StreamSession(
 
         this.disposed = true;
         this.TearDown();
+        this.music?.Dispose();
 
         // Deliberately NOT disposed. On unload there are no further frames in which queued GPU work
         // could drain, so freeing these textures here races the driver — and losing that race is an

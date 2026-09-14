@@ -44,7 +44,7 @@ internal sealed class ControlWindow : Window
         this.Library = new LibraryTab(context);
         this.LiveTv = new LiveTvTab(context, this.Dial);
         var screen = new ScreenTab(context);
-        var sound = new SoundTab(context);
+        this.Sound = new SoundTab(context);
         this.Share = new ShareTab(context);
         var setup = new SetupTab(context);
 
@@ -54,7 +54,7 @@ internal sealed class ControlWindow : Window
             ("Library", this.Library.Draw),
             ("Live TV", this.LiveTv.Draw),
             ("Screen", screen.Draw),
-            ("Sound", sound.Draw),
+            ("Sound", this.Sound.Draw),
             ("Share", this.Share.Draw),
             ("Setup", setup.Draw),
         ];
@@ -74,6 +74,8 @@ internal sealed class ControlWindow : Window
     internal ShareTab Share { get; }
 
     internal LiveTvTab LiveTv { get; }
+
+    internal SoundTab Sound { get; }
 
     public override void PreDraw()
     {

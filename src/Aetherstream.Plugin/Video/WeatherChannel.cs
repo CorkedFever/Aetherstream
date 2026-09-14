@@ -47,6 +47,8 @@ internal sealed class WeatherChannel(BitmapFont font, Func<WeatherSnapshot?> dat
 
     public bool WantsPicture => false;
 
+    public bool WantsMusic => true;
+
     public void Render(uint[] target, uint[]? picture, DateTime now, double seconds)
     {
         var span = target.AsSpan();

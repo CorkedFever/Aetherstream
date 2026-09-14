@@ -13,6 +13,9 @@ internal interface IFrameChannel
     /// <summary>Whether it wants the live picture handed in, to show small somewhere.</summary>
     bool WantsPicture { get; }
 
+    /// <summary>Whether music plays underneath while it is up, in place of the picture's sound.</summary>
+    bool WantsMusic { get; }
+
     /// <summary>
     /// Paints a whole 1280x720 frame. <paramref name="picture"/> is the video (or the test card)
     /// when <see cref="WantsPicture"/> and something is on; <paramref name="seconds"/> climbs

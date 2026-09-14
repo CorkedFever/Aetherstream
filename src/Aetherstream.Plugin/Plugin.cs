@@ -173,6 +173,7 @@ public sealed partial class Plugin : IDalamudPlugin
         this.directory = new PartyDirectory(this.http);
         this.WireParty();
         this.WireLiveTv();
+        this.WireMusic();
 
         this.windows.AddWindow(this.window);
 
@@ -499,7 +500,8 @@ public sealed partial class Plugin : IDalamudPlugin
     /// </summary>
     private void ApplyVolumeForFrame()
     {
-        if (!this.session.IsPlaying)
+        // Music under a channel needs the room's rules too, even with no picture playing.
+        if (!this.session.IsPlaying && !this.session.MusicPlaying)
             return;
 
         var distance = 0f;

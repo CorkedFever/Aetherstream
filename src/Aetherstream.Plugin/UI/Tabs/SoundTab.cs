@@ -7,6 +7,147 @@ namespace Aetherstream.Plugin.UI.Tabs;
 
 internal sealed class SoundTab(UiContext ui)
 {
+    /// <summary>Set by the plugin: fetches the Plex audio playlists into <see cref="SetPlexPlaylists"/>.</summary>
+    public Action? LoadPlexPlaylists;
+
+    /// <summary>Set by the plugin: the music source changed, so its track list should be rebuilt.</summary>
+    public Action? MusicChanged;
+
+    private List<Aetherstream.Playback.PlexLibrary.Playlist> plexPlaylists = [];
+    private string plexStatus = string.Empty;
+
+    public void SetPlexPlaylists(List<Aetherstream.Playback.PlexLibrary.Playlist> value, string status)
+    {
+        this.plexPlaylists = value;
+        this.plexStatus = status;
+    }
+
+    /// <summary>
+    /// What plays under the guide and the weather. Bundled tracks by default, so it works out of
+    /// the box; your own folder or a Plex playlist when you would rather it were your music.
+    /// </summary>
+    private void DrawMusic()
+    {
+        Ui.Section("Channel music");
+
+        var on = ui.Config.ChannelMusic;
+        if (ImGui.Checkbox("Play music on the guide and weather channels", ref on))
+        {
+            ui.Config.ChannelMusic = on;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip("The smooth jazz under the forecast. The picture's own sound goes quiet while a channel is up.");
+
+        if (!on)
+            return;
+
+        var level = ui.Config.ChannelMusicVolume;
+        if (ImGui.SliderFloat("Music level", ref level, 0f, 1f, "%.2f"))
+        {
+            ui.Config.ChannelMusicVolume = level;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip("Relative to the main volume, so turning the set down turns this down with it.");
+
+        var source = ui.Config.ChannelMusicSource;
+        var label = source switch { "folder" => "A folder of my own", "plex" => "A Plex playlist", _ => "The bundled tracks" };
+
+        ImGui.SetNextItemWidth(260);
+        using (var combo = ImRaii.Combo("##musicsource", label))
+        {
+            if (combo)
+            {
+                foreach (var (key, name) in (ReadOnlySpan<(string, string)>)[("bundled", "The bundled tracks"), ("folder", "A folder of my own"), ("plex", "A Plex playlist")])
+                {
+                    if (ImGui.Selectable(name, key == source) && key != source)
+                    {
+                        ui.Config.ChannelMusicSource = key;
+                        ui.SaveConfig();
+                        this.MusicChanged?.Invoke();
+                        if (key == "plex")
+                            this.LoadPlexPlaylists?.Invoke();
+                    }
+                }
+            }
+        }
+
+        switch (source)
+        {
+            case "folder":
+                this.DrawMusicFolder();
+                break;
+            case "plex":
+                this.DrawMusicPlex();
+                break;
+            default:
+                Ui.Hint("A few royalty-free lounge tracks that ship with the plugin. Credits are in the music folder.");
+                break;
+        }
+
+        if (ui.Session.MusicNowPlaying is { Length: > 0 } track)
+            ImGui.TextColored(Theme.TextDim, $"Now playing: {track}");
+    }
+
+    private void DrawMusicFolder()
+    {
+        var folder = ui.Config.ChannelMusicFolder;
+        ImGui.TextColored(folder.Length > 0 ? Theme.Text : Theme.TextFaint, folder.Length > 0 ? folder : "no folder chosen");
+
+        if (ImGui.Button(folder.Length > 0 ? "Choose a different folder…" : "Choose a folder…"))
+        {
+            ui.FileDialogs.OpenFolderDialog(
+                "Which folder has the music?",
+                (accepted, path) =>
+                {
+                    if (accepted && path.Length > 0)
+                    {
+                        ui.Config.ChannelMusicFolder = path;
+                        ui.SaveConfig();
+                        this.MusicChanged?.Invoke();
+                    }
+                },
+                folder.Length > 0 ? folder : Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
+                true);
+        }
+
+        Ui.Tip("Searched for mp3, flac, ogg, m4a, wav and opus files, subfolders included, and shuffled.");
+    }
+
+    private void DrawMusicPlex()
+    {
+        var chosen = ui.Config.ChannelMusicPlexPlaylist;
+        var label = chosen.Length > 0 ? ui.Config.ChannelMusicPlexPlaylistName : "pick a playlist";
+
+        ImGui.SetNextItemWidth(260);
+        using (var combo = ImRaii.Combo("##musicplex", label))
+        {
+            if (combo)
+            {
+                if (this.plexPlaylists.Count == 0)
+                    ImGui.TextColored(Theme.TextFaint, this.plexStatus.Length > 0 ? this.plexStatus : "no audio playlists found");
+
+                foreach (var playlist in this.plexPlaylists)
+                {
+                    if (ImGui.Selectable($"{playlist.Title} ({playlist.Count})##pl{playlist.RatingKey}", playlist.RatingKey == chosen))
+                    {
+                        ui.Config.ChannelMusicPlexPlaylist = playlist.RatingKey;
+                        ui.Config.ChannelMusicPlexPlaylistName = playlist.Title;
+                        ui.SaveConfig();
+                        this.MusicChanged?.Invoke();
+                    }
+                }
+            }
+        }
+
+        ImGui.SameLine();
+        if (ImGui.SmallButton("Refresh"))
+            this.LoadPlexPlaylists?.Invoke();
+
+        Ui.Tip("Audio playlists on the Plex server you are signed in to. Tracks stream from it directly.");
+    }
+
     private List<(string Id, string Name)> devices = [];
     private bool devicesListed;
     private bool everListed;
@@ -118,6 +259,8 @@ internal sealed class SoundTab(UiContext ui)
         Ui.Tip(
             "A set on your left sounds like it is on your left. It follows the camera, not your " +
             "character, and it only ever turns the far side down — nothing gets louder.");
+
+        this.DrawMusic();
 
         Ui.Section("Sync");
 

@@ -308,6 +308,25 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Scanlines and a vignette baked into every frame. A look, not a correction.</summary>
     public bool RetroMode { get; set; }
 
+    // -- Channel music -------------------------------------------------------------------------------
+
+    /// <summary>Whether the guide and the weather play music underneath. The sound of a real channel.</summary>
+    public bool ChannelMusic { get; set; } = true;
+
+    /// <summary>Relative to <see cref="Volume"/>: music under a forecast should sit below a film.</summary>
+    public float ChannelMusicVolume { get; set; } = 0.7f;
+
+    /// <summary>"bundled", "folder" or "plex".</summary>
+    public string ChannelMusicSource { get; set; } = "bundled";
+
+    /// <summary>A folder of your own music, searched for audio files, when the source is "folder".</summary>
+    public string ChannelMusicFolder { get; set; } = string.Empty;
+
+    /// <summary>The Plex playlist's rating key and its name for the picker, when the source is "plex".</summary>
+    public string ChannelMusicPlexPlaylist { get; set; } = string.Empty;
+
+    public string ChannelMusicPlexPlaylistName { get; set; } = string.Empty;
+
     public float Opacity { get; set; } = 1f;
 
     /// <summary>

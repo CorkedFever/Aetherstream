@@ -288,6 +288,10 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
 
         var previous = this.media;
         this.media = new Media(this.vlc, stream.PlaylistUrl, FromType.FromLocation, options.ToArray());
+        // Unsubscribed first: a player that plays several media in a row (the jukebox) would
+        // otherwise fire each event once per track it has ever played.
+        this.player.EncounteredError -= this.OnPlayerFailed;
+        this.player.EndReached -= this.OnPlayerStopped;
         this.player.EncounteredError += this.OnPlayerFailed;
         this.player.EndReached += this.OnPlayerStopped;
         this.player.Play(this.media);

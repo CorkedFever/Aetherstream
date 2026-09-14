@@ -140,6 +140,7 @@ if [ "$DRY_RUN" = 0 ] && [ "$DEV_COPY" = 1 ] && [ -d "$DEV_DIR" ]; then
     say "dev copy"
     for f in Aetherstream.dll Aetherstream.json Aetherstream.Core.dll Aetherstream.Playback.dll; do cp -f "$OUT_DIR/$f" "$DEV_DIR/$f"; done
     mkdir -p "$DEV_DIR/images" && for f in icon.png testcard.rgba.gz guidefont.a8.gz; do cp -f "$OUT_DIR/images/$f" "$DEV_DIR/images/$f"; done
+    [ -d "$OUT_DIR/music" ] && mkdir -p "$DEV_DIR/music" && cp -f "$OUT_DIR/music"/* "$DEV_DIR/music/"
     echo "   $DEV_DIR"
 fi
 

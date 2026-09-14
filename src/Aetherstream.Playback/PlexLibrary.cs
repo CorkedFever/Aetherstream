@@ -212,6 +212,72 @@ public sealed class PlexLibrary(HttpClient http, string server, string token)
         return items;
     }
 
+    /// <summary>A playlist of music on the server.</summary>
+    public readonly record struct Playlist(string RatingKey, string Title, int Count);
+
+    /// <summary>The audio playlists, for the channels' background music.</summary>
+    public async Task<List<Playlist>> ListAudioPlaylistsAsync(CancellationToken ct)
+    {
+        var playlists = new List<Playlist>();
+        using var json = await this.GetAsync("/playlists?playlistType=audio", ct);
+        if (json is null)
+            return playlists;
+
+        if (!json.RootElement.TryGetProperty("MediaContainer", out var container)
+            || !container.TryGetProperty("Metadata", out var metadata))
+        {
+            return playlists;
+        }
+
+        foreach (var entry in metadata.EnumerateArray())
+        {
+            var ratingKey = entry.TryGetProperty("ratingKey", out var rk) ? rk.GetString() : null;
+            if (ratingKey is null)
+                continue;
+
+            playlists.Add(new Playlist(
+                ratingKey,
+                entry.TryGetProperty("title", out var t) ? t.GetString() ?? "(untitled)" : "(untitled)",
+                (int)Number(entry, "leafCount")));
+        }
+
+        return playlists;
+    }
+
+    /// <summary>
+    /// Every track in a playlist as a URL the decoder can open directly. The token rides in the
+    /// query because libvlc 3 has no header option for it; it goes only to your own server.
+    /// </summary>
+    public async Task<List<string>> ListPlaylistTrackUrlsAsync(string ratingKey, CancellationToken ct)
+    {
+        var urls = new List<string>();
+        using var json = await this.GetAsync($"/playlists/{ratingKey}/items", ct);
+        if (json is null)
+            return urls;
+
+        if (!json.RootElement.TryGetProperty("MediaContainer", out var container)
+            || !container.TryGetProperty("Metadata", out var metadata))
+        {
+            return urls;
+        }
+
+        var origin = server.TrimEnd('/');
+        foreach (var entry in metadata.EnumerateArray())
+        {
+            if (!entry.TryGetProperty("Media", out var media) || media.GetArrayLength() == 0)
+                continue;
+
+            var first = media[0];
+            if (!first.TryGetProperty("Part", out var parts) || parts.GetArrayLength() == 0)
+                continue;
+
+            if (parts[0].TryGetProperty("key", out var key) && key.GetString() is { Length: > 0 } partKey)
+                urls.Add($"{origin}{partKey}?X-Plex-Token={Uri.EscapeDataString(token)}");
+        }
+
+        return urls;
+    }
+
     private async Task<JsonDocument?> GetAsync(string path, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, server.TrimEnd('/') + path);

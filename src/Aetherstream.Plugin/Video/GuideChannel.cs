@@ -71,6 +71,8 @@ internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : 
 
     public bool WantsPicture => true;
 
+    public bool WantsMusic => true;
+
     /// <summary>
     /// Paints the guide into <paramref name="target"/>. <paramref name="picture"/> is the frame
     /// to show small in the corner — the live video, or the test card — or null for nothing on.
