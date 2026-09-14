@@ -1,6 +1,7 @@
 namespace Aetherstream.Plugin.Video;
 
-internal sealed record NewsItem(string Title, string Description, DateTime Time, string Kind);
+/// <summary>A headline. <paramref name="Start"/> and <paramref name="End"/> are set for maintenance, in UTC.</summary>
+internal sealed record NewsItem(string Title, string Description, DateTime Time, string Kind, DateTime? Start = null, DateTime? End = null);
 
 /// <summary>The headlines as last fetched. <paramref name="Status"/> says why the list might be short.</summary>
 internal sealed record NewsSnapshot(IReadOnlyList<NewsItem> Items, DateTime FetchedAt, string Status);
@@ -66,6 +67,28 @@ internal sealed class NewsChannel(BitmapFont font, Func<NewsSnapshot?> data) : I
         }
 
         y += 8;
+
+        // Maintenance: the window in local time, and how far off it is. This is the part worth
+        // having a channel for, so it gets the big face.
+        if (story is { Start: { } start, End: { } end })
+        {
+            var s0 = start.ToLocalTime();
+            var e0 = end.ToLocalTime();
+            var sameDay = s0.Date == e0.Date;
+            var window = sameDay
+                ? $"{s0:ddd d MMM}  {s0:h:mm tt} - {e0:h:mm tt}"
+                : $"{s0:ddd d MMM h:mm tt} - {e0:ddd d MMM h:mm tt}";
+            font.Draw(span, W, window.ToUpperInvariant(), Left, y, Canvas.Amber, 1, all);
+            y += 40;
+
+            var untilStart = start - DateTime.UtcNow;
+            var untilEnd = end - DateTime.UtcNow;
+            var state = untilEnd <= TimeSpan.Zero ? "FINISHED"
+                : untilStart <= TimeSpan.Zero ? $"UNDER WAY, ENDS IN {Span(untilEnd)}"
+                : $"IN {Span(untilStart)}";
+            font.Draw(span, W, state, Left, y, untilEnd <= TimeSpan.Zero ? Canvas.Faint : Canvas.Rgb(0xFF, 0xD6, 0x4F), 2, all);
+            y += 92;
+        }
         foreach (var line in Canvas.Wrap(story.Description, font.Fit(StoryWidth), 8))
         {
             font.Draw(span, W, line, Left, y, Canvas.Dim, 1, all);
@@ -87,7 +110,10 @@ internal sealed class NewsChannel(BitmapFont font, Func<NewsSnapshot?> data) : I
         for (var i = 1; i < items.Count && shown < 12; i++)
         {
             var other = items[(index + i) % items.Count];
-            var title = Canvas.Cut(other.Title.ToUpperInvariant(), font.Fit(W - ListLeft - 24));
+            var tag = other is { Start: { } os, End: { } oe } && oe > DateTime.UtcNow
+                ? (os <= DateTime.UtcNow ? "  [NOW]" : $"  [IN {Span(os - DateTime.UtcNow)}]")
+                : string.Empty;
+            var title = Canvas.Cut(other.Title.ToUpperInvariant(), font.Fit(W - ListLeft - 24) - tag.Length) + tag;
             font.Draw(span, W, title, ListLeft, ly, shown == 0 ? Canvas.White : Canvas.Dim, 1, all);
             ly += 40;
             shown++;
@@ -102,6 +128,12 @@ internal sealed class NewsChannel(BitmapFont font, Func<NewsSnapshot?> data) : I
 
         this.DrawFooter(span, snapshot, all);
     }
+
+    /// <summary>A duration the way a countdown says it: 2D 4H, 3H 20M, 12M.</summary>
+    private static string Span(TimeSpan t) =>
+        t.TotalDays >= 1 ? $"{(int)t.TotalDays}D {t.Hours}H"
+        : t.TotalHours >= 1 ? $"{(int)t.TotalHours}H {t.Minutes:00}M"
+        : $"{Math.Max(0, (int)t.TotalMinutes)}M";
 
     private void DrawFooter(Span<uint> span, NewsSnapshot? snapshot, in BitmapFont.Clip all)
     {

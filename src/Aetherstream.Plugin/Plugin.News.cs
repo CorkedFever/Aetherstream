@@ -115,8 +115,36 @@ public sealed partial class Plugin
             }
         }
 
-        return items.OrderByDescending(i => i.Time).Take(16).ToList();
+        // Order of interest, not of time: maintenance that is still ahead, then the real news,
+        // then the housekeeping, then world status notices — which arrive by the dozen and all
+        // say the same thing — capped so they cannot crowd everything else off.
+        var now = DateTime.UtcNow;
+        static int Rank(NewsItem i) => i.Kind switch
+        {
+            "maintenance" => i.End is { } end && end > DateTime.UtcNow ? 0 : 5,
+            "topic" => 1,
+            "developer" => 2,
+            "update" => 3,
+            "notice" => 3,
+            "status" => 4,
+            _ => 3,
+        };
+
+        var status = items.Where(i => i.Kind == "status").OrderByDescending(i => i.Time).Take(3).ToList();
+        return items
+            .Where(i => i.Kind != "status")
+            .Concat(status)
+            .OrderBy(Rank)
+            .ThenBy(i => Rank(i) == 0 ? (i.Start ?? now) - now : now - i.Time)
+            .Take(16)
+            .ToList();
     }
+
+    private static DateTime? Stamp(JsonElement entry, string property) =>
+        entry.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
+            && DateTime.TryParse(value.GetString(), null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var parsed)
+            ? parsed
+            : null;
 
     private static void ReadNewsArray(JsonElement array, string kind, List<NewsItem> into)
     {
@@ -136,7 +164,10 @@ public sealed partial class Plugin
             if (description.Length > 480)
                 description = description[..480];
 
-            into.Add(new NewsItem(title, description, time, kind.TrimEnd('s') is "notice" ? "notice" : kind.TrimEnd('s')));
+            var start = Stamp(entry, "start");
+            var end = Stamp(entry, "end");
+
+            into.Add(new NewsItem(title, description, time, kind.TrimEnd('s'), start, end));
         }
     }
 }

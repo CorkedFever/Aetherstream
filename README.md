@@ -280,8 +280,9 @@ implementing `IFrameChannel` in `Video\`, handed a snapshot by the plugin when i
 | Guide | The listings grid, picture in the corner | Pins, parties, recents |
 | Weather | Local on the 8s, with rare-weather and special alerts | The game's weather tables; the live sky via ClientStructs |
 | Clock | Eorzea time, the calendar date, the moon, the sun's arc | The clock |
-| News | Lodestone headlines, one story at a time, with a ticker | lodestonenews.com, every fifteen minutes, cached in the config folder |
+| News | Lodestone headlines, one story at a time, maintenance windows in local time with a countdown | lodestonenews.com, every fifteen minutes, cached in the config folder |
 | Market | The watch list priced, a chart of the featured item, a ticker | Universalis, every ten minutes, for the world you are on |
+| Gathering | Timed nodes as a departures board: up now, then soonest, with real-time countdowns | The game's gathering tables and the clock |
 | Aquarium, Fireplace, Starfield, Plasma, Mystify | Something on, nothing to read | Procedural; the heavy ones draw at a quarter size and scale up |
 
 The weather channel's alerts come in two kinds. Rare weather — a one-in-ten chance or less for
