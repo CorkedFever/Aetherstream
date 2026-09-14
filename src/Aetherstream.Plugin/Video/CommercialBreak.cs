@@ -128,11 +128,15 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
 
         public void Render(uint[] target, uint[]? picture, DateTime now, double seconds)
         {
+            // Four in a row, 44 seconds a set: the trailer takes its twenty, the rest eight each.
             var unix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var index = (int)(unix / (long)SpotFor);
-            var t = (unix % (long)SpotFor) + (seconds % 1.0);
+            const long Set = 44;
+            var set = (int)(unix / Set);
+            var at = (unix % Set) + (seconds % 1.0);
+            var kind = at < 8 ? 0 : at < 16 ? 1 : at < 36 ? 2 : 3;
+            var t = kind switch { 0 => at, 1 => at - 8, 2 => at - 16, _ => at - 36 };
+            var index = (set * 4) + kind;
             var span = target.AsSpan();
-            var kind = index % 4;
             switch (kind)
             {
                 case 0: breaks.Promo(span, index, t, seconds); break;
@@ -141,40 +145,59 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
                 default: breaks.Sponsor(span, index, t, seconds); break;
             }
 
-            var label = $"AD REEL  #{index % 10000}  {kind switch { 0 => "PROMO", 1 => "ITEM", 2 => "TRAILER", _ => "SPONSOR" }}  {(int)t + 1}/12";
+            var length = kind == 2 ? 20 : 8;
+            var label = $"AD REEL  #{index % 10000}  {kind switch { 0 => "PROMO", 1 => "ITEM", 2 => "TRAILER", _ => "SPONSOR" }}  {(int)t + 1}/{length}";
             var all = new BitmapFont.Clip(0, 0, W, H);
             Canvas.Fill(span, 0, 0, breaks.Font.Measure(label) + 24, 36, Ink);
             breaks.Font.Draw(span, W, label, 12, -2, Gold, 1, all);
         }
     }
 
+    /// <summary>The three spots of a break: their kinds and lengths, which add up to the whole break.</summary>
+    private static (int Kind, double Length)[] Plan(int cycle)
+    {
+        var kinds = new[] { Pick(cycle * 7, 5), 1 + Pick((cycle * 7) + 1, 4), Pick((cycle * 7) + 5, 5) };
+        // At most one trailer a break, and it gets twenty seconds; the other two share the rest.
+        var trailerAt = Array.IndexOf(kinds, 2);
+        for (var i = 0; i < 3; i++)
+        {
+            if (kinds[i] == 2 && i != trailerAt)
+                kinds[i] = 3;
+        }
+
+        var plan = new (int, double)[3];
+        for (var i = 0; i < 3; i++)
+            plan[i] = (kinds[i], trailerAt < 0 ? BreakFor / 3.0 : i == trailerAt ? 20.0 : (BreakFor - 20.0) / 2.0);
+        return plan;
+    }
+
     /// <summary>One frame of a break: which spot this is, and the bumpers at either end.</summary>
     private void RenderBreak(uint[] target, string returningTo, int cycle, double into, double seconds)
     {
         var span = target.AsSpan();
-        var spot = Math.Min(2, (int)(into / SpotFor));
-        var within = into - (spot * SpotFor);
-        this.RenderSpot(span, cycle, spot, within, seconds);
+        var plan = Plan(cycle);
+        var spot = 0;
+        var within = into;
+        while (spot < 2 && within >= plan[spot].Length)
+        {
+            within -= plan[spot].Length;
+            spot++;
+        }
+
+        var seed = (cycle * 7) + spot;
+        switch (plan[spot].Kind)
+        {
+            case 0: this.Promo(span, seed, within, seconds); break;
+            case 1: this.Item(span, seed, within, seconds); break;
+            case 2: this.Trailer(span, seed, within, seconds); break;
+            case 3: this.Sponsor(span, seed, within, seconds); break;
+            default: this.Item(span, seed + 11, within, seconds); break;
+        }
 
         if (spot == 0 && within < 2.0)
             this.Bumper(span, "WE'LL BE RIGHT BACK", within);
-        else if (spot == 2 && within > SpotFor - 2.0)
-            this.Bumper(span, $"AND NOW, BACK TO {returningTo.ToUpperInvariant()}", SpotFor - within);
-    }
-
-    /// <summary>A spot of one of the kinds, chosen by the cycle and its place in the break.</summary>
-    private void RenderSpot(Span<uint> span, int cycle, int index, double t, double seconds)
-    {
-        var seed = (cycle * 7) + index;
-        var kind = index switch { 0 => Pick(seed, 5), 1 => 1 + Pick(seed, 4), _ => Pick(seed + 3, 5) };
-        switch (kind)
-        {
-            case 0: this.Promo(span, seed, t, seconds); break;
-            case 1: this.Item(span, seed, t, seconds); break;
-            case 2: this.Trailer(span, seed, t, seconds); break;
-            case 3: this.Sponsor(span, seed, t, seconds); break;
-            default: this.Item(span, seed + 11, t, seconds); break;
-        }
+        else if (spot == 2 && within > plan[2].Length - 2.0)
+            this.Bumper(span, $"AND NOW, BACK TO {returningTo.ToUpperInvariant()}", plan[2].Length - within);
     }
 
     // -- the spots ----------------------------------------------------------------------------------------------
@@ -295,11 +318,11 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
         var star = "STARRING " + Starring[Pick(seed + 5, Starring.Length)].ToUpperInvariant();
         var rating = Ratings[Pick(seed + 6, Ratings.Length)];
 
-        if (t < 4.0)
+        if (t < 8.0)
         {
             // The words come one at a time, the way trailers do.
             var words = tagline.Split(' ');
-            var shown = Math.Min(words.Length, (int)(t / 4.0 * (words.Length + 1)));
+            var shown = Math.Min(words.Length, (int)(t / 7.0 * (words.Length + 1)));
             var text = string.Join(' ', words.Take(shown));
             var y = 300;
             foreach (var line in Canvas.Wrap(text, font.Fit(W - 200), 3))
@@ -308,9 +331,9 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
                 y += 40;
             }
         }
-        else if (t < 8.5)
+        else if (t < 14.5)
         {
-            var scale = t < 5.0 ? 1 : 2;
+            var scale = t < 10.0 ? 1 : 2;
             var w = font.Measure(title, scale);
             if (w > W - 80)
             {
@@ -319,7 +342,7 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
             }
 
             Shadowed(span, title, (W - w) / 2, 300, Gold, scale, all);
-            if (t > 6.0)
+            if (t > 11.5)
                 Shadowed(span, star, (W - font.Measure(star)) / 2, 400, Cream, 1, all);
         }
         else
