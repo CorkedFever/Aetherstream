@@ -109,7 +109,10 @@ internal static class Scenery
         for (var i = 0; i < 9; i++)
         {
             prng ^= prng << 13; prng ^= prng >> 17; prng ^= prng << 5;
-            var px = (int)((prng % (uint)(width + 200)) - 100 - (scroll * 0.9) % (width + 200));
+            // Signed on purpose: an unsigned remainder minus a constant stays unsigned and wraps
+            // to four billion, which the int cast then saturates — and a prop at the far edge of
+            // the integers sends the line drawer off for a walk it never comes back from.
+            var px = (int)(prng % (uint)(width + 200)) - 100 - (int)((scroll * 0.9) % (width + 200));
             if (px < -100)
                 px += width + 200;
             var scale = 1 + (int)((prng >> 8) % 3);

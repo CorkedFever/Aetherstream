@@ -64,7 +64,7 @@ internal static class Canvas
             target[(y * Width) + x] = colour;
     }
 
-    /// <summary>Bresenham, clipped per pixel; fine for the few hundred lines a frame ever needs.</summary>
+    /// <summary>Bresenham, clipped per pixel and capped at the canvas's own size; fine for the few hundred lines a frame ever needs.</summary>
     public static void Line(Span<uint> target, int x0, int y0, int x1, int y1, uint colour)
     {
         var dx = Math.Abs(x1 - x0);
@@ -72,12 +72,18 @@ internal static class Canvas
         var sx = x0 < x1 ? 1 : -1;
         var sy = y0 < y1 ? 1 : -1;
         var err = dx + dy;
+        var guard = 0;
 
         while (true)
         {
             Plot(target, x0, y0, colour);
             if (x0 == x1 && y0 == y1)
                 break;
+
+            // A line longer than the canvas has nothing more to plot; a bad coordinate must not
+            // become a frame that never ends.
+            if (++guard > 2 * (Width + Height))
+                return;
 
             var e2 = 2 * err;
             if (e2 >= dy) { err += dy; x0 += sx; }
