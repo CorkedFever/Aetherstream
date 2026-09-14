@@ -221,100 +221,338 @@ internal sealed class BardChannel(BitmapFont font, Func<StoryStock?> stock, Func
 
     private void DrawParlour(Span<uint> span, double seconds, HostSprites.Bard action, in BitmapFont.Clip all)
     {
-        // The parlour: a dark wall, a bookcase, a fire in a hearth, a rug, and the chair.
-        Canvas.Fill(span, 0, 0, W, H, Wall);
-        for (var y = 0; y < 560; y += 28)
-            Canvas.Fill(span, 0, y, W, 1, Canvas.Lerp(Wall, Canvas.Black, 0.3f));
+        // The parlour by firelight: everything is a shape against the glow. The hearth on the
+        // right throws the light; the teller sits in silhouette in the high-backed chair with the
+        // book on the knee and the lantern up, and the bookcase is a dark wall of spines.
+        var flicker = 0.85f + (0.15f * (float)Math.Sin(seconds * 9.0)) * (float)Math.Abs(Math.Sin(seconds * 2.3));
+        var glow = Canvas.Lerp(Canvas.Rgb(0x6A, 0x3A, 0x1A), Canvas.Rgb(0xB8, 0x6A, 0x2A), flicker);
+        for (var y = 0; y < H; y++)
+        {
+            for (var x = 0; x < W; x += 8)
+            {
+                var dx = (x - 1040) / 900f;
+                var dy = (y - 430) / 520f;
+                var d = MathF.Sqrt((dx * dx) + (dy * dy));
+                var c = Canvas.Lerp(glow, Wall, Math.Clamp(d, 0f, 1f));
+                Canvas.Fill(span, x, y, 8, 1, c);
+            }
+        }
 
-        // The bookcase.
-        Canvas.Fill(span, 60, 60, 340, 480, Wood);
+        // The hearth: the opening, and the fire that lights the room.
+        Canvas.Fill(span, 880, 240, 320, 320, Canvas.Lerp(Wall, Canvas.Black, 0.5f));
+        Canvas.Fill(span, 910, 270, 260, 270, Canvas.Lerp(glow, Canvas.Rgb(0xFF, 0xC0, 0x60), 0.4f));
+        for (var f = 0; f < 6; f++)
+        {
+            var fx = 950 + (f * 36) + (int)(Math.Sin((seconds * 5.0) + f) * 6);
+            var fh = 70 + (int)(Math.Sin((seconds * 7.0) + (f * 1.3)) * 24);
+            Canvas.Disc(span, fx, 520 - (fh / 2), 26, Canvas.Rgb(0xFF, 0x8A, 0x30));
+            Canvas.Disc(span, fx, 520 - (fh / 2) - 10, 16, Canvas.Rgb(0xFF, 0xC8, 0x60));
+            Canvas.Disc(span, fx, 520 - fh, 8, Canvas.Rgb(0xFF, 0xF0, 0xA0));
+        }
+
+        Canvas.Fill(span, 900, 520, 280, 24, Canvas.Lerp(Wall, Canvas.Black, 0.6f));
+
+        // The bookcase in silhouette, spines as a ragged skyline.
+        var ink = Canvas.Lerp(Wall, Canvas.Black, 0.75f);
+        Canvas.Fill(span, 60, 80, 340, 480, ink);
+        var rng = 7919u;
         for (var shelf = 0; shelf < 5; shelf++)
         {
-            var sy = 90 + (shelf * 90);
-            Canvas.Fill(span, 70, sy + 70, 320, 8, Canvas.Lerp(Wood, Canvas.Black, 0.4f));
-            var rng = (uint)(shelf * 7919) | 1u;
-            var bx = 76;
-            while (bx < 380)
+            var sy = 160 + (shelf * 90);
+            var bx = 70;
+            while (bx < 390)
             {
                 rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5;
                 var bw = 12 + (int)(rng % 14);
                 var bh = 40 + (int)((rng >> 8) % 28);
-                var colour = (rng >> 16) % 5 switch
-                {
-                    0 => Canvas.Rgb(0x8A, 0x2A, 0x2A),
-                    1 => Canvas.Rgb(0x2A, 0x4A, 0x7A),
-                    2 => Canvas.Rgb(0x4A, 0x6A, 0x3A),
-                    3 => Canvas.Rgb(0xB0, 0x8A, 0x3A),
-                    _ => Canvas.Rgb(0x5A, 0x3A, 0x6A),
-                };
-                Canvas.Fill(span, bx, sy + 70 - bh, bw, bh, colour);
+                Canvas.Fill(span, bx, sy - bh, bw, bh, Canvas.Lerp(ink, glow, 0.08f + (0.06f * ((rng >> 16) % 3))));
                 bx += bw + 2;
             }
+
+            Canvas.Fill(span, 60, sy, 340, 6, Canvas.Lerp(ink, Canvas.Black, 0.5f));
         }
 
-        // The hearth, with a fire that moves.
-        Canvas.Fill(span, 860, 260, 360, 300, Canvas.Rgb(0x6A, 0x5A, 0x50));
-        Canvas.Fill(span, 900, 300, 280, 240, Canvas.Rgb(0x14, 0x0E, 0x0A));
-        Canvas.Fill(span, 900, 520, 280, 20, Canvas.Rgb(0x3A, 0x2A, 0x20));
-        for (var f = 0; f < 6; f++)
-        {
-            var fx = 950 + (f * 36) + (int)(Math.Sin((seconds * 5.0) + f) * 6);
-            var fh = 60 + (int)(Math.Sin((seconds * 7.0) + (f * 1.3)) * 22);
-            Canvas.Disc(span, fx, 520 - (fh / 2), 24, Canvas.Rgb(0xE0, 0x60, 0x20));
-            Canvas.Disc(span, fx, 520 - (fh / 2) - 8, 14, Canvas.Rgb(0xFF, 0xB0, 0x40));
-            Canvas.Disc(span, fx, 520 - fh, 8, Canvas.Rgb(0xFF, 0xE0, 0x80));
-        }
+        // The floor and the rug, and the chair's shadow across them.
+        Canvas.Fill(span, 0, 560, W, 120, Canvas.Lerp(Wall, Canvas.Black, 0.55f));
+        Canvas.Fill(span, 380, 580, 520, 90, Canvas.Lerp(Canvas.Rgb(0x6A, 0x22, 0x22), Canvas.Black, 0.45f));
 
-        Canvas.Fill(span, 900, 300, 280, 4, Canvas.Rgb(0x8A, 0x7A, 0x70));
+        // The teller: a silhouette, rim-lit on the fire's side.
+        var rim = Canvas.Lerp(glow, Canvas.Rgb(0xFF, 0xD0, 0x80), 0.5f);
+        var chairX = 470;
+        Canvas.Fill(span, chairX, 250, 180, 330, ink);
+        Canvas.Fill(span, chairX + 176, 250, 6, 330, rim);
+        Canvas.Fill(span, chairX - 30, 440, 240, 20, ink);
+        Canvas.Fill(span, chairX - 30, 460, 16, 100, ink);
+        Canvas.Fill(span, chairX + 194, 460, 16, 100, ink);
 
-        // The rug and the floor.
-        Canvas.Fill(span, 0, 560, W, 120, Canvas.Rgb(0x3A, 0x28, 0x1C));
-        Canvas.Fill(span, 420, 580, 460, 90, Canvas.Rgb(0x7A, 0x2A, 0x2A));
-        Canvas.Fill(span, 436, 596, 428, 58, Canvas.Rgb(0x9A, 0x3A, 0x3A));
+        var bob = (int)(Math.Sin(seconds * 1.1) * 3);
+        var headX = chairX + 100;
+        var headY = 300 + bob;
+        Canvas.Disc(span, headX, headY, 44, ink);
+        Canvas.Disc(span, headX + 36, headY - 8, 8, rim);
+        Canvas.Fill(span, headX - 60, headY + 30, 120, 130, ink);
 
-        // The bard in his chair, lit by the fire.
-        HostSprites.DrawBard(span, action, seconds, 480, 560 - 300, 10);
+        // The book on the knee, a pale shape the fire catches, and the page turning.
+        var page = action == HostSprites.Bard.Turn ? (int)((seconds * 3.0) % 1.0 * 30) : 0;
+        Canvas.Fill(span, headX - 70, 470, 140, 12, Canvas.Lerp(rim, Canvas.White, 0.3f));
+        Canvas.Fill(span, headX - 70 + page, 456, 70 - page, 14, Canvas.Lerp(rim, Canvas.White, 0.5f));
+
+        // The lantern in the far hand: raised when he gestures, its glass the brightest thing on the left.
+        var raise = action is HostSprites.Bard.Gesture or HostSprites.Bard.Wave ? (int)(Math.Abs(Math.Sin(seconds * 1.6)) * 60) : 0;
+        var lx = chairX - 40;
+        var ly = 420 - raise;
+        Canvas.Fill(span, lx - 30, ly - 10, 60, 8, ink);
+        Canvas.Fill(span, lx - 3, ly - 40, 6, 32, ink);
+        Canvas.Disc(span, lx, ly + 24, 40, Canvas.Lerp(glow, Canvas.Rgb(0xFF, 0xD8, 0x80), 0.25f));
+        Canvas.Fill(span, lx - 18, ly, 36, 48, Canvas.Rgb(0xFF, 0xC8, 0x60));
+        Canvas.Fill(span, lx - 22, ly - 4, 44, 6, ink);
+        Canvas.Fill(span, lx - 22, ly + 46, 44, 6, ink);
+        Canvas.Fill(span, lx - 22, ly, 4, 48, ink);
+        Canvas.Fill(span, lx + 18, ly, 4, 48, ink);
     }
 
     private void DrawPicture(Span<uint> span, Story story, int page, double seconds, DateTime now, in BitmapFont.Clip all)
     {
-        // The page's scene: where it is set, and who is in it, framed like a plate in a book.
+        // A shadow play: a paper screen lit from behind, the light warmest at the middle and
+        // flickering a little, in a wooden frame; every figure a black cutout on it.
         var atHome = page is 0 or 1 or 5;
         var biome = atHome ? story.HomeBiome : story.FarBiome;
-        var hour = now.Hour + (now.Minute / 60f);
-        var daylight = page is 3 or 4 ? 0.25f : Math.Clamp(1f - (Math.Abs(hour - 13f) / 7.5f), 0f, 1f);
+        var flicker = 0.92f + (0.08f * (float)Math.Sin(seconds * 11.0) * (float)Math.Abs(Math.Sin(seconds * 3.1)));
+        var paper = Canvas.Lerp(Canvas.Rgb(0xF4, 0xD8, 0xA0), Canvas.Rgb(0xFF, 0xEC, 0xC0), flicker);
+        var paperEdge = Canvas.Rgb(0xC8, 0xA0, 0x60);
+        const int Top = 60, Bottom = 540, GroundY = 470;
 
-        Canvas.Fill(span, 0, 0, W, H, Page);
-        Scenery.Paint(span, W, 60, 340, 540, biome, daylight, (page * 17) + 3, page == 2 ? seconds * 40.0 : seconds * 4.0);
-        Canvas.Rect(span, 0, 60, W, 480, Ink, 6);
+        Canvas.Fill(span, 0, 0, W, H, Wood);
+        for (var y = Top; y < Bottom; y++)
+        {
+            for (var x = 0; x < W; x += 8)
+            {
+                var dx = (x - 640) / 640f;
+                var dy = (y - 300) / 300f;
+                var d = MathF.Sqrt((dx * dx) + (dy * dy));
+                Canvas.Fill(span, x, y, 8, 1, Canvas.Lerp(paper, paperEdge, Math.Clamp(d * 0.9f, 0f, 1f)));
+            }
+        }
 
-        // The hero: a small figure, walking on the road page, standing otherwise.
-        // The hero, sized for their people, feet on the ground line.
+        // The night pages: the screen dims and a paper moon is cut in.
+        if (page is 3 or 4)
+        {
+            Dim(span, 0.25f);
+            Canvas.Disc(span, 1080, 150, 46, Canvas.Lerp(paper, Canvas.White, 0.5f));
+        }
+
+        // The country, in cut paper: two ranges of hills and the props, all black.
+        var ink = Canvas.Rgb(0x14, 0x10, 0x0C);
+        var pan = page == 2 ? seconds * 40.0 : seconds * 3.0;
+        ShadowHills(span, GroundY, ink, (page * 17) + 3, 0.006, 70, pan * 0.3);
+        ShadowHills(span, GroundY, ink, (page * 17) + 9, 0.011, 44, pan * 0.6);
+        Canvas.Fill(span, 0, GroundY, W, Bottom - GroundY, ink);
+        ShadowProps(span, biome, GroundY, ink, (page * 17) + 5, pan);
+
+        // The hero: a cutout with a hood, a pack and a staff, walking on the road page.
         var heroX = page == 2 ? 200 + (int)((seconds * 30.0) % 700) : 300;
-        var heroScale = Math.Max(2, (int)Math.Round(5 * HostSprites.HeroScale(story.People)));
-        var heroY = 532 - (38 * heroScale);
-        HostSprites.DrawHero(span, story.People, page == 2 ? HostSprites.Hero.Walk : HostSprites.Hero.Stand, seconds, heroX, heroY, heroScale, story.Hair, story.Cloak, story.Skin);
+        var heroScale = HostSprites.HeroScale(story.People);
+        ShadowHero(span, story.People, heroX, GroundY, heroScale, page == 2 ? seconds : 0.0, ink);
 
-        // The beast on the pages it is on; the treasure where it is found and where it ends up.
+        // The beast, cut from its own portrait; the treasure, cut from its icon with a glow behind.
         if (page is 3 or 4)
         {
             var bump = page == 4 ? (int)(Math.Sin(seconds * 10.0) * 8) : (int)(Math.Sin(seconds * 1.5) * 3);
-            Canvas.Disc(span, 900, 520, 90, Canvas.Lerp(Canvas.Black, Canvas.Rgb(0x40, 0x40, 0x40), 0.5f));
-            this.DrawIcon(span, story.BeastIcon, 820 + bump, 360, 160);
+            this.DrawCutout(span, story.BeastIcon, 800 + bump, GroundY - 200, 200, ink);
         }
 
         if (page is 1 or 3 or 5)
         {
             var glow = (int)(Math.Sin(seconds * 3.0) * 4);
-            var tx = page == 5 ? 560 : 760;
-            Canvas.Disc(span, tx + 40, 500 - glow, 52, Canvas.Lerp(Gold, Page, 0.5f));
-            this.DrawIcon(span, story.TreasureIcon, tx, 460 - glow, 80);
+            var tx = page == 5 ? 560 : 700;
+            Canvas.Disc(span, tx + 45, GroundY - 40 - glow, 60, Canvas.Lerp(paper, Canvas.Rgb(0xFF, 0xF4, 0xD0), 0.8f));
+            this.DrawCutout(span, story.TreasureIcon, tx, GroundY - 90 - glow, 90, ink);
         }
 
+        // The frame, and the plate's labels on it.
+        Canvas.Fill(span, 0, Top - 12, W, 12, WoodDark);
+        Canvas.Fill(span, 0, Bottom, W, 12, WoodDark);
+        Canvas.Fill(span, 0, Top, 12, Bottom - Top, WoodDark);
+        Canvas.Fill(span, W - 12, Top, 12, Bottom - Top, WoodDark);
         var caption = Canvas.Cut(atHome ? story.Home.ToUpperInvariant() : story.Far.ToUpperInvariant(), 30);
-        font.Draw(span, W, caption, W - 30 - font.Measure(caption), 20, Ink, 1, all);
+        font.Draw(span, W, caption, W - 30 - font.Measure(caption), 10, Cream, 1, all);
         var plate = $"PLATE {page + 1}";
-        font.Draw(span, W, plate, 30, 20, Ink, 1, all);
+        font.Draw(span, W, plate, 30, 10, Cream, 1, all);
+    }
+
+    private static readonly uint WoodDark = Canvas.Rgb(0x3A, 0x24, 0x10);
+
+    private static void ShadowHills(Span<uint> span, int ground, uint ink, int seed, double freq, int height, double shift)
+    {
+        for (var x = 0; x < W; x++)
+        {
+            var wx = x + shift;
+            var h = (Math.Sin((wx * freq) + seed) * 0.5) + (Math.Sin((wx * freq * 2.3) + (seed * 1.7)) * 0.3) + (Math.Sin((wx * freq * 5.1) + (seed * 0.4)) * 0.2);
+            var top = ground - (int)(((h + 1.0) / 2.0) * height) - 4;
+            Canvas.Fill(span, x, top, 1, ground - top, ink);
+        }
+    }
+
+    private static void ShadowProps(Span<uint> span, Biome biome, int ground, uint ink, int seed, double scroll)
+    {
+        var rng = (uint)(seed * 11) | 1u;
+        for (var i = 0; i < 7; i++)
+        {
+            rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5;
+            var px = (int)((rng % (uint)(W + 200)) - 100 - (scroll * 0.9) % (W + 200));
+            if (px < -100)
+                px += W + 200;
+            var scale = 2 + (int)((rng >> 8) % 2);
+            switch (biome)
+            {
+                case Biome.Desert:
+                    Canvas.Fill(span, px - (2 * scale), ground - (16 * scale), 4 * scale, 16 * scale, ink);
+                    Canvas.Fill(span, px - (7 * scale), ground - (12 * scale), 5 * scale, 2 * scale, ink);
+                    Canvas.Fill(span, px - (7 * scale), ground - (16 * scale), 2 * scale, 5 * scale, ink);
+                    Canvas.Fill(span, px + (2 * scale), ground - (9 * scale), 5 * scale, 2 * scale, ink);
+                    Canvas.Fill(span, px + (5 * scale), ground - (13 * scale), 2 * scale, 5 * scale, ink);
+                    break;
+                case Biome.Snow:
+                    for (var t = 0; t < 3; t++)
+                    {
+                        var w = (10 - (t * 2)) * scale;
+                        var ty = ground - (6 * scale) - (t * 6 * scale);
+                        for (var r = 0; r < 6 * scale; r++)
+                            Canvas.Fill(span, px - (w * r / (6 * scale)), ty - r, (2 * w * r / (6 * scale)) + 1, 1, ink);
+                    }
+
+                    break;
+                case Biome.Coast:
+                    for (var k = 0; k < 16 * scale; k++)
+                        Canvas.Fill(span, px + (k / 4), ground - k, 3 * scale / 2, 1, ink);
+                    for (var f = -2; f <= 2; f++)
+                        Canvas.Line(span, px + (4 * scale), ground - (16 * scale), px + (4 * scale) + (f * 7 * scale), ground - (16 * scale) + (Math.Abs(f) * 3 * scale) - (2 * scale), ink);
+                    break;
+                case Biome.Highland:
+                case Biome.Steppe:
+                    Canvas.Disc(span, px, ground - (3 * scale), 6 * scale, ink);
+                    break;
+                default:
+                    Canvas.Fill(span, px - (2 * scale), ground - (18 * scale), 4 * scale, 18 * scale, ink);
+                    Canvas.Disc(span, px, ground - (22 * scale), 10 * scale, ink);
+                    Canvas.Disc(span, px - (4 * scale), ground - (18 * scale), 7 * scale, ink);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The hero as a cutout: a hooded head, a cloaked body that widens to the hem, legs that
+    /// swing when walking, a pack, a staff. The people shows in the outline: ears, horns, a
+    /// tail, a mane, or a smaller figure.
+    /// </summary>
+    private static void ShadowHero(Span<uint> span, string people, int x, int ground, float scale, double walk, uint ink)
+    {
+        var h = (int)(200 * scale);
+        var top = ground - h;
+        var cx = x + (int)(40 * scale);
+        var headR = (int)(22 * scale);
+        var headY = top + headR + (int)(10 * scale);
+
+        // Head, and what the people adds to it.
+        Canvas.Disc(span, cx, headY, headR, ink);
+        switch (people)
+        {
+            case "Miqo'te":
+                Canvas.Line(span, cx - headR + 4, headY - headR + 6, cx - headR - 2, headY - headR - (int)(18 * scale), ink);
+                Canvas.Line(span, cx - headR + 12, headY - headR + 2, cx - headR - 2, headY - headR - (int)(18 * scale), ink);
+                Canvas.Line(span, cx + headR - 4, headY - headR + 6, cx + headR + 2, headY - headR - (int)(18 * scale), ink);
+                Canvas.Line(span, cx + headR - 12, headY - headR + 2, cx + headR + 2, headY - headR - (int)(18 * scale), ink);
+                break;
+            case "Viera":
+                Canvas.Fill(span, cx - (int)(14 * scale), headY - headR - (int)(46 * scale), (int)(9 * scale), (int)(50 * scale), ink);
+                Canvas.Fill(span, cx + (int)(5 * scale), headY - headR - (int)(46 * scale), (int)(9 * scale), (int)(50 * scale), ink);
+                break;
+            case "Elezen":
+                Canvas.Line(span, cx - headR, headY, cx - headR - (int)(12 * scale), headY - (int)(10 * scale), ink);
+                Canvas.Line(span, cx + headR, headY, cx + headR + (int)(12 * scale), headY - (int)(10 * scale), ink);
+                break;
+            case "Au Ra":
+                Canvas.Line(span, cx - headR + 4, headY - headR + 8, cx - headR - (int)(10 * scale), headY - headR - (int)(14 * scale), ink);
+                Canvas.Line(span, cx + headR - 4, headY - headR + 8, cx + headR + (int)(10 * scale), headY - headR - (int)(14 * scale), ink);
+                break;
+            case "Hrothgar":
+                Canvas.Disc(span, cx, headY, headR + (int)(10 * scale), ink);
+                Canvas.Disc(span, cx - headR + 2, headY - headR + 2, (int)(8 * scale), ink);
+                Canvas.Disc(span, cx + headR - 2, headY - headR + 2, (int)(8 * scale), ink);
+                Canvas.Disc(span, cx + headR - 4, headY + (int)(6 * scale), (int)(12 * scale), ink);
+                break;
+            case "Roegadyn":
+                Canvas.Disc(span, cx, headY + (int)(6 * scale), headR + (int)(4 * scale), ink);
+                break;
+        }
+
+        // The body: a cloak that widens to the hem, over the legs.
+        var shoulderY = headY + headR - (int)(4 * scale);
+        var hemY = ground - (int)(40 * scale);
+        for (var y = shoulderY; y < hemY; y++)
+        {
+            var t = (float)(y - shoulderY) / Math.Max(1, hemY - shoulderY);
+            var half = (int)((26 + (t * 22)) * scale);
+            Canvas.Fill(span, cx - half, y, half * 2, 1, ink);
+        }
+
+        // The pack, behind the shoulder; the legs, swinging when walking; the staff.
+        Canvas.Fill(span, cx + (int)(20 * scale), shoulderY + (int)(10 * scale), (int)(24 * scale), (int)(40 * scale), ink);
+        var swing = walk > 0 ? (int)(Math.Sin(walk * 10.0) * 14 * scale) : 0;
+        Canvas.Fill(span, cx - (int)(16 * scale) - swing, hemY, (int)(12 * scale), ground - hemY, ink);
+        Canvas.Fill(span, cx + (int)(4 * scale) + swing, hemY, (int)(12 * scale), ground - hemY, ink);
+        var sx = cx - (int)(40 * scale);
+        Canvas.Fill(span, sx, top - (int)(10 * scale), (int)(5 * scale), ground - top + (int)(10 * scale), ink);
+        Canvas.Disc(span, sx + (int)(2 * scale), top - (int)(10 * scale), (int)(6 * scale), ink);
+        Canvas.Fill(span, sx, shoulderY + (int)(20 * scale), (int)(24 * scale), (int)(10 * scale), ink);
+
+        // Tails.
+        if (people is "Miqo'te" or "Au Ra")
+        {
+            var thick = people == "Au Ra" ? (int)(10 * scale) : (int)(6 * scale);
+            var tx = cx + (int)(40 * scale);
+            var ty = hemY - (int)(10 * scale);
+            var wag = (int)(Math.Sin(walk > 0 ? walk * 6.0 : 0.0) * 6 * scale);
+            Canvas.Line(span, tx, ty, tx + (int)(30 * scale), ty - (int)(30 * scale) + wag, ink);
+            for (var i = 1; i < thick; i++)
+                Canvas.Line(span, tx, ty + i, tx + (int)(30 * scale), ty - (int)(30 * scale) + wag + i, ink);
+        }
+    }
+
+    /// <summary>An icon as a cutout: every pixel that is solid enough goes black.</summary>
+    private void DrawCutout(Span<uint> span, uint iconId, int x, int y, int size, uint ink)
+    {
+        if (icon(iconId) is not { } px)
+            return;
+
+        for (var ty = 0; ty < size; ty++)
+        {
+            var yy = y + ty;
+            if (yy < 0 || yy >= H)
+                continue;
+
+            var sy = ty * px.Height / size;
+            for (var tx = 0; tx < size; tx++)
+            {
+                var xx = x + tx;
+                if (xx < 0 || xx >= W)
+                    continue;
+
+                var p = px.Pixels[(sy * px.Width) + (tx * px.Width / size)];
+                var a = (int)(p >> 24);
+                var lum = ((p & 0xFF) + ((p >> 8) & 0xFF) + ((p >> 16) & 0xFF)) / 3;
+
+                // The portrait frames are squares of mid-grey: those go too. What stays is the
+                // figure itself, dark against its ground, and anything fully solid.
+                var isFrame = tx < 4 || ty < 4 || tx >= size - 4 || ty >= size - 4;
+                if (a < 128 || isFrame)
+                    continue;
+
+                if (lum < 150)
+                    span[(yy * W) + xx] = ink;
+            }
+        }
     }
 
     private void DrawCaption(Span<uint> span, string tab, string line, in BitmapFont.Clip all)
