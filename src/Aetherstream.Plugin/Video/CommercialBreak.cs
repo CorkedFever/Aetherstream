@@ -301,60 +301,189 @@ internal sealed class CommercialBreak(BitmapFont font, Func<IReadOnlyList<(strin
         font.Draw(span, W, Fine[Pick(seed + 4, Fine.Length)].ToUpperInvariant(), 40, 660, Canvas.Lerp(Ink, back, 0.5f), 1, all);
     }
 
+    // Lines the actors say in the middle of a trailer, in pairs.
+    private static readonly (string A, string B)[] Dialogue =
+    [
+        ("You came back.", "I never left. I was in the queue."),
+        ("They said you were dead.", "They said a lot of things. Mostly about my glamour."),
+        ("We had a deal.", "We had a market board. It is not the same."),
+        ("How many are out there?", "All of them. And they have all done the roulette."),
+        ("Is it true? About the fish?", "Everything is true about the fish."),
+        ("You can't go alone.", "I have a chocobo. It counts. Legally."),
+        ("What do we do now?", "We wait for the weather. Then we do nothing, faster."),
+    ];
+
+    private static readonly string[] Studios = ["FROM THE STUDIO THAT BROUGHT YOU", "FROM THE MAKERS OF", "FROM A PRODUCER WHO ONCE SAW"];
+
+    /// <summary>
+    /// A trailer in five shots, twenty seconds: an actor walking into a wide country as the tagline
+    /// arrives, a close-up in the dusk with a line, the two of them at night by a fire with
+    /// lightning, the title, and the card. Hard cuts, letterbox, and the cast drawn from the hosts.
+    /// </summary>
     private void Trailer(Span<uint> span, int seed, double t, double seconds)
     {
         var all = new BitmapFont.Clip(0, 0, W, H);
-        var biome = (Biome)Pick(seed, 8);
-        var daylight = Pick(seed + 1, 3) == 0 ? 0.1f : 0.8f;
-        Scenery.Paint(span, W, 0, 380, H, biome, daylight, seed, seconds * 30);
-
-        // Letterbox, and a slow push in that the bars sell.
-        var bar = 90;
-        Canvas.Fill(span, 0, 0, W, bar, Ink);
-        Canvas.Fill(span, 0, H - bar, W, bar, Ink);
-
         var title = $"{TitleA[Pick(seed + 2, TitleA.Length)]} {TitleB[Pick(seed + 3, TitleB.Length)]}".ToUpperInvariant();
         var tagline = Taglines[Pick(seed + 4, Taglines.Length)].ToUpperInvariant();
         var star = "STARRING " + Starring[Pick(seed + 5, Starring.Length)].ToUpperInvariant();
         var rating = Ratings[Pick(seed + 6, Ratings.Length)];
-
-        // One size for the title, chosen once, so nothing grows or shrinks while you read it.
+        var lead = Pick(seed + 7, 9);
+        var foil = (lead + 1 + Pick(seed + 8, 8)) % 9;
+        var biomeA = (Biome)Pick(seed, 7);
+        var biomeB = (Biome)Pick(seed + 9, 7);
+        var (lineA, lineB) = Dialogue[Pick(seed + 10, Dialogue.Length)];
+        var other = $"{TitleA[Pick(seed + 12, TitleA.Length)]} {TitleB[Pick(seed + 13, TitleB.Length)]}".ToUpperInvariant();
+        var rains = Pick(seed + 11, 3) == 0;
+        const int Bar = 90;
         var titleScale = font.Measure(title, 2) <= W - 120 ? 2 : 1;
         var titleW = font.Measure(title, titleScale);
 
-        if (t < 8.0)
+        // Shot boundaries, and a beat of black at each cut.
+        var cuts = new[] { 0.0, 5.0, 8.5, 12.0, 15.0 };
+        var shot = 0;
+        for (var i = 1; i < cuts.Length; i++)
         {
-            // The words come one at a time, the way trailers do, into lines laid out up front
-            // so the ones already there never move.
-            var lines = Canvas.Wrap(tagline, font.Fit(W - 200), 3);
-            var total = lines.Sum(l => l.Split(' ').Length);
-            var shown = Math.Min(total, (int)(t / 7.0 * (total + 1)));
-            var y = 300;
-            foreach (var line in lines)
+            if (t >= cuts[i])
+                shot = i;
+        }
+
+        var into = t - cuts[shot];
+        if (shot > 0 && into < 0.12)
+        {
+            Canvas.Fill(span, 0, 0, W, H, Ink);
+            return;
+        }
+
+        switch (shot)
+        {
+            case 0:
             {
-                var words = line.Split(' ');
-                var take = Math.Clamp(shown, 0, words.Length);
-                shown -= take;
-                if (take > 0)
-                    Shadowed(span, string.Join(' ', words.Take(take)), (W - font.Measure(line)) / 2, y, Cream, 1, all);
-                y += 40;
+                // Wide: the lead walks in from the left as the words arrive.
+                Scenery.Paint(span, W, 0, 380, H, biomeA, 0.85f, seed, into * 40);
+                var x = -80 + (int)(into * 70);
+                Actor(span, lead, walk: true, seconds, x, 330, 7, flip: false);
+                if (rains)
+                    Rain(span, seconds);
+                var lines = Canvas.Wrap(tagline, font.Fit(W - 200), 3);
+                var total = lines.Sum(l => l.Split(' ').Length);
+                var shown = Math.Min(total, (int)(into / 4.5 * (total + 1)));
+                var y = 140;
+                foreach (var line in lines)
+                {
+                    var words = line.Split(' ');
+                    var take = Math.Clamp(shown, 0, words.Length);
+                    shown -= take;
+                    if (take > 0)
+                        Shadowed(span, string.Join(' ', words.Take(take)), (W - font.Measure(line)) / 2, y, Cream, 1, all);
+                    y += 40;
+                }
+
+                break;
+            }
+
+            case 1:
+            {
+                // Close-up at dusk: the foil, large, and a line.
+                Scenery.Paint(span, W, 0, 380, H, biomeB, 0.3f, seed + 1, 0);
+                Actor(span, foil, walk: false, seconds, 760, 160 + (int)(into * 6), 12, flip: true);
+                Subtitle(span, lineA, all);
+                break;
+            }
+
+            case 2:
+            {
+                // Night: the two of them by a fire, lightning if it rains, the answer.
+                Scenery.Paint(span, W, 0, 380, H, biomeB, 0.05f, seed + 2, 0);
+                var flicker = (int)(Math.Sin(seconds * 9) * 6);
+                Canvas.Disc(span, W / 2, 470, 90 + flicker, Canvas.Rgb(0x6A, 0x30, 0x10));
+                Canvas.Disc(span, W / 2, 470, 40 + (flicker / 2), Canvas.Rgb(0xFF, 0x9A, 0x30));
+                Canvas.Disc(span, W / 2, 458, 16, Canvas.Rgb(0xFF, 0xE0, 0x80));
+                Actor(span, lead, walk: false, seconds, 300, 300, 8, flip: false);
+                Actor(span, foil, walk: false, seconds, 780, 300, 8, flip: true);
+                if (rains)
+                {
+                    Rain(span, seconds);
+                    if ((int)(seconds * 10) % 17 == 0)
+                        Canvas.Fill(span, 0, 0, W, H, Canvas.Lerp(Cream, Canvas.Rgb(0xC8, 0xD8, 0xFF), 0.5f));
+                }
+
+                Subtitle(span, lineB, all);
+                break;
+            }
+
+            case 3:
+            {
+                // The title, over the night scene gone dark.
+                Scenery.Paint(span, W, 0, 380, H, biomeB, 0.05f, seed + 2, 0);
+                for (var y = 0; y < H; y++)
+                {
+                    var row = span.Slice(y * W, W);
+                    for (var x = 0; x < W; x++)
+                        row[x] = Canvas.Lerp(row[x], Ink, 0.7f);
+                }
+
+                Shadowed(span, title, (W - titleW) / 2, 300, Gold, titleScale, all);
+                if (into > 1.5)
+                    Shadowed(span, star, (W - font.Measure(star)) / 2, 300 + (titleScale * 44) + 20, Cream, 1, all);
+                break;
+            }
+
+            default:
+            {
+                Canvas.Fill(span, 0, 0, W, H, Ink);
+                var studio = Studios[Pick(seed + 14, Studios.Length)];
+                Shadowed(span, studio, (W - font.Measure(studio)) / 2, 150, Faint, 1, all);
+                Shadowed(span, $"'{other}'", (W - font.Measure($"'{other}'")) / 2, 190, Cream, 1, all);
+                Shadowed(span, title, (W - titleW) / 2, 280, Gold, titleScale, all);
+                Shadowed(span, "COMING THIS STARLIGHT", (W - font.Measure("COMING THIS STARLIGHT")) / 2, 400, Cream, 1, all);
+                Shadowed(span, "TO A CHANNEL THAT DOES NOT EXIST", (W - font.Measure("TO A CHANNEL THAT DOES NOT EXIST")) / 2, 440, Faint, 1, all);
+                Canvas.Rect(span, (W / 2) - 260, 500, 520, 48, Cream, 2);
+                font.Draw(span, W, rating, (W - font.Measure(rating)) / 2, 504, Cream, 1, all);
+                break;
             }
         }
-        else if (t < 14.5)
+
+        Canvas.Fill(span, 0, 0, W, Bar, Ink);
+        Canvas.Fill(span, 0, H - Bar, W, Bar, Ink);
+    }
+
+    /// <summary>One frame of a trailer into an array; the harness calls this, since it cannot pass a span.</summary>
+    private void TrailerFrame(uint[] target, int seed, double t, double seconds) => this.Trailer(target.AsSpan(), seed, t, seconds);
+
+    /// <summary>The cast: the hosts, by number, walking or standing, at a size, facing a way.</summary>
+    private static void Actor(Span<uint> span, int who, bool walk, double seconds, int x, int y, int scale, bool flip)
+    {
+        switch (who)
         {
-            Shadowed(span, title, (W - titleW) / 2, 300, Gold, titleScale, all);
-            if (t > 11.5)
-                Shadowed(span, star, (W - font.Measure(star)) / 2, 300 + (titleScale * 44) + 20, Cream, 1, all);
+            case 0: HostSprites.DrawRanger(span, walk ? HostSprites.Ranger.Run : HostSprites.Ranger.Stand, seconds, x, y, scale, flip); break;
+            case 1: HostSprites.DrawGoblin(span, walk ? HostSprites.Goblin.Excited : HostSprites.Goblin.Talk, seconds, x, y, scale, flip); break;
+            case 2: HostSprites.DrawPainter(span, walk ? HostSprites.Painter.Wave : HostSprites.Painter.Stand, seconds, x, y, scale, flip); break;
+            case 3: HostSprites.DrawLoporrit(span, walk ? HostSprites.Loporrit.Point : HostSprites.Loporrit.Talk, seconds, x, y, scale, flip); break;
+            case 4: HostSprites.DrawPixie(span, walk ? HostSprites.Pixie.Point : HostSprites.Pixie.Hover, seconds, x, y, scale, flip); break;
+            case 5: HostSprites.DrawKobold(span, walk ? HostSprites.Kobold.Cheer : HostSprites.Kobold.Talk, seconds, x, y, scale, flip); break;
+            case 6: HostSprites.DrawSahagin(span, walk ? HostSprites.Sahagin.Point : HostSprites.Sahagin.Talk, seconds, x, y, scale, flip); break;
+            case 7: HostSprites.DrawMandragora(span, walk ? HostSprites.Mandragora.Wild : HostSprites.Mandragora.Talk, seconds, x, y, scale, flip); break;
+            default: ChefSprite.Draw(span, walk ? ChefSprite.Action.Wave : ChefSprite.Action.Present, seconds, x, y, scale); break;
         }
-        else
+    }
+
+    private static void Rain(Span<uint> span, double seconds)
+    {
+        var drop = Canvas.Rgb(0xB8, 0xC8, 0xE0);
+        for (var i = 0; i < 160; i++)
         {
-            Canvas.Fill(span, 0, bar, W, H - (2 * bar), Ink);
-            Shadowed(span, title, (W - titleW) / 2, 220, Gold, titleScale, all);
-            Shadowed(span, "COMING THIS STARLIGHT", (W - font.Measure("COMING THIS STARLIGHT")) / 2, 340, Cream, 1, all);
-            Shadowed(span, "TO A CHANNEL THAT DOES NOT EXIST", (W - font.Measure("TO A CHANNEL THAT DOES NOT EXIST")) / 2, 380, Faint, 1, all);
-            Canvas.Rect(span, (W / 2) - 260, 450, 520, 48, Cream, 2);
-            font.Draw(span, W, rating, (W - font.Measure(rating)) / 2, 454, Cream, 1, all);
+            var x = ((i * 97) + (int)(seconds * 40)) % W;
+            var y = ((i * 53) + (int)(seconds * 900)) % H;
+            Canvas.Line(span, x, y, x - 4, y + 18, drop);
         }
+    }
+
+    private void Subtitle(Span<uint> span, string line, in BitmapFont.Clip all)
+    {
+        var text = $"\"{line.ToUpperInvariant()}\"";
+        var w = font.Measure(text);
+        Canvas.Fill(span, (W - w) / 2 - 16, 560, w + 32, 44, Canvas.Lerp(Ink, Canvas.Black, 0.2f));
+        font.Draw(span, W, text, (W - w) / 2, 562, Cream, 1, all);
     }
 
     private void Sponsor(Span<uint> span, int seed, double t, double seconds)
