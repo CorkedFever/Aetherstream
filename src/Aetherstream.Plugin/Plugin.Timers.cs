@@ -129,17 +129,17 @@ public sealed partial class Plugin
                 var leves = quests->NumLeveAllowances;
                 var nextLeves = QuestManager.GetNextLeveAllowancesDateTime();
                 var nextLocal = nextLeves.Kind == DateTimeKind.Utc ? nextLeves.ToLocalTime() : nextLeves;
-                tasks.Add(new TaskRow("Leve allowances", $"{leves} in hand, +3 at {nextLocal:h:mm tt}", leves >= 100));
+                tasks.Add(new TaskRow("Leve allowances", $"{leves} held, +3 at {nextLocal:h:mm tt}", leves >= 100));
 
                 var tribe = quests->GetBeastTribeAllowance();
-                tasks.Add(new TaskRow("Allied society quests", $"{tribe} of 12 left today", tribe == 0));
+                tasks.Add(new TaskRow("Allied society quests", $"{tribe}/12 left today", tribe == 0));
             }
 
             var supply = SatisfactionSupplyManager.Instance();
             if (supply != null)
             {
                 var left = supply->GetRemainingAllowances();
-                tasks.Add(new TaskRow("Custom deliveries", $"{left} of 12 left this week", left == 0));
+                tasks.Add(new TaskRow("Custom deliveries", $"{left}/12 left this week", left == 0));
             }
 
             var player = PlayerState.Instance();
@@ -153,7 +153,7 @@ public sealed partial class Plugin
                     var expiresLocal = expires.Kind == DateTimeKind.Utc ? expires.ToLocalTime() : expires;
                     tasks.Add(new TaskRow(
                         "Wondrous Tails",
-                        expired ? "journal expired, get a new one" : $"{stickers} of 9 stickers, due {expiresLocal:ddd h:mm tt}",
+                        expired ? "expired, get a new one" : $"{stickers}/9 stickers, due {expiresLocal:ddd}",
                         stickers >= 9 || expired));
                 }
                 else
@@ -166,7 +166,7 @@ public sealed partial class Plugin
                 {
                     var back = DateTimeOffset.FromUnixTimeSeconds(mission).UtcDateTime;
                     var done = back <= utc;
-                    tasks.Add(new TaskRow("Squadron mission", done ? "complete, report to the barracks" : $"back {back.ToLocalTime():h:mm tt}", done));
+                    tasks.Add(new TaskRow("Squadron mission", done ? "done, see the barracks" : $"back {back.ToLocalTime():h:mm tt}", done));
                     if (!done)
                         rows.Add(new TimerRow("Squadron mission", "out in the field", back, "squadron"));
                 }
@@ -182,7 +182,7 @@ public sealed partial class Plugin
             if (friday > utc.AddDays(4))
                 friday = friday.AddDays(-7);
             var judgingOpen = utc >= friday && utc < ResetTimers.NextWeekly(utc);
-            tasks.Add(new TaskRow("Fashion Report", judgingOpen ? $"judging open until {ResetTimers.NextWeekly(utc).ToLocalTime():ddd h:mm tt}" : $"judging opens {(friday > utc ? friday : friday.AddDays(7)).ToLocalTime():ddd h:mm tt}", false));
+            tasks.Add(new TaskRow("Fashion Report", judgingOpen ? $"open until {ResetTimers.NextWeekly(utc).ToLocalTime():ddd h:mm tt}" : $"opens {(friday > utc ? friday : friday.AddDays(7)).ToLocalTime():ddd h:mm tt}", false));
         }
         catch (Exception ex)
         {
@@ -250,7 +250,7 @@ public sealed partial class Plugin
         foreach (var (name, kind, back) in this.vessels)
         {
             var done = back <= utc;
-            estate.Add(new TaskRow($"{kind} {name}", done ? "returned, collect at the workshop" : $"back {back.ToLocalTime():ddd h:mm tt}", done));
+            estate.Add(new TaskRow($"{kind} {name}", done ? "returned, at the workshop" : $"back {back.ToLocalTime():ddd h:mm tt}", done));
             if (!done)
                 rows.Add(new TimerRow(name, $"{kind.ToLowerInvariant()} on a voyage", back, "vessel"));
         }

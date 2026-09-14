@@ -142,7 +142,7 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
 
         foreach (var (name, value, done) in items)
         {
-            if (ry > 560)
+            if (ry > 600)
                 break;
 
             // A box, ticked when done; the value dim beside or under the name.
@@ -150,24 +150,26 @@ internal sealed class TimersChannel(BitmapFont font, Func<TimersSnapshot?> data)
             if (done)
                 Canvas.Fill(span, Split + 21, ry + 14, 12, 12, Canvas.Good);
 
-            var label = Canvas.Cut(name.ToUpperInvariant(), font.Fit(W - Split - 72));
+            // A wider right margin than the rest of the board: a painted surface crops its edges.
+            var columns = font.Fit(W - Split - 72 - 40);
+            var label = Canvas.Cut(name.ToUpperInvariant(), columns);
             font.Draw(span, W, label, Split + 48, ry, done ? Canvas.Faint : Canvas.White, 1, all);
 
             if (value.Length > 0)
             {
-                font.Draw(span, W, Canvas.Cut(value.ToUpperInvariant(), font.Fit(W - Split - 72)), Split + 48, ry + 32, Canvas.Dim, 1, all);
-                ry += 76;
+                font.Draw(span, W, Canvas.Cut(value.ToUpperInvariant(), columns), Split + 48, ry + 34, Canvas.Dim, 1, all);
+                ry += 80;
             }
             else
             {
-                ry += 44;
+                ry += 46;
             }
         }
 
-        ry = 616;
+        ry = 636;
         font.Draw(span, W, "RETAINERS", Split + 16, ry, Canvas.Amber, 1, all);
         var noteLeft = Split + 16 + font.Measure("RETAINERS") + 24;
-        font.Draw(span, W, Canvas.Cut(snapshot.RetainerNote.ToUpperInvariant(), font.Fit(W - noteLeft - 24)), noteLeft, ry, Canvas.Dim, 1, all);
+        font.Draw(span, W, Canvas.Cut(snapshot.RetainerNote.ToUpperInvariant(), font.Fit(W - noteLeft - 48)), noteLeft, ry, Canvas.Dim, 1, all);
 
         this.DrawFooter(span, all);
     }
