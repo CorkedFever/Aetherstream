@@ -332,6 +332,19 @@ internal sealed class SetupTab(UiContext ui)
     {
         Ui.Section("Decoding");
 
+        var buffer = ui.Config.NetworkCachingMs / 1000;
+        ImGui.SetNextItemWidth(220);
+        if (ImGui.SliderInt("Buffer before playing", ref buffer, 2, 20, "%d s"))
+        {
+            ui.Config.NetworkCachingMs = buffer * 1000;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip(
+            "How much libvlc holds before it starts, the way a Roku sits on a spinner first. More " +
+            "rides out a slow host; less starts faster. The audio ring grows with it. Takes effect " +
+            "on the next Play.");
+
         var hardware = ui.Config.UseHardwareDecode;
         if (ImGui.Checkbox("Hardware decoding", ref hardware))
         {

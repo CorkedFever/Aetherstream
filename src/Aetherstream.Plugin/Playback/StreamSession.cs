@@ -437,7 +437,8 @@ internal sealed class StreamSession(
             $"[sync] elapsed {elapsed}ms | audio delivered {deliveredMs}ms " +
             $"(lead {deliveredMs - elapsed:+#;-#;0}ms) | waiting in ring {ringMs}ms " +
             $"| video last at {this.source.LastVideoAtMs}ms, audio last at {this.source.LastAudioAtMs}ms " +
-            $"| pts {this.source.LastAudioPts / 1000}ms | frames {this.source.Stats.FramesPresented}");
+            $"| pts {this.source.LastAudioPts / 1000}ms | frames {this.source.Stats.FramesPresented}" +
+            (this.source.Audio is { } r ? $" | ring overruns {r.Overruns}, underruns {r.Underruns}" : string.Empty));
     }
 
     /// <summary>
@@ -942,7 +943,8 @@ internal sealed class StreamSession(
                     width: Width,
                     height: Height,
                     callbackAudio: wantsAudio,
-                    muteOutput: !wantsAudio);
+                    muteOutput: !wantsAudio,
+                    ringSeconds: (config.NetworkCachingMs / 1000) + 4);
 
                 if (wantsAudio && created.Audio is { } ring)
                 {

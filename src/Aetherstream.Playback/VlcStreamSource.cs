@@ -85,7 +85,8 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
         int width = 1280,
         int height = 720,
         bool callbackAudio = true,
-        bool muteOutput = false)
+        bool muteOutput = false,
+        int ringSeconds = 4)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(width, 16);
         ArgumentOutOfRangeException.ThrowIfLessThan(height, 16);
@@ -128,7 +129,9 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
             // played, expecting the output to hold it — so the standing queue here IS the sync
             // correction, and it has to fit. A one-second ring sat at ~90% full and overran at the
             // peaks, discarding audio while still being too small to align anything.
-            this.Audio = new StereoRingBuffer(sampleRate * 4);
+            // Sized from the network buffer: libvlc front-loads roughly that much audio, and a
+            // ring smaller than the buffer overruns, drops, and leaves the sound out of step.
+            this.Audio = new StereoRingBuffer(sampleRate * Math.Max(4, ringSeconds));
             this.audioPlayCb = this.OnAudioPlay;
             this.audioFlushCb = this.OnAudioFlush;
             // Callbacks first, then the format: libvlc only honours a fixed format when callbacks
