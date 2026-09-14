@@ -4,6 +4,7 @@ using Aetherstream.Playback;
 using Aetherstream.Plugin.Playback;
 using Aetherstream.Plugin.Surfaces;
 using Aetherstream.Plugin.Video;
+using Aetherstream.Plugin.Weather;
 using Aetherstream.Plugin.UI;
 
 using Dalamud.Bindings.ImGui;
@@ -25,6 +26,7 @@ public sealed partial class Plugin : IDalamudPlugin
     private readonly IDalamudPluginInterface pluginInterface;
     private readonly ICommandManager commands;
     private readonly IClientState clientState;
+    private readonly IDataManager dataManager;
     private readonly IObjectTable objects;
     private readonly IPluginLog log;
     private readonly WindowSystem windows = new("Aetherstream");
@@ -54,6 +56,9 @@ public sealed partial class Plugin : IDalamudPlugin
     private volatile bool configDirty;
 
     private CancellationTokenSource? resolving;
+    private readonly EorzeaWeather weather;
+    private readonly GuideChannel guideChannel;
+    private readonly WeatherChannel weatherChannel;
     private PlexAccount plex = null!;
 
     public Plugin(
@@ -64,12 +69,14 @@ public sealed partial class Plugin : IDalamudPlugin
         IClientState clientState,
         IObjectTable objects,
         ITargetManager targets,
+        IDataManager data,
         IPluginLog log)
     {
         this.pluginInterface = pluginInterface;
         this.commands = commands;
         this.clientState = clientState;
         this.objects = objects;
+        this.dataManager = data;
         this.log = log;
 
         this.config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -100,9 +107,14 @@ public sealed partial class Plugin : IDalamudPlugin
         this.session = new StreamSession(this.vlc, textures, log, this.config)
         {
             IdleCard = new TestCard(Path.Combine(images, "testcard.rgba.gz"), log),
-            Guide = new GuideChannel(new BitmapFont(Path.Combine(images, "guidefont.a8.gz"), log)),
-            GuideData = this.GuideSnapshot,
         };
+
+        // The drawn channels share one face. Each is handed the plugin's view of its data and
+        // asks for it when it paints.
+        var face = new BitmapFont(Path.Combine(images, "guidefont.a8.gz"), log);
+        this.weather = new EorzeaWeather(data, log);
+        this.guideChannel = new GuideChannel(face, this.GuideSnapshot);
+        this.weatherChannel = new WeatherChannel(face, this.WeatherSnapshot);
         this.screen = new WorldScreen(gameGui);
         this.gameGuiRef = gameGui;
         this.binding = new SurfaceBinding(log);
@@ -137,6 +149,8 @@ public sealed partial class Plugin : IDalamudPlugin
             UnbindSurface = this.UnbindSurfaces,
             LocateYtDlp = () => YtDlpResolver.Locate(this.config.YtDlpPath, this.ToolDirectories()),
             FileDialogs = this.fileDialogs,
+            Guide = this.guideChannel,
+            Weather = this.weatherChannel,
         };
 
         // The display face is loaded before the window so the first frame is drawn in it.

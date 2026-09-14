@@ -79,8 +79,8 @@ they would change the experience.
 - **Startup thunk**, a brief warm-up glow when the set switches on.
 - **Remote control rattle**, a tiny animation on button press.
 - **Channel idents.** A short bumper card with the channel name on switch.
-- **Weather channel.** Eorzea weather and time for the current zone on a Weather-Channel-style
-  card, with music.
+- **Weather channel.** *Built (the cloud button on the remote); music still to do.* Eorzea weather
+  and time for the current zone on a Weather-Channel-style card.
 
 ## Reach
 

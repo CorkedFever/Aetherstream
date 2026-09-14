@@ -257,6 +257,18 @@ VT323 rasterised at build time by `tools/make_guidefont.py` (needs Pillow); re-r
 changing the size in the script. Glyphs are ASCII only — names are folded to plain letters
 before drawing.
 
+## The weather channel
+
+The cloud button beside the guide puts up Local on the 8s for Eorzea: the zone you are standing
+in, what the sky is doing and when it changes, the next five weather periods, and a crawl of
+every outdoor zone underneath. Indoors, the district you are in stands in for the sky.
+
+Nothing is fetched. Eorzea's weather is a function of the clock — every 1400 real seconds a
+number from 0 to 99 is drawn from the time and looked up in the zone's odds table — and both
+the tables and the zone list are read from the game's own data through Dalamud, so a new
+expansion's zones appear on their own. The maths lives in `Weather/EorzeaWeather.cs`; the icons
+are 16x16 pixel art in `Video/WeatherChannel.cs`.
+
 ## Running the harness
 
 ```

@@ -55,6 +55,11 @@ internal sealed class UiContext
     /// <summary>The plugin's file picker. Shared, because only one dialog can sensibly be open at a time.</summary>
     public required FileDialogManager FileDialogs { get; init; }
 
+    /// <summary>The drawn channels. Null when their font did not load.</summary>
+    public required Video.IFrameChannel? Guide { get; init; }
+
+    public required Video.IFrameChannel? Weather { get; init; }
+
 
     /// <summary>
     /// A screen setup offered by the party code just played, when it differs from what is already

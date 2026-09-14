@@ -88,14 +88,10 @@ internal sealed class Remote(UiContext ui, ChannelDial dial, Screen screen)
         if (Ui.IconButton(FontAwesomeIcon.History, "Last channel", "##last", dial.HasLast))
             dial.Last();
 
-        // The guide channel. Lit while it is up; works with or without something playing.
-        ImGui.SameLine();
-        var guideUp = session.GuideActive;
-        using (ImRaii.PushColor(ImGuiCol.Button, Theme.GlassLit, guideUp).Push(ImGuiCol.Border, Theme.Accent, guideUp))
-        {
-            if (Ui.IconButton(FontAwesomeIcon.ThList, guideUp ? "Put the guide away" : "Guide channel", "##guide", session.Guide is { Available: true }))
-                session.GuideActive = !guideUp;
-        }
+        // The drawn channels: the guide and the weather. Lit while up; either works with or
+        // without something playing, and picking one puts the other away.
+        this.ChannelButton(session, ui.Guide, FontAwesomeIcon.ThList, "Guide channel", "##guide");
+        this.ChannelButton(session, ui.Weather, FontAwesomeIcon.CloudSun, "Weather channel", "##weather");
 
         if (dial.NumberOf(ui.Config.Source) is > 0 and var number)
         {
@@ -151,6 +147,15 @@ internal sealed class Remote(UiContext ui, ChannelDial dial, Screen screen)
             var tag = session.Current is { Relayed: true } ? "relay · " : string.Empty;
             Ui.RightAlignedText($"{tag}{session.FramesPresented:N0} frames", Theme.TextFaint);
         }
+    }
+
+    private void ChannelButton(Playback.StreamSession session, Video.IFrameChannel? channel, FontAwesomeIcon icon, string name, string id)
+    {
+        ImGui.SameLine();
+        var up = channel is not null && ReferenceEquals(session.Channel, channel);
+        using var lit = ImRaii.PushColor(ImGuiCol.Button, Theme.GlassLit, up).Push(ImGuiCol.Border, Theme.Accent, up);
+        if (Ui.IconButton(icon, up ? "Put it away" : name, id, channel is { Available: true }))
+            session.Channel = up ? null : channel;
     }
 
     private string audioLanguageBuffer = string.Empty;

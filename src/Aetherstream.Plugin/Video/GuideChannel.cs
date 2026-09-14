@@ -25,7 +25,7 @@ internal sealed record GuideSnapshot(
 /// while it is off.
 /// </para>
 /// </summary>
-internal sealed class GuideChannel(BitmapFont font)
+internal sealed class GuideChannel(BitmapFont font, Func<GuideSnapshot> data) : IFrameChannel
 {
     public const int Width = 1280;
     public const int Height = 720;
@@ -69,11 +69,17 @@ internal sealed class GuideChannel(BitmapFont font)
 
     public bool Available => font.Available;
 
+    public bool WantsPicture => true;
+
     /// <summary>
     /// Paints the guide into <paramref name="target"/>. <paramref name="picture"/> is the frame
     /// to show small in the corner — the live video, or the test card — or null for nothing on.
     /// <paramref name="seconds"/> drives the scrolling and only needs to climb steadily.
     /// </summary>
+    public void Render(uint[] target, uint[]? picture, DateTime now, double seconds) =>
+        this.Render(target, picture, data(), now, seconds);
+
+    /// <summary>The same, with the listing handed in — for the offline preview.</summary>
     public void Render(uint[] target, uint[]? picture, GuideSnapshot data, DateTime now, double seconds)
     {
         var span = target.AsSpan();

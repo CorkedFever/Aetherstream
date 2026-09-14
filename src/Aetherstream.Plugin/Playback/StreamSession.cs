@@ -268,9 +268,9 @@ internal sealed class StreamSession(
             this.Start(request, resumeAt);
         }
 
-        if (this.GuideActive && this.Guide is { Available: true } guide && this.GuideData is { } guideData)
+        if (this.Channel is { Available: true } channel)
         {
-            this.ShowGuide(guide, guideData);
+            this.ShowChannel(channel);
             return;
         }
 
@@ -667,61 +667,61 @@ internal sealed class StreamSession(
         }
     }
 
-    // -- the guide channel ---------------------------------------------------------------------
-
-    /// <summary>The guide renderer. Set by the plugin; null when its font is missing.</summary>
-    public GuideChannel? Guide { get; set; }
-
-    /// <summary>Whether the guide is up. It composes over whatever else is on, or over nothing.</summary>
-    public bool GuideActive { get; set; }
-
-    /// <summary>Asked for what to list, once per repaint. Render thread.</summary>
-    public Func<GuideSnapshot>? GuideData { get; set; }
-
-    private uint[]? composed;
-    private readonly System.Diagnostics.Stopwatch guideClock = new();
-    private long guidePaintedMs = -1;
+    // -- drawn channels ------------------------------------------------------------------------
 
     /// <summary>
-    /// Paints the guide over the live picture, or over the test card when nothing is on.
-    /// Repainted about thirty times a second so the rows and the ticker move, and whenever the
-    /// decoder presents a new picture for the corner.
+    /// The drawn channel on screen — the guide, the weather — or null for the picture itself.
+    /// It composes over whatever else is on, or over nothing; the sound carries on underneath.
     /// </summary>
-    private void ShowGuide(GuideChannel guide, Func<GuideSnapshot> data)
+    public IFrameChannel? Channel { get; set; }
+
+    private uint[]? composed;
+    private readonly System.Diagnostics.Stopwatch channelClock = new();
+    private long channelPaintedMs = -1;
+
+    /// <summary>
+    /// Paints a drawn channel, over the live picture when it wants one. Repainted about thirty
+    /// times a second so anything that scrolls moves, and whenever the decoder presents a new
+    /// picture for the corner.
+    /// </summary>
+    private void ShowChannel(IFrameChannel channel)
     {
-        if (!this.guideClock.IsRunning)
-            this.guideClock.Restart();
+        if (!this.channelClock.IsRunning)
+            this.channelClock.Restart();
 
         if (this.uploader is null)
         {
             this.uploader = this.CreateUploader();
-            this.guidePaintedMs = -1;
+            this.channelPaintedMs = -1;
         }
 
-        // The test card path must repaint from scratch once the guide comes down.
+        // The test card path must repaint from scratch once the channel comes down.
         this.idleStamp = (-1, false, false, false);
         this.IdleShowing = this.source is null;
 
         var moved = this.PullVideo();
-        var now = this.guideClock.ElapsedMilliseconds;
-        if (!moved && this.guidePaintedMs >= 0 && now - this.guidePaintedMs < 33)
+        var now = this.channelClock.ElapsedMilliseconds;
+        if (!moved && this.channelPaintedMs >= 0 && now - this.channelPaintedMs < 33)
             return;
 
-        this.guidePaintedMs = now;
+        this.channelPaintedMs = now;
 
         uint[]? picture = null;
-        if (this.source is not null)
+        if (channel.WantsPicture)
         {
-            picture = this.frame;
-        }
-        else if (this.IdleCard is { Available: true } card)
-        {
-            card.Render(this.frame, DateTime.Now);
-            picture = this.frame;
+            if (this.source is not null)
+            {
+                picture = this.frame;
+            }
+            else if (this.IdleCard is { Available: true } card)
+            {
+                card.Render(this.frame, DateTime.Now);
+                picture = this.frame;
+            }
         }
 
         this.composed ??= new uint[Width * Height];
-        guide.Render(this.composed, picture, data(), DateTime.Now, now / 1000.0);
+        channel.Render(this.composed, picture, DateTime.Now, now / 1000.0);
 
         if (config.RetroMode)
             this.Retro(this.composed);
@@ -735,8 +735,8 @@ internal sealed class StreamSession(
         }
         catch (Exception ex)
         {
-            log.Warning(ex, "Could not show the guide.");
-            this.GuideActive = false;
+            log.Warning(ex, "Could not show the channel.");
+            this.Channel = null;
             this.TearDown();
         }
     }
