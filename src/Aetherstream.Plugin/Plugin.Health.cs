@@ -59,6 +59,23 @@ public sealed partial class Plugin
     }
 
     /// <summary>
+    /// A live channel the decoder gave up on — the remote's NO PICTURE — is dead too. Checked once
+    /// a frame; the dead list itself stops it being marked twice.
+    /// </summary>
+    private void WatchForFailure()
+    {
+        if (this.session.Error is null)
+            return;
+
+        var source = this.config.Source;
+        if (this.window.Dial.Find(source) is null || this.IsDead(source))
+            return;
+
+        this.MarkDead(source, "the decoder gave up");
+        this.window.Dial.MarkOffline(source);
+    }
+
+    /// <summary>
     /// Watches the picture of a playing live channel. Every frame is too often for a full scan; a
     /// sampled brightness once a second is plenty to tell a black feed from a dark scene, given
     /// that a dark scene changes and a dead feed does not.

@@ -277,6 +277,7 @@ public sealed partial class Plugin : IDalamudPlugin
         // Checked here so a stall is noticed whether or not the control window is open.
         this.RetryStalledThroughRelay();
         this.WatchForBlack();
+        this.WatchForFailure();
 
         this.ApplyVolumeForFrame();
         this.RecordProgress();
