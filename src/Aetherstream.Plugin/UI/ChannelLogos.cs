@@ -134,6 +134,21 @@ internal static class ChannelLogos
                 DrawStar(d, P(11f, -8f), 2.5f * u, Paper);
                 break;
 
+            case "kitchen":
+                // A pot on the boil, steam rising.
+                d.AddRectFilled(P(-11f, -1f), P(11f, 12f), Theme.U32(Theme.TextDim), 3f * u);
+                d.AddRectFilled(P(-13f, -3f), P(13f, 0f), Theme.U32(Paper), 1f);
+                d.AddLine(P(-13f, 4f), P(-16f, 4f), Theme.U32(Theme.TextDim), 3f * u);
+                d.AddLine(P(13f, 4f), P(16f, 4f), Theme.U32(Theme.TextDim), 3f * u);
+                for (var s = 0; s < 3; s++)
+                {
+                    var x = -6f + (s * 6f);
+                    d.AddLine(P(x, -6f), P(x + 1.5f, -9f), Theme.U32(Theme.WithAlpha(Paper, 0.7f)), 1.6f * u);
+                    d.AddLine(P(x + 1.5f, -9f), P(x, -12f), Theme.U32(Theme.WithAlpha(Paper, 0.7f)), 1.6f * u);
+                }
+
+                break;
+
             case "scrambled":
                 // A picture torn into bands, each slid a different way, with a sync line through it.
                 for (var row = 0; row < 5; row++)
