@@ -197,6 +197,17 @@ internal static class ChannelLogos
                     d.AddRectFilled(P(8f + (b * 3.2f), 6f - (b * 4f) - 2f), P(10f + (b * 3.2f), 8f), Theme.U32(Sky), 1f);
                 break;
 
+            case "housing":
+                // A little house with a sold sign that says nothing yet.
+                d.AddTriangleFilled(P(-13f, -2f), P(0f, -13f), P(13f, -2f), Theme.U32(Rose));
+                d.AddRectFilled(P(-10f, -2f), P(10f, 11f), Theme.U32(Paper), 1f);
+                d.AddRectFilled(P(-3f, 3f), P(3f, 11f), Theme.U32(Theme.Text), 1f);
+                d.AddRectFilled(P(5f, 1f), P(9f, 5f), Theme.U32(Sky), 1f);
+                d.AddRectFilled(P(-9f, 1f), P(-5f, 5f), Theme.U32(Sky), 1f);
+                d.AddLine(P(9f, 13f), P(9f, 4f), Theme.U32(Coin), 1.4f * u);
+                d.AddRectFilled(P(5f, 4f), P(14f, 8f), Theme.U32(Coin), 1f);
+                break;
+
             case "painting":
                 // A palette with its thumb hole and dabs, and a brush across it.
                 d.AddCircleFilled(P(-2f, 1f), 12f * u, Theme.U32(Coin), 24);

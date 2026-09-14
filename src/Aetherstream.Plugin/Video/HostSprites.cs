@@ -57,6 +57,9 @@ internal static class HostSprites
         ['q'] = Canvas.Rgb(0xF6, 0xF0, 0xE0),
         ['l'] = Canvas.Rgb(0x50, 0x54, 0x5C),
         ['b'] = Canvas.Rgb(0x3A, 0x22, 0x44),
+        // The loporrit.
+        ['u'] = Canvas.Rgb(0x4A, 0x6A, 0xB0),
+        ['j'] = Canvas.Rgb(0x8A, 0x62, 0x3A),
         // The goblin.
         ['z'] = Canvas.Rgb(0xC8, 0xE8, 0xFF),
         ['a'] = Canvas.Rgb(0x30, 0x30, 0x38),
@@ -799,6 +802,170 @@ internal static class HostSprites
         var bob = (int)(Math.Sin(seconds * 2.0) * 3);
         var frame = frames[(int)(seconds * rate) % frames.Length];
         Canvas.Sprite(target, frame, c => Palette.GetValueOrDefault(c, 0u), x, y + bob, scale, flip);
+    }
+
+    public enum Loporrit
+    {
+        Talk,
+        Point,
+    }
+
+    // The estate agent is a Loporrit: a round white rabbit with long ears, a collar and a
+    // clipboard, 24 wide, 32 tall. The ears twitch; the clipboard is always with him.
+    private static readonly string[][] LoporritTalk =
+    [
+        [
+            ".....ww..........ww.....",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            ".....wPw........wPw.....",
+            ".....wPw........wPw.....",
+            "......ww........ww......",
+            ".....wwwwwwwwwwwwww.....",
+            "....wwwwwwwwwwwwwwww....",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwweewwwwwweewwww...",
+            "...wwwweewwwwwweewwww...",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwwwwwwPPwwwwwwww...",
+            "....wwwwwwkkkkwwwwww....",
+            ".....wwwwwwwwwwwwww.....",
+            "......uuuuuuuuuuuu......",
+            ".....wwwwwwwwwwwwwww....",
+            "....wwwwwwwwwwwwwwwjjj..",
+            "...wwwwwwwwwwwwwwwwjqj..",
+            "...wwwwwwwwwwwwwwwwjqj..",
+            "...wwwwwwwwwwwwwwwwjqj..",
+            "...wwwwwwwwwwwwwwwwjjj..",
+            "....wwwwwwwwwwwwwwww....",
+            ".....wwwwwwwwwwwwww.....",
+            "......wwwwwwwwwwww......",
+            ".......wwww..wwww.......",
+            ".......wwww..wwww.......",
+            ".......WWWW..WWWW.......",
+            "........................",
+            "........................",
+        ],
+        [
+            "....ww............ww....",
+            "...wPPw..........wPPw...",
+            "...wPPw..........wPPw...",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            ".....wPw........wPw.....",
+            ".....wPw........wPw.....",
+            "......ww........ww......",
+            ".....wwwwwwwwwwwwww.....",
+            "....wwwwwwwwwwwwwwww....",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwweewwwwwweewwww...",
+            "...wwwweewwwwwweewwww...",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwwwwwwPPwwwwwwww...",
+            "....wwwwwwkeekwwwwww....",
+            ".....wwwwwwwwwwwwww.....",
+            "......uuuuuuuuuuuu......",
+            ".....wwwwwwwwwwwwwww....",
+            "....wwwwwwwwwwwwwwwjjj..",
+            "...wwwwwwwwwwwwwwwwjqj..",
+            "...wwwwwwwwwwwwwwwwjqj..",
+            "...wwwwwwwwwwwwwwwwjqj..",
+            "...wwwwwwwwwwwwwwwwjjj..",
+            "....wwwwwwwwwwwwwwww....",
+            ".....wwwwwwwwwwwwww.....",
+            "......wwwwwwwwwwww......",
+            ".......wwww..wwww.......",
+            ".......wwww..wwww.......",
+            ".......WWWW..WWWW.......",
+            "........................",
+            "........................",
+        ],
+    ];
+
+    private static readonly string[][] LoporritPoint =
+    [
+        [
+            ".....ww..........ww.....",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            ".....wPw........wPw.....",
+            ".....wPw........wPw.....",
+            "......ww........ww......",
+            ".....wwwwwwwwwwwwww.....",
+            "....wwwwwwwwwwwwwwww....",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwweewwwwwweewwww...",
+            "...wwwweewwwwwweewwww...",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwwwwwwPPwwwwwwww...",
+            "....wwwwwwkkkkwwwwww....",
+            ".....wwwwwwwwwwwwww.....",
+            "......uuuuuuuuuuuu......",
+            ".....wwwwwwwwwwwwwwwww..",
+            "....wwwwwwwwwwwwwwwwwwww",
+            "...wwwwwwwwwwwwwwwwww.ww",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwwwwwwwwwwwwwwww...",
+            "....wwwwwwwwwwwwwwww....",
+            ".....wwwwwwwwwwwwww.....",
+            "......wwwwwwwwwwww......",
+            ".......wwww..wwww.......",
+            ".......wwww..wwww.......",
+            ".......WWWW..WWWW.......",
+            "........................",
+            "........................",
+        ],
+        [
+            ".....ww..........ww.....",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            "....wPPw........wPPw....",
+            ".....wPw........wPw.....",
+            ".....wPw........wPw.....",
+            "......ww........ww......",
+            ".....wwwwwwwwwwwwww.....",
+            "....wwwwwwwwwwwwwwww....",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwweewwwwwweewwww...",
+            "...wwwweewwwwwweewwww...",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwwwwwwPPwwwwwwww...",
+            "....wwwwwwkkkkwwwwww....",
+            ".....wwwwwwwwwwwwww.....",
+            "......uuuuuuuuuuuu....ww",
+            ".....wwwwwwwwwwwwwwwwwww",
+            "....wwwwwwwwwwwwwwwwww..",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwwwwwwwwwwwwwwww...",
+            "...wwwwwwwwwwwwwwwwww...",
+            "....wwwwwwwwwwwwwwww....",
+            ".....wwwwwwwwwwwwww.....",
+            "......wwwwwwwwwwww......",
+            ".......wwww..wwww.......",
+            ".......wwww..wwww.......",
+            ".......WWWW..WWWW.......",
+            "........................",
+            "........................",
+        ],
+    ];
+
+    public static void DrawLoporrit(Span<uint> target, Loporrit action, double seconds, int x, int y, int scale, bool flip = false)
+    {
+        var (frames, rate) = action switch
+        {
+            Loporrit.Point => (LoporritPoint, 3.0),
+            _ => (LoporritTalk, 2.5),
+        };
+
+        var frame = frames[(int)(seconds * rate) % frames.Length];
+        Canvas.Sprite(target, frame, c => Palette.GetValueOrDefault(c, 0u), x, y, scale, flip);
     }
 
     public static void DrawGoblin(Span<uint> target, Goblin action, double seconds, int x, int y, int scale, bool flip = false)
