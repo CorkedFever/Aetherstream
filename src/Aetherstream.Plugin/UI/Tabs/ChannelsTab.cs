@@ -68,6 +68,20 @@ internal sealed class ChannelsTab(UiContext ui)
         }
 
         this.DrawMarketWatch();
+        this.DrawVenues();
+    }
+
+    private void DrawVenues()
+    {
+        Ui.Section("Venues");
+        var sfw = ui.Config.VenuesSfwOnly;
+        if (ImGui.Checkbox("Only venues marked safe for work", ref sfw))
+        {
+            ui.Config.VenuesSfwOnly = sfw;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip("Listings come from ffxivvenues.com for the datacenter you are on. Venues mark themselves; the site's own word is taken for it.");
     }
 
     private void DrawMarketWatch()

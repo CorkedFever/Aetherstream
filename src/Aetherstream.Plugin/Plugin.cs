@@ -125,6 +125,7 @@ public sealed partial class Plugin : IDalamudPlugin
             ("Market", "Your watch list, priced by Universalis.", new MarketChannel(face, this.MarketSnapshot)),
             ("Gathering", "Timed nodes: what is up, and how long until each pops.", new GatheringChannel(face, this.GatheringSnapshot)),
             ("Almanac", "Resets, the boat, the cactpot, your retainers, today's roulettes.", new TimersChannel(face, this.TimersSnapshot)),
+            ("Venues", "Who is open on your datacenter tonight, via ffxivvenues.com.", new VenuesChannel(face, this.VenuesSnapshot)),
             ("Aquarium", "Fish. The odd Namazu. Nothing to read.", new AquariumChannel(face)),
             ("Fireplace", "A fire in a hearth, for the winter.", new FireplaceChannel(face)),
             ("Starfield", "The screensaver everyone had.", new StarfieldChannel(face)),

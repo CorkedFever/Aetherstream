@@ -114,6 +114,8 @@ they would change the experience.
 - **Announcements.** A text ticker across the bottom of the picture, editable by the host.
 - **Intermission card** with a countdown to when the film resumes.
 - **Guest join code.** A short code in a macro or the venue's Discord that joins in one command.
+- **Venues channel.** *Built.* Who is open on your datacenter tonight from ffxivvenues.com, with
+  banners, descriptions and a crawl.
 
 ## Persistence
 

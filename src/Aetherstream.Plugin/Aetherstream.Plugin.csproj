@@ -38,6 +38,8 @@
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
     <!-- Dalamud provides no audio API, so the plugin opens its own WASAPI render stream. -->
     <PackageReference Include="NAudio.Wasapi" Version="2.3.0" />
+    <!-- Decodes venue banners (WebP) into pixels the drawn channels can paint. -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
   </ItemGroup>
 
 </Project>

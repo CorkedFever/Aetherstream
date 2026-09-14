@@ -336,6 +336,9 @@ public sealed class Configuration : IPluginConfiguration
 
     public string ChannelMusicPlexPlaylistName { get; set; } = string.Empty;
 
+    /// <summary>Whether the venues channel lists only venues marked safe for work. On by default: it is a TV in a house.</summary>
+    public bool VenuesSfwOnly { get; set; } = true;
+
     /// <summary>What the market channel lists. Seeded with the crystals, which every crafter watches.</summary>
     public List<MarketItem> MarketWatch { get; set; } = [];
 
