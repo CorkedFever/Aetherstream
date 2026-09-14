@@ -150,7 +150,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
         }
 
         var pan = phase == Phase.Approach ? t * 30.0 : phase == Phase.Titles ? 0 : ApproachFor * 30.0;
-        Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, pan);
+        Scenery.Paint(span, W, 0, Horizon, 676, biome, daylight, seed, pan);
 
         // The creature stands in the middle distance: its portrait on a shadow, breathing.
         var breathe = (int)(Math.Sin(seconds * 2.0) * 3);
@@ -329,7 +329,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             case 0:
             {
                 // Field notes: a page from the notebook, filled in line by line, the beast sketched in the corner.
-                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, 0);
+                Scenery.Paint(span, W, 0, Horizon, 676, biome, daylight, seed, 0);
                 Canvas.Fill(span, 200, 90, 880, 470, Cream);
                 Canvas.Fill(span, 200, 90, 880, 470, Canvas.Lerp(Cream, Canvas.Rgb(0xE8, 0xD8, 0xB0), 0.4f));
                 Canvas.Rect(span, 200, 90, 880, 470, Ink, 3);
@@ -359,7 +359,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             case 1:
             {
                 // Snack break: on a rock, a kupo nut going down in bites.
-                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, 0);
+                Scenery.Paint(span, W, 0, Horizon, 676, biome, daylight, seed, 0);
                 Canvas.Disc(span, 620, Ground - 40, 110, Ink);
                 Canvas.Disc(span, 700, Ground - 20, 80, Ink);
                 var bites = (int)(t / 2.5);
@@ -383,7 +383,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             case 2:
             {
                 // The injury tally: bandaged, counting on a board.
-                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, 0);
+                Scenery.Paint(span, W, 0, Horizon, 676, biome, daylight, seed, 0);
                 Canvas.Fill(span, 700, 120, 420, 340, Canvas.Rgb(0x2A, 0x3A, 0x2E));
                 Canvas.Rect(span, 700, 120, 420, 340, Canvas.Rgb(0x8A, 0x6A, 0x3A), 6);
                 font.Draw(span, W, "INJURIES THIS SEASON", 724, 136, Cream, 1, all);
@@ -415,7 +415,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             case 3:
             {
                 // A letter from a viewer, read out and answered.
-                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, 0);
+                Scenery.Paint(span, W, 0, Horizon, 676, biome, daylight, seed, 0);
                 var (q, a) = Letters[Pick(episode * 7, Letters.Length)];
                 var open = Math.Clamp(t / 1.5, 0.0, 1.0);
                 Canvas.Fill(span, 560, 120, 560, 300, Cream);
@@ -442,7 +442,7 @@ internal sealed class NatureChannel(BitmapFont font, Func<IReadOnlyList<Creature
             default:
             {
                 // The chase: the beast turns out not to have gone far.
-                Scenery.Paint(span, W, 0, Horizon, Ground, biome, daylight, seed, t * 80.0);
+                Scenery.Paint(span, W, 0, Horizon, 676, biome, daylight, seed, t * 80.0);
                 var bx = -200 + (int)(t * 130);
                 var hop = (int)(Math.Abs(Math.Sin(t * 8.0)) * 20);
                 Canvas.Disc(span, bx + 70, Horizon + 140, 60, Canvas.Lerp(Canvas.Black, Canvas.Rgb(0x40, 0x40, 0x40), 0.5f));

@@ -760,6 +760,7 @@ internal sealed class StreamSession(
     public string MusicNowPlaying => this.music?.NowPlaying ?? string.Empty;
 
     private uint[]? composed;
+    private IFrameChannel? lastChannel;
     private readonly System.Diagnostics.Stopwatch channelClock = new();
     private long channelPaintedMs = -1;
 
@@ -821,6 +822,15 @@ internal sealed class StreamSession(
         }
 
         this.composed ??= new uint[Width * Height];
+
+        // A fresh canvas whenever the channel changes: a channel that leaves part of the frame
+        // untouched would otherwise show whatever the last one painted there.
+        if (!ReferenceEquals(channel, this.lastChannel))
+        {
+            Array.Fill(this.composed, 0xFF000000u);
+            this.lastChannel = channel;
+        }
+
         channel.Render(this.composed, picture, DateTime.Now, now / 1000.0);
         this.PaintOverlay(this.composed);
 
