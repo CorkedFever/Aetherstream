@@ -41,10 +41,14 @@ internal sealed class ChannelsTab(UiContext ui)
                 session.Channel = up ? null : channel;
 
             var drawList = ImGui.GetWindowDrawList();
-            using (Theme.PushDisplay())
-                drawList.AddText(origin + new Vector2(12f, 10f), Theme.U32(up ? Theme.Accent : Theme.Text), name.ToUpperInvariant());
+            ChannelLogos.Draw(drawList, name, origin + new Vector2(10f, 10f), 44f, up);
 
-            drawList.AddText(origin + new Vector2(12f, 36f), Theme.U32(Theme.TextDim), blurb);
+            using (Theme.PushDisplay())
+                drawList.AddText(origin + new Vector2(64f, 10f), Theme.U32(up ? Theme.Accent : Theme.Text), name.ToUpperInvariant());
+
+            // The blurb is cut to the tile, with an ellipsis, rather than run under the next one.
+            var blurbWidth = tile.X - 64f - 24f;
+            drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), origin + new Vector2(64f, 36f), Theme.U32(Theme.TextDim), blurb, blurbWidth);
 
             if (up)
                 drawList.AddCircleFilled(origin + new Vector2(tile.X - 14f, 14f), 4f, Theme.U32(Theme.Good), 12);

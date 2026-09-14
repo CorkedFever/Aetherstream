@@ -262,7 +262,7 @@ internal static class Theme
         pushedVars++;
     }
 
-    private static Vector4 Rgb(byte r, byte g, byte b) => new(r / 255f, g / 255f, b / 255f, 1f);
+    internal static Vector4 Rgb(byte r, byte g, byte b) => new(r / 255f, g / 255f, b / 255f, 1f);
 
     private sealed class Nothing : IDisposable
     {
