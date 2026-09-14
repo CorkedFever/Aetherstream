@@ -371,6 +371,13 @@ internal sealed class LiveTvTab(UiContext ui, ChannelDial dial)
         }
     }
 
+    /// <summary>
+    /// The guide's lineup: the channels this tab is filtered to right now, so the group and
+    /// country pickers decide what the set lists. Capped so the grid scrolls in minutes, not hours.
+    /// </summary>
+    public IReadOnlyList<M3uPlaylist.Channel> Lineup(int cap) =>
+        this.channels.Count == 0 ? [] : this.Filtered().Take(cap).ToList();
+
     private List<M3uPlaylist.Channel> Filtered()
     {
         var term = this.search.Trim();

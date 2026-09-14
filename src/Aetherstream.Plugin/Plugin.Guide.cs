@@ -29,7 +29,15 @@ public sealed partial class Plugin
 
         // What is on right now, first, wherever it came from: its remaining run, then whatever is
         // queued after it, laid end to end from each one's length. A schedule computed, not looked up.
-        if (this.session.Current is { } playing && this.session.IsPlaying && dial.Find(source) is null)
+        // A live channel you are on but have not pinned still gets a row, at the top, with its listings.
+        var currentChannel = dial.Find(source);
+        if (currentChannel is { } tuned && this.session.IsPlaying && dial.NumberOf(source) == 0)
+        {
+            var group = tuned.Group.Length > 0 ? tuned.Group : "Live";
+            rows.Add(new GuideRow("NOW", tuned.Name, group, Current: true, Offline: dial.IsOffline(tuned.Url), Slots: this.ListingsFor(tuned, utc)));
+        }
+
+        if (this.session.Current is { } playing && this.session.IsPlaying && currentChannel is null)
         {
             var slots = new List<GuideSlot>();
             var duration = this.session.DurationMs;
@@ -75,6 +83,26 @@ public sealed partial class Plugin
                 Slots: this.ListingsFor(channel, utc)));
         }
 
+        // The rest of the lineup: whatever the Live TV tab is filtered to, unpinned, unnumbered.
+        // Listings only for the first few dozen, since every one is a guide lookup a second.
+        var listed = 0;
+        foreach (var channel in this.window.LiveTv.Lineup(80))
+        {
+            if (dial.NumberOf(channel.Url) > 0 || string.Equals(channel.Url, source, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var detail = channel.Group.Length > 0
+                ? channel.Country.Length > 0 ? $"{channel.Group} / {channel.Country}" : channel.Group
+                : channel.Country.Length > 0 ? channel.Country : "Live";
+
+            rows.Add(new GuideRow(
+                "--",
+                channel.Name,
+                detail,
+                Offline: dial.IsOffline(channel.Url),
+                Slots: listed++ < 40 ? this.ListingsFor(channel, utc) : null));
+        }
+
         // Parties that are on the air right now.
         foreach (var group in this.window.Share.Parties)
         {
@@ -94,10 +122,10 @@ public sealed partial class Plugin
         }
 
         // Recent things that are not channels: films, videos, anything on demand.
-        var listed = 0;
+        var recents = 0;
         foreach (var recent in this.config.Recents)
         {
-            if (dial.Find(recent.Source) is not null || listed >= 6)
+            if (dial.Find(recent.Source) is not null || recents >= 6)
                 continue;
 
             var label = recent.Label.Length > 0 ? recent.Label : UI.Ui.Pretty(recent.Source);
@@ -109,13 +137,17 @@ public sealed partial class Plugin
                 label,
                 detail,
                 Current: string.Equals(recent.Source, source, StringComparison.OrdinalIgnoreCase)));
-            listed++;
+            recents++;
         }
 
         if (rows.Count == 0)
             rows.Add(new GuideRow("--", "Nothing listed", "Pin channels in Live TV and they appear here"));
 
-        var nowPlaying = this.session.Current?.DisplayName is { Length: > 0 } onNow ? onNow : "Nothing on";
+        // The channel's own name when it is one; a relayed channel's stream name is a hostname.
+        var nowPlaying = currentChannel?.Name
+            ?? (this.session.Current?.DisplayName is { Length: > 0 } onNow ? onNow : "Nothing on");
+        if (currentChannel is { } named && this.OnNow(named) is { } programme)
+            nowPlaying = $"{named.Name}: {programme}";
 
         var pinned = this.config.LiveTvFavourites.Count;
         var live = this.window.Share.Parties.Count(g => g.Live);
@@ -123,7 +155,7 @@ public sealed partial class Plugin
             $"Aetherstream guide  ·  {pinned} channel{(pinned == 1 ? "" : "s")} pinned  ·  " +
             $"{live} part{(live == 1 ? "y" : "ies")} live  ·  " +
             "channel up and down on the remote still change channel  ·  " +
-            "pin more channels in Live TV to fill the grid";
+            "the Live TV tab's filters pick the lineup";
 
         this.guideSnapshot = new GuideSnapshot(rows, nowPlaying, ticker);
         this.guideSnapshotAtMs = now;
