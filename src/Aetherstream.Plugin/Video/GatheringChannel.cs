@@ -63,7 +63,7 @@ internal sealed class GatheringChannel(BitmapFont font, Func<GatheringSnapshot?>
         }
 
         // Column heads.
-        const int ColType = 24, ColLevel = 104, ColPlace = 168, ColItems = 560, ColWindow = 968, ColLeft = 1120;
+        const int ColType = 24, ColLevel = 104, ColPlace = 168, ColItems = 540, ColWindow = 916, ColLeft = 1112;
         font.Draw(span, W, "JOB", ColType, 68, Canvas.Amber, 1, all);
         font.Draw(span, W, "LV", ColLevel, 68, Canvas.Amber, 1, all);
         font.Draw(span, W, "WHERE", ColPlace, 68, Canvas.Amber, 1, all);
@@ -132,7 +132,7 @@ internal sealed class GatheringChannel(BitmapFont font, Func<GatheringSnapshot?>
         font.Draw(span, W, "AETHERSTREAM GATHERING", 24, 680, Canvas.Accent, 1, all);
 
         var right = snapshot is { } s
-            ? $"{s.UpCount} UP NOW  /  {s.Total} TIMED NODES  /  BLUE EPHEMERAL, GOLD LEGENDARY"
+            ? $"{s.UpCount} UP / {s.Total} TIMED / BLUE EPHEMERAL, GOLD LEGENDARY"
             : "READING THE LOG";
         font.Draw(span, W, right, W - 24 - font.Measure(right), 680, Canvas.Faint, 1, all);
     }
