@@ -31,6 +31,9 @@ internal sealed class LibraryTab(UiContext ui)
     /// <summary>Videos on this machine.</summary>
     internal LocalTab Local { get; } = new(ui);
 
+    /// <summary>YouTube: search, playlists, and your feeds through yt-dlp.</summary>
+    internal YouTubeTab YouTube { get; } = new(ui);
+
     /// <summary>
     /// How deep into a show we are: empty at the library, one entry inside a show, two inside a
     /// season. Held here rather than as a single label so "back" can go up one level instead of
@@ -77,14 +80,20 @@ internal sealed class LibraryTab(UiContext ui)
 
     public void Draw()
     {
-        Ui.Strip("shelf", ["PLEX", "ARCHIVE", "LOCAL"], ref this.shelf);
+        Ui.Strip("shelf", ["PLEX", "YOUTUBE", "ARCHIVE", "LOCAL"], ref this.shelf);
         if (this.shelf == 1)
+        {
+            this.YouTube.Draw();
+            return;
+        }
+
+        if (this.shelf == 2)
         {
             this.Archive.Draw();
             return;
         }
 
-        if (this.shelf == 2)
+        if (this.shelf == 3)
         {
             this.Local.Draw();
             return;
