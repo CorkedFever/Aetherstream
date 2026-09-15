@@ -220,6 +220,10 @@ public sealed partial class Plugin : IDalamudPlugin
         this.window.Library.Local.Scan = this.ScanLocal;
         this.window.Library.YouTube.Browse = this.BrowseYouTube;
         this.window.Library.Twitch.Browse = this.BrowseTwitch;
+        this.window.Library.Pluto.Browse = this.BrowsePluto;
+        this.window.Library.Pluto.Search = this.SearchPluto;
+        this.window.Library.Pluto.OpenSeries = this.OpenPlutoSeries;
+        this.window.Library.Pluto.Play = this.PlayPluto;
         this.broadcast.Log = message => log.Information(message);
         this.window.Share.Session = () => this.broadcast;
         this.window.Share.StartBroadcast = this.StartBroadcast;

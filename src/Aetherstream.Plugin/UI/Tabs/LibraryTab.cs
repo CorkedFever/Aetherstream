@@ -37,6 +37,9 @@ internal sealed class LibraryTab(UiContext ui)
     /// <summary>Twitch: followed, top, a game, or a search.</summary>
     internal TwitchTab Twitch { get; } = new(ui);
 
+    /// <summary>Pluto TV's free films and series.</summary>
+    internal PlutoTab Pluto { get; } = new(ui);
+
     /// <summary>
     /// How deep into a show we are: empty at the library, one entry inside a show, two inside a
     /// season. Held here rather than as a single label so "back" can go up one level instead of
@@ -83,7 +86,7 @@ internal sealed class LibraryTab(UiContext ui)
 
     public void Draw()
     {
-        Ui.Strip("shelf", ["PLEX", "YOUTUBE", "TWITCH", "ARCHIVE", "LOCAL"], ref this.shelf);
+        Ui.Strip("shelf", ["PLEX", "YOUTUBE", "TWITCH", "PLUTO", "ARCHIVE", "LOCAL"], ref this.shelf);
         if (this.shelf == 1)
         {
             this.YouTube.Draw();
@@ -98,11 +101,17 @@ internal sealed class LibraryTab(UiContext ui)
 
         if (this.shelf == 3)
         {
-            this.Archive.Draw();
+            this.Pluto.Draw();
             return;
         }
 
         if (this.shelf == 4)
+        {
+            this.Archive.Draw();
+            return;
+        }
+
+        if (this.shelf == 5)
         {
             this.Local.Draw();
             return;
