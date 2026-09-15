@@ -44,7 +44,7 @@ internal sealed class SoundTab(UiContext ui)
             ui.SaveConfig();
         }
 
-        Ui.Tip("The music under the shows and the info channels, and what the Radio channel plays. The weather covers the picture, so its sound gives way to the music; the guide keeps the picture in the corner, so a film playing keeps its sound and the music only fills in when nothing is on.");
+        Ui.Tip("The music under the drawn channels. The shows and the info channels keep the bundled lounge tracks; the source chosen below plays on the Radio channel and the ambience channels. The weather covers the picture, so its sound gives way to the music; the guide keeps the picture in the corner, so a film playing keeps its sound and the music only fills in when nothing is on.");
 
         if (!on)
         {
@@ -60,6 +60,8 @@ internal sealed class SoundTab(UiContext ui)
         }
 
         Ui.Tip("Relative to the main volume, so turning the set down turns this down with it.");
+
+        Ui.Hint("What plays on the Radio channel and the ambience channels. The shows and the info channels keep the bundled tracks.");
 
         var source = ui.Config.ChannelMusicSource;
         var label = source switch { "folder" => "A folder of my own", "plex" => "A Plex playlist", "radio" => $"Radio: {ui.Config.ChannelMusicRadioName}", "podcast" => "A podcast", "rolls" => "Orchestrion rolls", _ => "The bundled tracks" };

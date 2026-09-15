@@ -22,7 +22,7 @@ public sealed partial class Plugin
         this.window.Sound.MusicChanged = this.MusicChanged;
         this.session.MusicTracks = this.MusicTracks;
         this.session.MusicTitles = this.MusicTitle;
-        this.session.MusicShuffle = () => this.config.ChannelMusicSource != "podcast";
+        this.session.MusicShuffle = () => !this.UsesChosenSource() || this.config.ChannelMusicSource != "podcast";
         this.WireRadio();
         this.WireOrchestrion();
 
@@ -35,9 +35,25 @@ public sealed partial class Plugin
     /// The current list, rebuilt when the source changes or a minute has passed. The same list
     /// instance is returned until then, which is how the jukebox knows nothing changed.
     /// </summary>
+    /// <summary>
+    /// Which channels get the chosen source. The shows and the info channels keep the bundled
+    /// lounge tracks whatever is chosen: they are programmes with their own sound, and a podcast
+    /// under the kitchen is two people talking at once. The Radio channel and the ambience
+    /// channels play whatever the Music tab says.
+    /// </summary>
+    private bool UsesChosenSource()
+    {
+        var up = this.session.Channel;
+        if (up is null)
+            return true;
+        var group = this.channels.FirstOrDefault(c => ReferenceEquals(c.Channel, up)).Group;
+        return group is not ("Info" or "Shows");
+    }
+
     private IReadOnlyList<string> MusicTracks()
     {
-        var key = $"{this.config.ChannelMusicSource}|{this.config.ChannelMusicFolder}|{this.config.ChannelMusicPlexPlaylist}|{this.plexMusicTracks.Count}|{this.config.ChannelMusicRadioUrl}|{this.config.ChannelMusicPodcastFeed}|{this.config.ChannelMusicPodcastEpisode}|{this.podcastOpen?.Episodes.Count ?? 0}|{string.Join(',', this.config.ChannelMusicRolls)}|{this.rollFiles.Count}";
+        var source = this.UsesChosenSource() ? this.config.ChannelMusicSource : "bundled";
+        var key = $"{source}|{this.config.ChannelMusicFolder}|{this.config.ChannelMusicPlexPlaylist}|{this.plexMusicTracks.Count}|{this.config.ChannelMusicRadioUrl}|{this.config.ChannelMusicPodcastFeed}|{this.config.ChannelMusicPodcastEpisode}|{this.podcastOpen?.Episodes.Count ?? 0}|{string.Join(',', this.config.ChannelMusicRolls)}|{this.rollFiles.Count}";
         var now = Environment.TickCount64;
         if (key == this.musicKey && now - this.musicScannedAtMs < 60_000)
             return this.musicTracks;
@@ -48,7 +64,7 @@ public sealed partial class Plugin
         var found = new List<string>();
         try
         {
-            switch (this.config.ChannelMusicSource)
+            switch (source)
             {
                 case "folder":
                     if (Directory.Exists(this.config.ChannelMusicFolder))
@@ -85,7 +101,7 @@ public sealed partial class Plugin
         // A source with nothing in it, no rolls ticked, a folder gone, a feed not read yet, falls
         // back to the bundled tracks rather than to silence; the Music tab says so.
         this.musicFellBack = false;
-        if (found.Count == 0 && this.config.ChannelMusicSource != "bundled")
+        if (found.Count == 0 && source != "bundled")
         {
             try
             {
@@ -105,7 +121,7 @@ public sealed partial class Plugin
         if (!found.SequenceEqual(this.musicTracks))
         {
             this.musicTracks = found;
-            this.log.Information($"[music] {found.Count} tracks from {this.config.ChannelMusicSource}");
+            this.log.Information($"[music] {found.Count} tracks from {source}");
         }
 
         return this.musicTracks;

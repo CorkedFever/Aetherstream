@@ -150,6 +150,8 @@ public sealed partial class Plugin
     /// <summary>A name for a track the jukebox would otherwise call by its file name.</summary>
     private string? MusicTitle(string track)
     {
+        if (!this.UsesChosenSource())
+            return null;
         if (this.config.ChannelMusicSource == "rolls")
             return this.RollTitle(track);
         if (this.config.ChannelMusicSource == "radio" && track == this.config.ChannelMusicRadioUrl)
@@ -160,7 +162,7 @@ public sealed partial class Plugin
     }
 
     /// <summary>The picture to show for what is playing: the station's logo or the show's art.</summary>
-    private string MusicCoverUrl() => this.config.ChannelMusicSource switch
+    private string MusicCoverUrl() => !this.UsesChosenSource() ? string.Empty : this.config.ChannelMusicSource switch
     {
         "radio" => this.config.ChannelMusicRadioLogo,
         "podcast" => this.podcastOpen?.Image ?? string.Empty,
