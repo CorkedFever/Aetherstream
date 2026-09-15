@@ -46,6 +46,15 @@ internal sealed class LibraryTab(UiContext ui)
     /// <summary>PBS's shows, from their episode pages.</summary>
     internal PbsTab Pbs { get; } = new(ui);
 
+    /// <summary>NASA+'s videos by topic.</summary>
+    internal NasaTab Nasa { get; } = new(ui);
+
+    /// <summary>TED's talks and playlists.</summary>
+    internal TedTab Ted { get; } = new(ui);
+
+    /// <summary>Dailymotion's trending videos and channels.</summary>
+    internal DailymotionTab Dailymotion { get; } = new(ui);
+
     /// <summary>
     /// How deep into a show we are: empty at the library, one entry inside a show, two inside a
     /// season. Held here rather than as a single label so "back" can go up one level instead of
@@ -92,7 +101,7 @@ internal sealed class LibraryTab(UiContext ui)
 
     public void Draw()
     {
-        Ui.Strip("shelf", ["PLEX", "YOUTUBE", "TWITCH", "PLUTO", "RED BULL", "PBS", "ARCHIVE", "LOCAL"], ref this.shelf);
+        Ui.Strip("shelf", ["PLEX", "YOUTUBE", "TWITCH", "DAILYMOTION", "PLUTO", "RED BULL", "PBS", "NASA", "TED", "ARCHIVE", "LOCAL"], ref this.shelf);
         if (this.shelf == 1)
         {
             this.YouTube.Draw();
@@ -107,29 +116,47 @@ internal sealed class LibraryTab(UiContext ui)
 
         if (this.shelf == 3)
         {
-            this.Pluto.Draw();
+            this.Dailymotion.Draw();
             return;
         }
 
         if (this.shelf == 4)
         {
-            this.RedBull.Draw();
+            this.Pluto.Draw();
             return;
         }
 
         if (this.shelf == 5)
         {
-            this.Pbs.Draw();
+            this.RedBull.Draw();
             return;
         }
 
         if (this.shelf == 6)
         {
-            this.Archive.Draw();
+            this.Pbs.Draw();
             return;
         }
 
         if (this.shelf == 7)
+        {
+            this.Nasa.Draw();
+            return;
+        }
+
+        if (this.shelf == 8)
+        {
+            this.Ted.Draw();
+            return;
+        }
+
+        if (this.shelf == 9)
+        {
+            this.Archive.Draw();
+            return;
+        }
+
+        if (this.shelf == 10)
         {
             this.Local.Draw();
             return;

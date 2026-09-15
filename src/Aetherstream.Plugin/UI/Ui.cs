@@ -31,13 +31,17 @@ internal static class Ui
     public static void Strip(string id, string[] labels, ref int selected)
     {
         var drawList = ImGui.GetWindowDrawList();
+        var rightEdge = ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X;
         using (Theme.PushDisplay())
         {
             for (var i = 0; i < labels.Length; i++)
             {
-                if (i > 0)
-                    ImGui.SameLine(0f, 14f);
                 var size = ImGui.CalcTextSize(labels[i]);
+
+                // On one line while they fit; a strip that outgrows the panel continues below
+                // rather than running off its edge.
+                if (i > 0 && ImGui.GetItemRectMax().X + 14f + size.X + 6f <= rightEdge)
+                    ImGui.SameLine(0f, 14f);
                 var active = i == selected;
                 if (ImGui.InvisibleButton($"##{id}{i}", size + new Vector2(6f, 6f)))
                     selected = i;
@@ -58,6 +62,33 @@ internal static class Ui
 
     /// <summary>A heading in the display face with a rule under it.</summary>
     public static void Section(string title) => Theme.Heading(title);
+
+    /// <summary>
+    /// A row of chips that wraps to the panel, one lit. Returns the index pressed this frame, or
+    /// -1 when none was; the caller keeps the selection, which may legitimately be none.
+    /// </summary>
+    public static int Chips(string id, IReadOnlyList<string> labels, int selected)
+    {
+        var pressed = -1;
+        var rightEdge = ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X;
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        for (var i = 0; i < labels.Count; i++)
+        {
+            var width = ImGui.CalcTextSize(labels[i]).X + (ImGui.GetStyle().FramePadding.X * 2);
+            if (i > 0 && ImGui.GetItemRectMax().X + spacing + width < rightEdge)
+                ImGui.SameLine();
+
+            var lit = i == selected;
+            using var colours = ImRaii.PushColor(ImGuiCol.Button, lit ? Theme.GlassLit : Theme.Glass)
+                .Push(ImGuiCol.Border, lit ? Theme.Accent : Theme.GlassEdge)
+                .Push(ImGuiCol.Text, lit ? Theme.Accent : Theme.Text);
+            using var border = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 1f);
+            if (ImGui.Button($"{labels[i]}##{id}{i}"))
+                pressed = i;
+        }
+
+        return pressed;
+    }
 
     /// <summary>Grey explanatory text, wrapped to the panel.</summary>
     public static void Hint(string text)

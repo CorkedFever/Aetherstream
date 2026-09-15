@@ -74,6 +74,14 @@ public static class StreamResolvers
             return new PlutoResolver();
         }
 
+        // TED's pages name a plain manifest through an open call, so yt-dlp is not needed, and
+        // its TED support is broken at the moment anyway.
+        if (TedResolver.Matches(input))
+        {
+            description = "TED";
+            return new TedResolver(http);
+        }
+
         if (IsDirectMedia(input))
         {
             description = "direct URL";
