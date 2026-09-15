@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aetherstream</title>
-<meta name="description" content="A television in Final Fantasy XIV — live TV, Twitch, YouTube and your Plex library, painted onto a real in-game furnishing. Watch together with a six-character party code.">
+<meta name="description" content="A television in Final Fantasy XIV — live TV, Twitch, YouTube, Plex, the Internet Archive and a station of its own drawn from the game's data, painted onto a real in-game furnishing. Watch together with a six-character party code.">
 <meta property="og:title" content="Aetherstream">
 <meta property="og:description" content="A television in Final Fantasy XIV. Live from the Lifestream.">
 <meta property="og:image" content="https://raw.githubusercontent.com/CorkedFever/Aetherstream/main/src/Aetherstream.Plugin/images/banner.png">
@@ -240,8 +240,9 @@ footer .led { color: var(--good); font-family: var(--display); font-size: 17px; 
       <p>
         Aetherstream is a Dalamud plugin that puts a working screen in Final Fantasy XIV —
         painted onto a real furnishing, so the game lights and occludes the picture like anything
-        else in the room. Tune in live TV, Twitch, YouTube or your own Plex library, and watch
-        together from a six-character party code.
+        else in the room. Tune in live TV, Twitch, YouTube, your Plex library or the Internet
+        Archive; leave it on a station of its own, twenty-eight channels drawn from the game's data
+        with hosts, schedules and commercial breaks; and watch together from a six-character party code.
       </p>
       <div class="cta">
         <a class="btn lit" href="#install">INSTALL</a>
@@ -254,13 +255,17 @@ footer .led { color: var(--good); font-family: var(--display); font-size: 17px; 
     <h2>WHAT'S ON</h2>
     <div class="channels">
       <div class="ch"><div class="no">CH 1</div><h3>Live TV</h3>
-        <p>Thousands of channels from the public iptv-org directory, or any M3U playlist of your own — a channel guide, numbered presets, channel up/down.</p></div>
-      <div class="ch"><div class="no">CH 2</div><h3>Your Plex library</h3>
-        <p>Sign in with a code at plex.tv/link and browse films and shows as posters. Your token stays on your machine.</p></div>
-      <div class="ch"><div class="no">CH 3</div><h3>Twitch &amp; YouTube</h3>
-        <p>Paste a channel name or a link into the Watch tab. Twitch works with nothing installed; YouTube and most other sites go through yt-dlp.</p></div>
-      <div class="ch"><div class="no">CH 4</div><h3>Watch together</h3>
+        <p>Thousands of channels from the public iptv-org directory, or any M3U playlist of your own — a channel guide, numbered presets, channel up/down. A channel whose address moves is found again on its own.</p></div>
+      <div class="ch"><div class="no">CH 2</div><h3>Your libraries</h3>
+        <p>Plex, browsed as posters. YouTube: search, playlists, and your own feeds. Twitch: who you follow that is live, the top, a game. The Internet Archive's public domain films. Videos on your own machine.</p></div>
+      <div class="ch"><div class="no">CH 3</div><h3>The station</h3>
+        <p>Twenty-eight channels the set draws for itself from the game's data: a weather forecast with a pixie, a cooking show with a Namazu, a wildlife show with a moogle, a tonberry telling the tales of the Twelve, a shopping channel with a goblin, a film channel, and commercial breaks between.</p></div>
+      <div class="ch"><div class="no">CH 4</div><h3>Music</h3>
+        <p>Under the channels: the bundled lounge tracks, your folder, a Plex playlist, the game's own orchestrion rolls, thirty thousand internet radio stations, or a podcast. The Radio channel shows what is on.</p></div>
+      <div class="ch"><div class="no">CH 5</div><h3>Watch together</h3>
         <p>Make a party, send the six-character code. Everyone who pastes it sees your broadcast on their own screen, in their own house.</p></div>
+      <div class="ch"><div class="no">CH 6</div><h3>Real data, silly hosts</h3>
+        <p>The prices are the real market board, the recipes are your crafting log, the weather is the game's, the vistas are the Sightseeing Log's own paintings. The hosts are moogles, tonberries, goblins and kobolds, and every word they say is written.</p></div>
     </div>
   </section>
 
@@ -306,6 +311,10 @@ footer .led { color: var(--good); font-family: var(--display); font-size: 17px; 
         <span class="what">Deno<small>YouTube specifically</small></span>
         <span class="how"><p><span class="cmd">winget install --id DenoLand.Deno --exact</span>, then restart the game. yt-dlp uses it to solve YouTube's challenges — without it, YouTube half-works at best.</p></span>
       </div>
+      <div class="need"><span class="dot info"></span>
+        <span class="what">A signed-in browser<small>your YouTube and Twitch feeds</small></span>
+        <span class="how"><p>Your recommended, subscriptions and follows come from a browser you are signed in to, chosen under <strong>Setup → Sources</strong>. Firefox and its forks (Floorp, LibreWolf) work directly; Chrome, Edge and Brave need a cookies file exported from the browser.</p></span>
+      </div>
       <div class="need"><span class="dot warn"></span>
         <span class="what">ffmpeg<small>only to broadcast to a party</small></span>
         <span class="how"><p><span class="cmd">winget install --id Gyan.FFmpeg --exact</span>. Watching a party needs nothing.</p></span>
@@ -318,13 +327,17 @@ footer .led { color: var(--good); font-family: var(--display); font-size: 17px; 
     <div class="steps">
       <div class="step"><div>
         <h3>Put the picture on a screen</h3>
-        <p><strong>Screen tab → Known screens → Everkeep Monitor.</strong> Stand next to your monitor furnishing and click — the picture lands on the nearest one, fitted and ready. One tip worth the trouble: recolour the wall behind it black in-game. The panel is an additive effect, and a black wall is the single biggest picture-quality win.</p>
+        <p><strong>Setup → Screen → Known screens → Everkeep Monitor.</strong> Stand next to your monitor furnishing and click — the picture lands on the nearest one, fitted and ready. One tip worth the trouble: recolour the wall behind it black in-game. The panel is an additive effect, and a black wall is the single biggest picture-quality win.</p>
         <p>No furnishing? A floating panel works anywhere — it just draws over the world instead of living in it.</p>
       </div></div>
       <div class="step"><div>
         <h3>Tune something in</h3>
-        <p>The <strong>Watch tab</strong> takes anything: a Twitch channel name, a YouTube link, a direct stream URL, or a party code. The <strong>Library tab</strong> browses Plex. The <strong>Live TV tab</strong> is a channel guide — search it, then right-click a channel to pin it. Pins become numbered presets, and the remote's channel ▲/▼ and last-channel buttons step through them like a real set.</p>
+        <p>The <strong>Watch tab</strong> takes anything: a Twitch channel name, a YouTube link, a direct stream URL, or a party code. The <strong>Library tab</strong> has shelves: Plex, YouTube, Twitch, the Archive, and Local. The <strong>Live TV tab</strong> is a channel guide — search it, then right-click a channel to pin it. Pins become numbered presets, and the remote's channel ▲/▼ and last-channel buttons step through them like a real set.</p>
         <p>Run your own station? Add an <a href="https://ersatztv.org/">ErsatzTV</a> or Tunarr playlist alongside the public list from the guide's playlist picker.</p>
+      </div></div>
+      <div class="step"><div>
+        <h3>Leave it on a channel</h3>
+        <p>The <strong>Channels tab</strong> is the station: <strong>Info</strong> for what is on, what is up and what it costs; <strong>Shows</strong> for the programmes with hosts, on a clock so everyone watching sees the same episode; <strong>Ambience</strong> for the aquarium, the fireplace and the screensavers. The <strong>Music tab</strong> picks what plays under them.</p>
       </div></div>
       <div class="step"><div>
         <h3>Watch together</h3>
