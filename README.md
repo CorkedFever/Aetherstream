@@ -313,7 +313,7 @@ implementing `IFrameChannel` in `Video\`, handed a snapshot by the plugin when i
 
 | Channel | What it shows | Where the data comes from |
 | --- | --- | --- |
-| Guide | The listings grid, picture in the corner: the numbered lineup (pins, then the country and group chosen in Setup, defaulting to the character's region), what is playing and what is queued laid on the timeline from their lengths, live channels' programmes from XMLTV guides, recents with where you left off | The playlist's own guide plus the region's community guides (epgshare), or a URL set per playlist in the Live TV tab; cached twice a day and parsed for the lineup's first forty channels, matched by id then by name |
+| Guide | The listings grid, picture in the corner: the numbered lineup (pins, then the country and group chosen in Setup, defaulting to the character's region), what is playing and what is queued laid on the timeline from their lengths, live channels' programmes from XMLTV guides, recents with where you left off | The playlist's own guide plus the region's community guides (epgshare), or a URL set per playlist in the Live TV app; cached twice a day and parsed for the lineup's first forty channels, matched by id then by name |
 | Weather | Local on the 8s, with rare-weather and special alerts | The game's weather tables; the live sky via ClientStructs |
 | Clock | Eorzea time, the calendar date, the moon, the sun's arc | The clock |
 | News | Lodestone headlines, one story at a time, maintenance windows in local time with a countdown | lodestonenews.com, every fifteen minutes, cached in the config folder |
