@@ -67,6 +67,13 @@ public static class StreamResolvers
             return new LocalFileResolver();
         }
 
+        // Pluto's stitcher: a direct URL to look at, but one that needs its token as a header too.
+        if (PlutoResolver.Matches(input))
+        {
+            description = "Pluto";
+            return new PlutoResolver();
+        }
+
         if (IsDirectMedia(input))
         {
             description = "direct URL";

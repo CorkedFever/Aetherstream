@@ -5,8 +5,10 @@ namespace Aetherstream.Playback;
 /// <summary>
 /// Pluto TV's on-demand side: free films and series with Pluto's own ad breaks in the stream.
 /// A session comes from its boot endpoint, the catalogue from its VOD service in categories,
-/// a search from its search service, and a film or episode plays as an ordinary HLS playlist
-/// from its stitcher, with the session's parameters and token on the address. No account.
+/// a search from its search service, and a film or episode plays as an HLS playlist from its
+/// stitcher's v2 path, with the session's parameters and token on the address and the token as
+/// a bearer header as well; the older path, and the address without the header, get a "so sad"
+/// slate in place of the film. <see cref="PlutoResolver"/> adds the header. No account.
 /// </summary>
 public sealed class PlutoLibrary(HttpClient http)
 {
@@ -25,7 +27,7 @@ public sealed class PlutoLibrary(HttpClient http)
     public async Task<Session> BootAsync(CancellationToken ct)
     {
         var id = Guid.NewGuid().ToString("N")[..16];
-        var url = "https://boot.pluto.tv/v4/start?appName=web&appVersion=9.0.0&deviceVersion=120.0.0&deviceModel=web&deviceMake=chrome&deviceType=web"
+        var url = "https://boot.pluto.tv/v4/start?appName=web&appVersion=10.9.6&deviceVersion=128.0.0&deviceModel=web&deviceMake=chrome&deviceType=web"
             + $"&clientID=aetherstream-{id}&clientModelNumber=1.0.0&serverSideAds=false&drmCapabilities=widevine%3AL3";
         var text = await http.GetStringAsync(url, ct);
         using var doc = JsonDocument.Parse(text);
@@ -111,9 +113,12 @@ public sealed class PlutoLibrary(HttpClient http)
         return list;
     }
 
-    /// <summary>The playable address for a film or an episode: the stitcher's HLS path with the session on it.</summary>
-    public static string StreamUrl(Session s, Item item) =>
-        s.Stitcher + item.HlsPath + (item.HlsPath.Contains('?') ? "&" : "?") + s.StitcherParams + "&jwt=" + Uri.EscapeDataString(s.Token);
+    /// <summary>The playable address for a film or an episode: the stitcher's v2 HLS path with the session on it.</summary>
+    public static string StreamUrl(Session s, Item item)
+    {
+        var path = item.HlsPath.StartsWith("/stitch/", StringComparison.Ordinal) ? "/v2" + item.HlsPath : item.HlsPath;
+        return s.Stitcher + path + (path.Contains('?') ? "&" : "?") + s.StitcherParams + "&jwt=" + Uri.EscapeDataString(s.Token);
+    }
 
     private async Task<string> GetAsync(Session s, string url, CancellationToken ct)
     {

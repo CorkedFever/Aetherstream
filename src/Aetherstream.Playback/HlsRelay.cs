@@ -42,8 +42,10 @@ public sealed class HlsRelay : IDisposable
     private static readonly TimeSpan RefreshAfter = TimeSpan.FromSeconds(4);
 
     /// <summary>
-    /// Segment addresses remembered per channel. The live window is six or so; this leaves room for
-    /// a player that lags behind the edge without letting the map grow without bound.
+    /// Segment addresses remembered per channel of a live stream. The live window is six or so;
+    /// this leaves room for a player that lags behind the edge without letting the map grow
+    /// without bound. A whole programme's playlist is kept entire instead: the decoder may ask
+    /// for its first segment an hour after the last one was listed.
     /// </summary>
     private const int SegmentMemory = 64;
 
@@ -342,6 +344,9 @@ public sealed class HlsRelay : IDisposable
         private string? cached;
         private DateTime fetchedAt = DateTime.MinValue;
 
+        /// <summary>Whether the playlist is a whole programme rather than a live window, so every segment is kept.</summary>
+        private bool whole;
+
         public void ApplyHeaders(HttpRequestMessage request)
         {
             if (headers is null)
@@ -370,6 +375,11 @@ public sealed class HlsRelay : IDisposable
         /// </summary>
         private void PrefetchLatest(HttpClient client, Action<string> log)
         {
+            // The newest segments of a live window are the ones about to be asked for; the last
+            // segments of a whole programme are its final minute, and nobody is asking for those.
+            if (this.whole)
+                return;
+
             List<string> latest;
             lock (this.segments)
                 latest = this.order.Where(k => k.StartsWith("s/", StringComparison.Ordinal)).TakeLast(PrefetchAhead).ToList();
@@ -635,6 +645,8 @@ public sealed class HlsRelay : IDisposable
         private string Rewrite(string playlist, Uri baseUri, int id, int port)
         {
             var sequence = SequenceOf(playlist);
+            this.whole = playlist.Contains("#EXT-X-PLAYLIST-TYPE:VOD", StringComparison.Ordinal)
+                || playlist.Contains("#EXT-X-ENDLIST", StringComparison.Ordinal);
             var output = new StringBuilder(playlist.Length + 256);
             var root = $"http://127.0.0.1:{port}/c/{id}";
 
@@ -724,7 +736,7 @@ public sealed class HlsRelay : IDisposable
                 else
                     this.segments[key] = url;
 
-                while (this.order.Count > SegmentMemory)
+                while (!this.whole && this.order.Count > SegmentMemory)
                 {
                     this.segments.Remove(this.order[0]);
                     this.order.RemoveAt(0);

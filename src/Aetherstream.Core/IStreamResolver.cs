@@ -60,4 +60,10 @@ public sealed record ResolvedStream(
     /// The address this was before the relay took it over, so a relayed stream can still be
     /// matched to the channel it came from. Null when it has not been relayed.
     /// </summary>
-    string? Origin = null);
+    string? Origin = null,
+
+    /// <summary>
+    /// Whether the relay has to carry this from the start rather than after a stall: the origin
+    /// insists on a header libvlc cannot send, so opened directly it would never play at all.
+    /// </summary>
+    bool RelayRequired = false);

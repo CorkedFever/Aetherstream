@@ -874,6 +874,12 @@ public sealed partial class Plugin : IDalamudPlugin
 
                     this.log.Information($"Resolved '{source}' via {via}.");
                     this.RememberTitle(source, stream.DisplayName);
+
+                    // An origin that wants a header libvlc cannot send is relayed from the start;
+                    // played directly it would only ever show the origin's refusal.
+                    if (stream.RelayRequired)
+                        stream = this.relay.Publish(stream);
+
                     this.session.RequestStart(stream, this.ResumePointFor(source));
                 }
                 catch (OperationCanceledException)
