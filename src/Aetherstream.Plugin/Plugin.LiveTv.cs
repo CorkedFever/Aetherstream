@@ -169,7 +169,7 @@ public sealed partial class Plugin
         this.window.Dial.MarkOffline(origin);
         this.MarkDead(current.PlaylistUrl, "stalled and would not come back");
         if (current.Origin is not null)
-            this.config.LiveTvAlternates.Remove(origin);
+            this.SetAlternate(origin, null);
         else
             this.MarkDead(origin, "stalled and would not come back");
         if (this.window.Dial.Find(origin) is { } stalled)

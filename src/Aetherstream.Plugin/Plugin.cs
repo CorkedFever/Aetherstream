@@ -48,6 +48,14 @@ public sealed partial class Plugin : IDalamudPlugin
     private readonly PartyDirectory directory;
     private CancellationTokenSource? partyLoop;
 
+    /// <summary>
+    /// Cancelled first thing on unload, so background work that outlives the teardown — the
+    /// lineup health check, most of all — stops writing into the configuration while it is
+    /// being saved. The same lock guards those writes and the save.
+    /// </summary>
+    private readonly CancellationTokenSource unloading = new();
+    private readonly object configLock = new();
+
     /// <summary>Stream path of the group currently selected to broadcast to.</summary>
     private string currentStreamPath = string.Empty;
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(20) };
@@ -278,6 +286,8 @@ public sealed partial class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        this.unloading.Cancel();
+
         // First, and before anything else is torn down: the LibVLC instance outlives the plugin
         // deliberately (see the note at the end of this method), so a subscription left behind here
         // would call into a log this unload is about to invalidate.
@@ -330,7 +340,7 @@ public sealed partial class Plugin : IDalamudPlugin
         this.relay.Dispose();
         this.http.Dispose();
 
-        this.pluginInterface.SavePluginConfig(this.config);
+        this.SaveConfig();
         this.log.Information("[unload] done");
     }
 
@@ -1110,5 +1120,9 @@ public sealed partial class Plugin : IDalamudPlugin
 
     private void OpenMainUi() => this.window.IsOpen = true;
 
-    private void SaveConfig() => this.pluginInterface.SavePluginConfig(this.config);
+    private void SaveConfig()
+    {
+        lock (this.configLock)
+            this.pluginInterface.SavePluginConfig(this.config);
+    }
 }

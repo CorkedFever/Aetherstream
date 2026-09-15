@@ -27,32 +27,65 @@ public sealed partial class Plugin
     /// <summary>What the Setup tab shows about the last check.</summary>
     private string healthStatus = string.Empty;
 
-    private bool IsDead(string url) =>
-        this.config.LiveTvDead.TryGetValue(url, out var until) && until > DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    private bool IsDead(string url)
+    {
+        lock (this.configLock)
+            return this.config.LiveTvDead.TryGetValue(url, out var until) && until > DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    }
 
+    // The marks are written from the health check's threads as well as the frame, and the
+    // configuration is serialised whole on every save, so every write to these two dictionaries
+    // takes the lock the save takes; once unloading, nothing is written at all.
     private void MarkDead(string url, string why)
     {
-        if (url.Length == 0)
+        if (url.Length == 0 || this.unloading.IsCancellationRequested)
             return;
 
-        this.config.LiveTvDead[url] = (DateTimeOffset.UtcNow + DeadFor).ToUnixTimeSeconds();
+        lock (this.configLock)
+            this.config.LiveTvDead[url] = (DateTimeOffset.UtcNow + DeadFor).ToUnixTimeSeconds();
         this.configDirty = true;
         this.log.Information($"[health] {why}: {url}");
     }
 
     private void MarkAlive(string url)
     {
-        if (this.config.LiveTvDead.Remove(url))
+        if (this.unloading.IsCancellationRequested)
+            return;
+
+        bool removed;
+        lock (this.configLock)
+            removed = this.config.LiveTvDead.Remove(url);
+        if (removed)
             this.configDirty = true;
+    }
+
+    private void SetAlternate(string url, string? other)
+    {
+        if (this.unloading.IsCancellationRequested)
+            return;
+
+        lock (this.configLock)
+        {
+            if (other is null)
+                this.config.LiveTvAlternates.Remove(url);
+            else
+                this.config.LiveTvAlternates[url] = other;
+        }
+
+        this.configDirty = true;
     }
 
     /// <summary>Forgets expired marks. Called with the once-a-second housekeeping.</summary>
     private void PruneDead()
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var expired = this.config.LiveTvDead.Where(kv => kv.Value <= now).Select(kv => kv.Key).ToList();
-        foreach (var url in expired)
-            this.config.LiveTvDead.Remove(url);
+        List<string> expired;
+        lock (this.configLock)
+        {
+            expired = this.config.LiveTvDead.Where(kv => kv.Value <= now).Select(kv => kv.Key).ToList();
+            foreach (var url in expired)
+                this.config.LiveTvDead.Remove(url);
+        }
 
         if (expired.Count > 0)
             this.configDirty = true;
@@ -83,7 +116,7 @@ public sealed partial class Plugin
         var viaAlternate = !string.Equals(playing, source, StringComparison.OrdinalIgnoreCase);
         this.MarkDead(playing, viaAlternate ? "the alternate gave up too" : "the decoder gave up");
         if (viaAlternate)
-            this.config.LiveTvAlternates.Remove(source);
+            this.SetAlternate(source, null);
         else
             this.MarkDead(source, "the decoder gave up");
         this.window.Dial.MarkOffline(source);
@@ -164,6 +197,9 @@ public sealed partial class Plugin
                 await gate.WaitAsync();
                 try
                 {
+                    if (this.unloading.IsCancellationRequested)
+                        return;
+
                     var address = this.AddressOf(channel.Url);
                     var alive = await this.ProbeAsync(channel with { Url = address });
                     if (!alive && channel.TvgId.Length > 0)
@@ -171,11 +207,10 @@ public sealed partial class Plugin
                         // The listed address is gone; another from the index may not be.
                         this.MarkDead(address, "no answer");
                         if (address != channel.Url)
-                            this.config.LiveTvAlternates.Remove(channel.Url);
+                            this.SetAlternate(channel.Url, null);
                         if (await this.FindAlternateAsync(channel) is { } other)
                         {
-                            this.config.LiveTvAlternates[channel.Url] = other;
-                            this.configDirty = true;
+                            this.SetAlternate(channel.Url, other);
                             this.log.Information($"[health] '{channel.Name}' moved to another address: {other}");
                             alive = true;
                         }
