@@ -39,7 +39,7 @@ internal sealed class PbsTab(UiContext ui)
             this.Go(PbsShows.Shows[0].Slug);
         }
 
-        Ui.Hint("PBS's shows, read from their episode pages. Free; some titles are only for viewers in the United States.");
+        Ui.Hint("PBS's shows, read from their pages. Free; Passport titles are left out, and some are only for viewers in the United States.");
 
         var rightEdge = ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X;
         var spacing = ImGui.GetStyle().ItemSpacing.X;

@@ -32,7 +32,7 @@ public sealed partial class PbsShows(HttpClient http)
         new("washington-week", "Washington Week"),
     ];
 
-    /// <summary>The episodes on a show's episodes page, in the order PBS lists them.</summary>
+    /// <summary>The episodes on a show's page that anyone can watch, in the order PBS lists them. Passport titles are left out.</summary>
     public async Task<List<Episode>> EpisodesAsync(string slug, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, $"https://www.pbs.org/show/{slug}/");
@@ -52,11 +52,17 @@ public sealed partial class PbsShows(HttpClient http)
         }
 
         var stills = new Dictionary<string, string>();
+        var passport = new HashSet<string>();
         foreach (Match m in StillLink().Matches(html))
         {
             var path = m.Groups[1].Value;
             if (!stills.ContainsKey(path))
                 stills[path] = WebUtility.HtmlDecode(m.Groups[2].Value);
+
+            // Members-only titles wear a Passport badge right after the still; they need a login this cannot give.
+            var tail = html.AsSpan(m.Index + m.Length, Math.Min(600, html.Length - m.Index - m.Length));
+            if (tail.IndexOf("passport_badge", StringComparison.Ordinal) >= 0)
+                passport.Add(path);
         }
 
         var descriptions = new Dictionary<string, (string Kind, string Length, string Words)>();
@@ -75,7 +81,7 @@ public sealed partial class PbsShows(HttpClient http)
         foreach (var path in order.Count > 0 ? order : titles.Keys.ToList())
         {
             var title = titles.GetValueOrDefault(path, string.Empty);
-            if (title.StartsWith("Preview: ", StringComparison.OrdinalIgnoreCase))
+            if (title.StartsWith("Preview: ", StringComparison.OrdinalIgnoreCase) || passport.Contains(path))
                 continue;
             var d = descriptions.GetValueOrDefault(path);
             list.Add(new Episode("https://www.pbs.org" + path, title.Length > 0 ? title : path.Trim('/'), stills.GetValueOrDefault(path, string.Empty), d.Kind ?? string.Empty, d.Length ?? string.Empty, d.Words ?? string.Empty));
