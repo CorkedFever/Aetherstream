@@ -36,7 +36,7 @@ If a YouTube link does nothing, the screen says why: `NO PICTURE — yt-dlp is n
   nothing, try another. Add your own list (an ErsatzTV or Tunarr server, say) from the playlist
   picker.
 - **Share.** The plugin is signed in to the Aetherstream party server out of the box. Make a party,
-  send the six-character code. Whoever pastes it into the Watch tab sees what you broadcast.
+  send the six-character code. Whoever pastes it into the Paste a link app sees what you broadcast.
 
 ## Dependencies
 
@@ -50,9 +50,9 @@ zip; **external** has to be on the user's machine; **server** runs on the party 
 | [libvlc](https://www.videolan.org/vlc/libvlc.html) (`VideoLAN.LibVLC.Windows`) | 3.0.21 | LGPL 2.1+ (some plugins GPL) | All decoding: HLS, DASH, RTMP, files, every codec. This is ~90 MB of the zip and the reason it is that size. |
 | [LibVLCSharp](https://github.com/videolan/libvlcsharp) | 3.9.4 | LGPL 2.1 | .NET bindings to libvlc — the video and audio callbacks the framebuffer comes through. |
 | [NAudio](https://github.com/naudio/NAudio) / `NAudio.Wasapi` | 2.2.1 / 2.3.0 | MIT | Audio output. Dalamud has no audio API, so the plugin opens its own shared-mode WASAPI render stream. |
-| [VT323](https://fonts.google.com/specimen/VT323) | Google Fonts, 2011 | SIL OFL 1.1 | The display face — headings, the on-screen display, the input strip. `Fonts\OFL.txt` ships beside it, as the licence requires. |
+| [VT323](https://fonts.google.com/specimen/VT323) | Google Fonts, 2011 | SIL OFL 1.1 | The display face — headings, the on-screen display, the app names. `Fonts\OFL.txt` ships beside it, as the licence requires. |
 | [ImageSharp](https://github.com/SixLabors/ImageSharp) 3.1 | Six Labors | Six Labors Split License (Apache 2.0 terms for open source) | Decodes venue banners, which are WebP, into pixels for the venues channel. |
-| Bossa Antigua, Lobby Time, Backbay Lounge, Airport Lounge, Deuces | [Kevin MacLeod](https://incompetech.com), incompetech.com | CC BY 4.0 | The music under the guide and weather channels, re-encoded at 112 kbps. `music\CREDITS.txt` ships beside them; the Music tab can swap in your own folder, a Plex playlist, a radio station or a podcast. |
+| Bossa Antigua, Lobby Time, Backbay Lounge, Airport Lounge, Deuces | [Kevin MacLeod](https://incompetech.com), incompetech.com | CC BY 4.0 | The music under the guide and weather channels, re-encoded at 112 kbps. `music\CREDITS.txt` ships beside them; the Music app can swap in your own folder, a Plex playlist, a radio station or a podcast. |
 | [Dalamud](https://github.com/goatcorp/Dalamud) (`Dalamud.NET.Sdk`) | 15.0.0 / API level 15 | AGPL 3.0 | The plugin host: ImGui, textures, the game object table, logging. Not in the zip — every user already has it. |
 
 libvlc's own plugin set is shipped unpruned. It is the safest choice — pruning it is what produced
@@ -67,7 +67,7 @@ the "no Opus decoder" theory that turned out to be wrong — at the cost of the 
 | [ffmpeg](https://ffmpeg.org/) | Broadcasting to a party (not watching one) | `winget install --id Gyan.FFmpeg --exact` | LGPL 2.1+ / GPL 2+ depending on build |
 
 Both are looked up on `PATH` at the moment they are needed. yt-dlp is also found in the plugin's
-config folder, or wherever the **Setup tab**'s file picker is pointed — so a copy downloaded by
+config folder, or wherever **Setup**'s file picker is pointed — so a copy downloaded by
 hand to the Desktop works, once, for good. (Not beside the plugin DLL: Dalamud installs each version into its
 own numbered folder, so anything left there vanishes on the next update.) Neither is downloaded by the plugin, deliberately —
 a plugin that fetches executables is not something to ask people to trust.
@@ -77,20 +77,20 @@ a plugin that fetches executables is not something to ask people to trust.
 | Source | What | Notes |
 | --- | --- | --- |
 | [iptv-org](https://github.com/iptv-org/iptv) | The default live TV playlist (`index.m3u`) | Volunteer-maintained index of publicly available streams. Cached locally for 12 hours; any other extended M3U can be used instead or alongside it. |
-| [Pluto TV](https://pluto.tv/) on demand | The library's Pluto shelf: free films and series | A session from Pluto's boot endpoint, the shelves and a search from its services, a series' seasons and episodes, and playback as an HLS playlist from its stitcher's v2 path with Pluto's own ad breaks in the stream, carried by the plugin's loopback relay because the stitcher wants the session token as a header on every playlist. No account; what is on depends on your country. Pluto's linear channels are in Live TV through iptv-org. |
-| [Jellyfin](https://jellyfin.org/) and [Emby](https://emby.media/) | The library's Jellyfin or Emby shelf: your libraries, continue watching, a search, series into episodes with the rest queued | The two share Emby's API. A name and password go to your server once for a token, which is what is kept; the file streams as it sits on disk, so anything the decoder handles plays without the server transcoding. |
-| [Red Bull TV](https://www.redbull.com/int-en/tv) | The library's Red Bull shelf: films, documentaries, shows and replays | A session token from its API, the discover page's shelves, each collection on its own, a search, and a film's HLS playlist straight from its media service. Free, worldwide, no account. |
-| [NASA+](https://plus.nasa.gov/) | The library's NASA shelf: documentaries, series, launches, Earth from orbit | NASA+ is a WordPress site, so its videos are posts on the public REST API, each naming a plain HLS address, with topics as a taxonomy and a search. Free, worldwide, no account. |
-| [TED](https://www.ted.com/) | The library's TED shelf: the newest talks, TED's playlists, a search; a pasted talk address | TED's open GraphQL endpoint lists talks and playlists and searches; a talk's player data names its HLS manifest, which is resolved here since yt-dlp's TED support is broken. Free, worldwide. |
-| [Dailymotion](https://www.dailymotion.com/) | The library's Dailymotion shelf: trending, channels, a search | Dailymotion's open API lists and searches; a video plays through yt-dlp, because the manifest host turns away any client whose TLS handshake is not a browser's. |
-| [PBS](https://www.pbs.org/) | The library's PBS shelf: NOVA, Nature, FRONTLINE and a dozen more | PBS keeps no open catalogue service, so each show's episodes page is read for its episode cards: title, still, length, description. A video plays through yt-dlp. Passport titles, which need a member login, are left off the shelf. Some titles are only for viewers in the United States. |
-| Twitch | The library's Twitch shelf | Who is live at the top, in a game, or by a search, through the same GraphQL endpoint the resolver uses for playback tokens; who you follow through the session borrowed from the browser set for YouTube, read once through yt-dlp's cookie handling and kept in memory for half an hour. |
-| YouTube, through yt-dlp | The library's YouTube shelf | Search, a playlist or channel link, and with a signed-in browser's cookies set under Setup, Sources, your own feeds: recommended, subscriptions, watch later, history. Listed flat by yt-dlp with thumbnails; a pick plays and the rest of the list follows it. |
-| Local files | The library's Local shelf | Your Videos folder and any folders you add, scanned for the usual formats; a picture with the file's name, or a poster.jpg in its folder, is the tile. Played as a file URI. |
-| The orchestrion | The Music tab's Rolls part: the game's own music | The Orchestrion tables for the rolls and their files; the Ogg Vorbis stream is pulled out of each roll's SCD once and kept beside the config, then plays like any track. Which rolls the character has comes from the player state. |
-| [Radio Browser](https://www.radio-browser.info/) | The Music tab's Radio part: internet radio stations | A community directory of some thirty thousand stations with stream addresses, logos and tags, on public mirrors. A station plays as the music under the drawn channels; the Radio channel shows its logo and what the stream says is on. |
-| Apple's podcast directory, and RSS | The Music tab's Podcasts part | Shows are found by name through Apple's free search, or a feed address is pasted in; episodes are read from the feed's RSS and play as the music, in order from the one chosen. |
-| [Internet Archive](https://archive.org/details/movies) | The library's Archive shelf: public domain and freely licensed films | Searched through the advanced search API by collection and title, most downloaded first; a film's best MP4 is picked from its metadata and played straight from archive.org's download links, which redirect to a storage node and support ranges. No account. Quality varies with the transfer. |
+| [Pluto TV](https://pluto.tv/) on demand | The Pluto app: free films and series | A session from Pluto's boot endpoint, the shelves and a search from its services, a series' seasons and episodes, and playback as an HLS playlist from its stitcher's v2 path with Pluto's own ad breaks in the stream, carried by the plugin's loopback relay because the stitcher wants the session token as a header on every playlist. No account; what is on depends on your country. Pluto's linear channels are in Live TV through iptv-org. |
+| [Jellyfin](https://jellyfin.org/) and [Emby](https://emby.media/) | The Jellyfin or Emby app: your libraries, continue watching, a search, series into episodes with the rest queued | The two share Emby's API. A name and password go to your server once for a token, which is what is kept; the file streams as it sits on disk, so anything the decoder handles plays without the server transcoding. |
+| [Red Bull TV](https://www.redbull.com/int-en/tv) | The Red Bull app: films, documentaries, shows and replays | A session token from its API, the discover page's shelves, each collection on its own, a search, and a film's HLS playlist straight from its media service. Free, worldwide, no account. |
+| [NASA+](https://plus.nasa.gov/) | The NASA app: documentaries, series, launches, Earth from orbit | NASA+ is a WordPress site, so its videos are posts on the public REST API, each naming a plain HLS address, with topics as a taxonomy and a search. Free, worldwide, no account. |
+| [TED](https://www.ted.com/) | The TED app: the newest talks, TED's playlists, a search; a pasted talk address | TED's open GraphQL endpoint lists talks and playlists and searches; a talk's player data names its HLS manifest, which is resolved here since yt-dlp's TED support is broken. Free, worldwide. |
+| [Dailymotion](https://www.dailymotion.com/) | The Dailymotion app: trending, channels, a search | Dailymotion's open API lists and searches; a video plays through yt-dlp, because the manifest host turns away any client whose TLS handshake is not a browser's. |
+| [PBS](https://www.pbs.org/) | The PBS app: NOVA, Nature, FRONTLINE and a dozen more | PBS keeps no open catalogue service, so each show's episodes page is read for its episode cards: title, still, length, description. A video plays through yt-dlp. Passport titles, which need a member login, are left off the shelf. Some titles are only for viewers in the United States. |
+| Twitch | The Twitch app | Who is live at the top, in a game, or by a search, through the same GraphQL endpoint the resolver uses for playback tokens; who you follow through the session borrowed from the browser set for YouTube, read once through yt-dlp's cookie handling and kept in memory for half an hour. |
+| YouTube, through yt-dlp | The YouTube app | Search, a playlist or channel link, and with a signed-in browser's cookies set under Setup, Sources, your own feeds: recommended, subscriptions, watch later, history. Listed flat by yt-dlp with thumbnails; a pick plays and the rest of the list follows it. |
+| Local files | The Local app | Your Videos folder and any folders you add, scanned for the usual formats; a picture with the file's name, or a poster.jpg in its folder, is the tile. Played as a file URI. |
+| The orchestrion | The Orchestrion app: the game's own music | The Orchestrion tables for the rolls and their files; the Ogg Vorbis stream is pulled out of each roll's SCD once and kept beside the config, then plays like any track. Which rolls the character has comes from the player state. |
+| [Radio Browser](https://www.radio-browser.info/) | The Radio app: internet radio stations | A community directory of some thirty thousand stations with stream addresses, logos and tags, on public mirrors. A station plays as the music under the drawn channels; the Radio channel shows its logo and what the stream says is on. |
+| Apple's podcast directory, and RSS | The Podcasts app | Shows are found by name through Apple's free search, or a feed address is pasted in; episodes are read from the feed's RSS and play as the music, in order from the one chosen. |
+| [Internet Archive](https://archive.org/details/movies) | The Archive app: public domain and freely licensed films | Searched through the advanced search API by collection and title, most downloaded first; a film's best MP4 is picked from its metadata and played straight from archive.org's download links, which redirect to a storage node and support ranges. No account. Quality varies with the transfer. |
 | [PaissaDB](https://zhu.codes/paissa) | Open housing plots for the housing channel | The game never lists open plots; PaissaDB is crowd-sourced from players running PaissaHouse who open a ward. Fetched every five minutes while the channel is up, for the character's current world. Every listing shows how long ago it was last seen. |
 | [iptv-org API](https://github.com/iptv-org/api) | Other addresses for a channel whose listed one has died (`streams.json`) | The playlist lists one address per channel and the free services move theirs without notice; when a lineup channel dies, the index's other addresses for the same channel id are probed and the first that answers stands in for it, with the channel still listed under its own number. Read once per session, only when something dies. |
 | [Plex](https://www.plex.tv/) | Your own library, via `plex.tv/link` sign-in | The token is stored locally and only ever sent to your own server. |
@@ -118,10 +118,14 @@ Lives in `deploy\`; nothing here runs on a viewer's machine.
 
 ## The window
 
-The window is a television: the live picture in a bezel at the top, a remote under it, a strip of
-inputs, and whichever input is selected filling the rest. The screen and remote sit outside the
-inputs deliberately — pausing should never mean navigating away from what you were doing, and the
-picture is the one thing worth seeing from every panel. It is built to sit beside Memoria and read
+The window is a remote control and a television. The remote is the left column and never
+changes: a display, power, mute and Home, a number pad that dials pinned channels, channel and
+volume rockers with the guide and weather keys between them, transport, subtitles, audio and the
+gear, and a line at the foot saying what is on. Beside it, the picture in a bezel and a home
+screen: what is on, then a grid of apps — one per source or panel, each with a status line —
+and an app opened takes the screen with a Home button in its corner. Folding the window leaves
+the remote alone. The remote sits outside the apps deliberately: pausing, or dialling a channel,
+should never mean navigating away from what you were looking at. It is built to sit beside Memoria and read
 as its sibling: the same near-black shell, the same rule that the display face (VT323, SIL OFL,
 shipped in `Fonts\`) is for short labels only, never for a path or an error.
 
@@ -130,14 +134,16 @@ shipped in `Fonts\`) is for short labels only, never for a path or an error.
 | `UI\Theme.cs` | The palette, the shell styling, the glass panel, the display font. Every colour decision lives here. |
 | `UI\Ui.cs` | Shared widgets; its colour names forward to `Theme` so older panels keep working. |
 | `UI\DisplayFont.cs` | VT323 at 20 px and 40 px. The face is drawn on a 20-pixel grid and only looks right at multiples of it. |
-| `UI\ControlWindow.cs` | The shell: hand-drawn title bar, folding, the input strip. Pushes the theme in `PreDraw`, pops it in `PostDraw`, and catches everything in `Draw` so a throw cannot leave the style stack unbalanced for every other plugin's window. |
+| `UI\ControlWindow.cs` | The shell: hand-drawn title bar, folding, the remote column beside the television. Pushes the theme in `PreDraw`, pops it in `PostDraw`, and catches everything in `Draw` so a throw cannot leave the style stack unbalanced for every other plugin's window. |
 | `UI\Screen.cs` | The picture, the on-screen display, the scrub strip, the signal states, the LED. |
 | `UI\Remote.cs` | Transport, channel up/down, last channel, mute. |
 | `UI\ChannelDial.cs` | Channel numbers (pin order), stepping, last-channel memory, which channels are known dead. |
 | `UI\UiContext.cs` | What every panel needs, so a panel's constructor stays one argument long. |
 | `UI\PosterCard.cs` | One clickable tile, drawn by hand so the whole tile is the hit target. |
 | `UI\PlexArt.cs` | Poster and logo textures, fetched once and kept. |
-| `UI\Tabs\*.cs` | Watch, Library, Live TV, Screen, Sound, Share, Setup. |
+| `UI\RemoteWidget.cs` | The remote: display, dialling, rockers, transport, the menus for subtitles and audio. |
+| `UI\HomeScreen.cs` | The apps: the grid, the now-on card, and the router that shows one app at a time. |
+| `UI\Tabs\*.cs` | The apps' contents: the link box, each library shelf, Live TV, the drawn channels, music, share, setup. |
 
 Two things worth knowing before editing it:
 
@@ -302,7 +308,7 @@ pinned ones stay on the guide reading OFF AIR. "Forgive them" in Setup clears th
 
 ## The other channels
 
-The Channels tab is a dial of everything the set can draw for itself. Each is one class
+The Aetherstream app is a dial of everything the set can draw for itself. Each is one class
 implementing `IFrameChannel` in `Video\`, handed a snapshot by the plugin when it needs data:
 
 | Channel | What it shows | Where the data comes from |
@@ -344,7 +350,7 @@ know what the Shroud's sky is doing.
 
 ## Channel music
 
-The guide and the weather play music underneath, the way the real ones did. The Music tab's
+The guide and the weather play music underneath, the way the real ones did. The Music app's
 "Channel music" section picks the source: the bundled tracks (five Kevin MacLeod lounge pieces,
 CC BY 4.0, in `music\`), a folder of your own (mp3, flac, ogg, m4a, wav, opus, subfolders
 included), or an audio playlist on the Plex server you are signed in to. It is shuffled, looped,
