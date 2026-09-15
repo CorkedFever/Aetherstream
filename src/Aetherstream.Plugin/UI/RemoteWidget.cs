@@ -48,10 +48,15 @@ internal sealed class RemoteWidget(UiContext ui, ChannelDial dial, Screen screen
     /// <summary>Set by the window: the gear opens Setup.</summary>
     public Action? OpenSetup;
 
-    public void Draw()
+    /// <summary>
+    /// Draws the remote. Stretched, the body runs to the foot of the space it is given and the
+    /// line saying what is on sits at the bottom; folded, the window fits the body instead.
+    /// </summary>
+    public void Draw(bool stretch = false)
     {
         var session = ui.Session;
         var now = Environment.TickCount64;
+        var fullHeight = stretch ? ImGui.GetContentRegionAvail().Y : 0f;
 
         this.SettleDial(now);
 
@@ -177,11 +182,19 @@ internal sealed class RemoteWidget(UiContext ui, ChannelDial dial, Screen screen
         if (this.IconKey(FontAwesomeIcon.Cog, "Setup", "##setup", size: third))
             this.OpenSetup?.Invoke();
 
-        // -- what is on ---------------------------------------------------------------------
+        // -- what is on, at the foot ----------------------------------------------------------
+        if (stretch)
+        {
+            var infoHeight = (ImGui.GetTextLineHeight() * 2f) + 16f;
+            var slack = (start.Y + fullHeight - Pad - infoHeight) - ImGui.GetCursorScreenPos().Y;
+            if (slack > 0f)
+                ImGui.Dummy(new Vector2(0f, slack));
+        }
+
         this.DrawInfo(session);
 
         ImGui.EndGroup();
-        var end = new Vector2(start.X + BodyWidth, ImGui.GetItemRectMax().Y + Pad);
+        var end = new Vector2(start.X + BodyWidth, Math.Max(ImGui.GetItemRectMax().Y + Pad, start.Y + fullHeight));
         drawList.ChannelsSetCurrent(0);
         drawList.AddRectFilled(start, end, Theme.U32(Theme.Glass), 16f);
         drawList.AddRect(start, end, Theme.U32(Theme.GlassEdge), 16f);

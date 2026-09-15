@@ -227,18 +227,25 @@ internal sealed class HomeScreen
         if (hovered && status.Length > 0)
             ImGui.SetTooltip(status);
 
-        var plain = app.Colour == Plain;
-        var tint = plain ? Theme.Glass : app.Colour with { W = hovered ? 0.32f : 0.18f };
         var p0 = origin + new Vector2((cellWidth - iconSize) / 2f, 4f);
         var p1 = p0 + new Vector2(iconSize, iconSize);
-        drawList.AddRectFilled(p0, p1, Theme.U32(tint), iconSize * 0.27f);
-        drawList.AddRect(p0, p1, Theme.U32(plain ? Theme.GlassEdge : app.Colour with { W = hovered ? 0.9f : 0.45f }), iconSize * 0.27f);
-
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        if (AppLogos.Has(app.Key, this.ui.Config.MediaServerKind))
         {
-            var icon = app.Icon.ToIconString();
-            var size = ImGui.CalcTextSize(icon);
-            drawList.AddText(p0 + ((new Vector2(iconSize) - size) / 2f), Theme.U32(plain ? Theme.TextDim : app.Colour), icon);
+            AppLogos.Draw(drawList, app.Key, p0, iconSize, this.ui.Config.MediaServerKind, hovered);
+        }
+        else
+        {
+            var plain = app.Colour == Plain;
+            var tint = plain ? Theme.Glass : app.Colour with { W = hovered ? 0.32f : 0.18f };
+            drawList.AddRectFilled(p0, p1, Theme.U32(tint), iconSize * 0.27f);
+            drawList.AddRect(p0, p1, Theme.U32(plain ? Theme.GlassEdge : app.Colour with { W = hovered ? 0.9f : 0.45f }), iconSize * 0.27f);
+
+            using (ImRaii.PushFont(UiBuilder.IconFont))
+            {
+                var icon = app.Icon.ToIconString();
+                var size = ImGui.CalcTextSize(icon);
+                drawList.AddText(p0 + ((new Vector2(iconSize) - size) / 2f), Theme.U32(plain ? Theme.TextDim : app.Colour), icon);
+            }
         }
 
         var label = Ui.Fit(app.Name, cellWidth - 8f);

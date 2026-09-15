@@ -163,7 +163,7 @@ internal sealed class ControlWindow : Window
         using (var column = ImRaii.Child("##remote", new Vector2(FoldedWidth, -1f), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
         {
             if (column)
-                this.remote.Draw();
+                this.remote.Draw(stretch: true);
         }
 
         ImGui.SameLine(0f, ColumnGap);
