@@ -241,6 +241,18 @@ internal sealed class SoundTab(UiContext ui)
     }
 
     /// <summary>The Music input: the music under the channels, the radio, and the podcasts.</summary>
+    /// <summary>One part, by its number, for the home screen's apps: music, rolls, radio, podcasts.</summary>
+    public void DrawPart(int index)
+    {
+        switch (index)
+        {
+            case 1: this.Rolls.Draw(); break;
+            case 2: this.Radio.Draw(); break;
+            case 3: this.Podcasts.Draw(); break;
+            default: this.DrawMusic(); break;
+        }
+    }
+
     public void Draw()
     {
         Ui.Strip("music", ["MUSIC", "ROLLS", "RADIO", "PODCASTS"], ref this.part);

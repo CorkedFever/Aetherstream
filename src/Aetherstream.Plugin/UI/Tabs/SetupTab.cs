@@ -41,6 +41,9 @@ internal sealed class SetupTab(UiContext ui)
     /// <summary>Set by the window: the sound output, from the music tab's old home.</summary>
     public Action? DrawSound;
 
+    /// <summary>Set by the window: the home screen's apps, for the tick boxes that put them away.</summary>
+    public Func<IReadOnlyList<(string Key, string Name)>>? Apps;
+
     private string itemInput = string.Empty;
     private string itemStatus = string.Empty;
 
@@ -55,8 +58,37 @@ internal sealed class SetupTab(UiContext ui)
             case 3: this.DrawTools(); this.DrawPlex();
         ImGui.Spacing();
         this.DrawMediaServer(); break;
-            default: this.DrawDecoding(); this.DrawDiagnostics(); break;
+            default: this.DrawHomeScreen(); this.DrawDecoding(); this.DrawDiagnostics(); break;
         }
+    }
+
+    /// <summary>Which apps the home screen shows. Put away the ones you never open; nothing else changes.</summary>
+    private void DrawHomeScreen()
+    {
+        Ui.Section("Home screen");
+        Ui.Hint("Untick an app to take it off the home screen. Its sign-ins and settings are kept.");
+
+        var apps = this.Apps?.Invoke() ?? [];
+        var hidden = ui.Config.HiddenApps;
+        var columns = Math.Max(1, (int)(ImGui.GetContentRegionAvail().X / 180f));
+        for (var i = 0; i < apps.Count; i++)
+        {
+            if (i % columns != 0)
+                ImGui.SameLine(((i % columns) * 180f) + 8f);
+
+            var (key, name) = apps[i];
+            var shown = !hidden.Contains(key);
+            if (ImGui.Checkbox($"{name}##app{key}", ref shown))
+            {
+                if (shown)
+                    hidden.Remove(key);
+                else if (!hidden.Contains(key))
+                    hidden.Add(key);
+                ui.SaveConfig();
+            }
+        }
+
+        ImGui.Spacing();
     }
 
     /// <summary>

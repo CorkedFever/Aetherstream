@@ -9,27 +9,25 @@ using Dalamud.Interface.Windowing;
 namespace Aetherstream.Plugin.UI;
 
 /// <summary>
-/// The set. A screen at the top, the remote under it, a strip of inputs, and whichever input is
-/// selected filling the rest.
+/// The set: a remote in the left hand and the television beside it. The remote is always
+/// there; the screen and the home screen of apps appear to its right when the window is
+/// unfolded, and folding puts them away and leaves the remote alone in a corner of the game.
 /// <para>
-/// The screen and the remote sit outside the tabs deliberately: pausing what is playing should
-/// never mean navigating away from what you were doing, and the picture is the one thing worth
-/// seeing from every panel.
+/// The remote sits outside the apps deliberately: pausing what is playing, or dialling a channel,
+/// should never mean navigating away from whatever you were looking at.
 /// </para>
 /// </summary>
 internal sealed class ControlWindow : Window
 {
     private const float TitleBarHeight = 34f;
+    private const float ColumnGap = 12f;
 
     private readonly UiContext ui;
     private readonly Action saveConfig;
-    private readonly Remote remote;
-    private readonly RemoteWidget widget;
-    private readonly (string Label, Action Draw)[] inputs;
-    private int input;
-    private Vector2 unfoldedSize = new(560f, 720f);
+    private readonly RemoteWidget remote;
+    private Vector2 unfoldedSize = new(820f, 720f);
 
-    /// <summary>The folded widget's content width. Fixed, or auto-resize would keep whatever width the window had.</summary>
+    /// <summary>The folded window's content width. Fixed, or auto-resize would keep whatever width the window had.</summary>
     private const float FoldedWidth = RemoteWidget.Width;
     private Vector2? sizeToRestore;
     private bool loggedDrawFailure;
@@ -42,8 +40,7 @@ internal sealed class ControlWindow : Window
 
         this.Dial = new ChannelDial(context);
         this.Screen = new Screen(context);
-        this.remote = new Remote(context, this.Dial, this.Screen);
-        this.widget = new RemoteWidget(context, this.Dial) { Unfold = this.ToggleFold };
+        this.remote = new RemoteWidget(context, this.Dial, this.Screen) { Home = this.GoHome, OpenSetup = () => this.OpenApp("setup") };
 
         var watch = new WatchTab(context);
         this.Library = new LibraryTab(context);
@@ -54,19 +51,10 @@ internal sealed class ControlWindow : Window
         this.Channels = new ChannelsTab(context);
         this.Share = new ShareTab(context);
         this.Setup = new SetupTab(context) { LineupChoices = () => this.LiveTv.Choices, DrawScreen = screen.Draw, DrawSound = this.Sound.DrawOutput };
+        this.Home = new HomeScreen(context, this.Screen, this.Dial, watch, this.Library, this.LiveTv, this.Channels, this.Sound, this.Share, this.Setup);
+        this.Setup.Apps = () => this.Home.Apps;
 
-        this.inputs =
-        [
-            ("Watch", watch.Draw),
-            ("Library", this.Library.Draw),
-            ("Live TV", this.LiveTv.Draw),
-            ("Channels", this.Channels.Draw),
-            ("Music", this.Sound.Draw),
-            ("Share", this.Share.Draw),
-            ("Setup", this.Setup.Draw),
-        ];
-
-        // Wide enough for four poster columns and a 16:9 picture worth looking at.
+        // Wide enough for the remote, four poster columns and a 16:9 picture worth looking at.
         this.Size = this.unfoldedSize;
         this.SizeCondition = ImGuiCond.FirstUseEver;
         this.Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
@@ -75,6 +63,8 @@ internal sealed class ControlWindow : Window
     internal Screen Screen { get; }
 
     internal ChannelDial Dial { get; }
+
+    internal HomeScreen Home { get; }
 
     internal LibraryTab Library { get; }
 
@@ -88,17 +78,33 @@ internal sealed class ControlWindow : Window
 
     internal SetupTab Setup { get; }
 
+    /// <summary>Shows an app on the home screen, unfolding the window if it was folded.</summary>
+    internal void OpenApp(string key)
+    {
+        this.Home.OpenApp(key);
+        if (this.ui.Config.WindowMinimised)
+            this.ToggleFold();
+        this.IsOpen = true;
+    }
+
+    private void GoHome()
+    {
+        this.Home.GoHome();
+        if (this.ui.Config.WindowMinimised)
+            this.ToggleFold();
+    }
+
     public override void PreDraw()
     {
         var folded = this.ui.Config.WindowMinimised;
 
-        // Folded, the window shrinks to its bar rather than leaving a dark slab under it.
+        // Folded, the window shrinks to the remote rather than leaving a dark slab beside it.
         this.Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse
             | (folded ? ImGuiWindowFlags.AlwaysAutoResize : ImGuiWindowFlags.None);
 
         this.SizeConstraints = folded
             ? new WindowSizeConstraints { MinimumSize = new Vector2(FoldedWidth + 16f, TitleBarHeight + 24f), MaximumSize = new Vector2(float.MaxValue, float.MaxValue) }
-            : new WindowSizeConstraints { MinimumSize = new Vector2(440f, 460f), MaximumSize = new Vector2(1400f, 1600f) };
+            : new WindowSizeConstraints { MinimumSize = new Vector2(FoldedWidth + ColumnGap + 460f, 560f), MaximumSize = new Vector2(1600f, 1600f) };
 
         if (this.sizeToRestore is { } restore)
         {
@@ -149,25 +155,31 @@ internal sealed class ControlWindow : Window
 
         if (this.ui.Config.WindowMinimised)
         {
-            this.DrawFolded();
+            this.remote.Draw();
             return;
         }
 
-        this.Screen.Draw();
-        ImGui.Dummy(new Vector2(0f, 4f));
-        this.remote.Draw();
-        ImGui.Dummy(new Vector2(0f, 6f));
-        this.DrawInputStrip();
+        // The remote in its own column, so the television beside it scrolls without moving it.
+        using (var column = ImRaii.Child("##remote", new Vector2(FoldedWidth, -1f), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+        {
+            if (column)
+                this.remote.Draw();
+        }
 
-        // Each input scrolls on its own, so a long panel never pushes the screen off the top.
-        using var body = ImRaii.Child($"##body{this.input}", new Vector2(-1f, -1f), false);
-        if (body)
-            this.inputs[this.input].Draw();
+        ImGui.SameLine(0f, ColumnGap);
+
+        using var set = ImRaii.Child("##set", new Vector2(-1f, -1f), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+        if (!set)
+            return;
+
+        this.Screen.Draw();
+        ImGui.Dummy(new Vector2(0f, 6f));
+        this.Home.Draw();
     }
 
     /// <summary>
-    /// The nameplate, what is on, and the fold and close buttons — drawn by hand because the whole
-    /// window is drawn by hand, and Dalamud's title bar would sit on top of it like a sticker.
+    /// The nameplate, what is open, and the fold and close buttons — drawn by hand because the
+    /// whole window is drawn by hand, and Dalamud's title bar would sit on top of it like a sticker.
     /// </summary>
     private void DrawTitleBar()
     {
@@ -197,13 +209,19 @@ internal sealed class ControlWindow : Window
             ImGui.SetCursorScreenPos(origin + new Vector2(12f, (TitleBarHeight - captionSize.Y) / 2f));
             ImGui.TextColored(Theme.Text, Caption);
 
-            // What is on, right-aligned against the buttons — the folded bar's whole reason to exist.
-            if (this.ui.Session.IsPlaying && !this.ui.Config.WindowMinimised)
+            // What is open, right-aligned against the buttons: the app, or what is on from the grid.
+            if (!this.ui.Config.WindowMinimised)
             {
-                var title = Ui.Ellipsis(this.Screen.Title(), 34).ToUpperInvariant();
-                var titleSize = ImGui.CalcTextSize(title);
-                ImGui.SetCursorScreenPos(origin + new Vector2(width - titleSize.X - buttonsWidth - 8f, (TitleBarHeight - titleSize.Y) / 2f));
-                ImGui.TextColored(Theme.TextDim, title);
+                var title = this.Home.Title();
+                if (title.Length == 0 && this.ui.Session.IsPlaying)
+                    title = this.Screen.Title();
+                if (title.Length > 0)
+                {
+                    title = Ui.Ellipsis(title, 34).ToUpperInvariant();
+                    var titleSize = ImGui.CalcTextSize(title);
+                    ImGui.SetCursorScreenPos(origin + new Vector2(width - titleSize.X - buttonsWidth - 8f, (TitleBarHeight - titleSize.Y) / 2f));
+                    ImGui.TextColored(Theme.TextDim, title);
+                }
             }
 
             ImGui.SetCursorScreenPos(origin + new Vector2(width - buttonsWidth, (TitleBarHeight - buttonHeight) / 2f));
@@ -212,7 +230,7 @@ internal sealed class ControlWindow : Window
 
             var foldHovered = ImGui.IsItemHovered();
             if (foldHovered)
-                ImGui.SetTooltip(this.ui.Config.WindowMinimised ? "Unfold" : "Fold down to a remote; the picture keeps playing");
+                ImGui.SetTooltip(this.ui.Config.WindowMinimised ? "Unfold the television" : "Fold down to the remote; the picture keeps playing");
 
             ImGui.SetCursorScreenPos(origin + new Vector2(width - buttonsWidth + 6f, (TitleBarHeight - captionSize.Y) / 2f - 4f));
             ImGui.TextColored(foldHovered ? Theme.Text : Theme.TextFaint, this.ui.Config.WindowMinimised ? "^" : "_");
@@ -229,13 +247,6 @@ internal sealed class ControlWindow : Window
         ImGui.SetCursorScreenPos(origin + new Vector2(0f, TitleBarHeight + 8f));
     }
 
-    /// <summary>
-    /// Folded: the LED, the state, and a thumbnail of the picture, so the window can live in a
-    /// corner while the furnishing does the showing and still say at a glance that all is well.
-    /// </summary>
-    /// <summary>Folded: the remote itself. See <see cref="RemoteWidget"/>.</summary>
-    private void DrawFolded() => this.widget.Draw();
-
     private void ToggleFold()
     {
         // Folding lets the window shrink to the remote, which is the size ImGui would then
@@ -247,49 +258,5 @@ internal sealed class ControlWindow : Window
 
         this.ui.Config.WindowMinimised = !this.ui.Config.WindowMinimised;
         this.saveConfig();
-    }
-
-    /// <summary>
-    /// The inputs, as the strip on the front of a set: the display face, the selected one lit with
-    /// a line under it. Screen and the sound output live on Setup; Music holds the music, radio and podcasts.
-    /// </summary>
-    private void DrawInputStrip()
-    {
-        var drawList = ImGui.GetWindowDrawList();
-
-        using (Theme.PushDisplay())
-        {
-            for (var i = 0; i < this.inputs.Length; i++)
-            {
-                if (i > 0)
-                    ImGui.SameLine(0f, 14f);
-
-                var label = this.inputs[i].Label.ToUpperInvariant();
-                var size = ImGui.CalcTextSize(label);
-                var active = i == this.input;
-
-                if (ImGui.InvisibleButton($"##input{i}", size + new Vector2(6f, 6f)))
-                    this.input = i;
-
-                var min = ImGui.GetItemRectMin();
-                var max = ImGui.GetItemRectMax();
-                var hovered = ImGui.IsItemHovered();
-
-                drawList.AddText(
-                    min + new Vector2(3f, 3f),
-                    Theme.U32(active ? Theme.Accent : hovered ? Theme.Text : Theme.TextDim),
-                    label);
-
-                if (active)
-                    drawList.AddRectFilled(new Vector2(min.X, max.Y - 1f), new Vector2(max.X, max.Y + 1f), Theme.U32(Theme.Accent));
-            }
-        }
-
-        // The rule the strip sits on.
-        var y = ImGui.GetItemRectMax().Y + 5f;
-        var left = ImGui.GetCursorScreenPos().X;
-        drawList.AddLine(new Vector2(left, y), new Vector2(left + ImGui.GetContentRegionAvail().X, y), Theme.U32(Theme.Edge), 1f);
-
-        ImGui.Dummy(new Vector2(0f, 8f));
     }
 }

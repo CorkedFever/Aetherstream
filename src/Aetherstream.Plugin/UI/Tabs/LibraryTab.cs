@@ -102,11 +102,14 @@ internal sealed class LibraryTab(UiContext ui)
 
     private bool Configured => ui.Config.PlexServer.Length > 0 && ui.Config.PlexToken.Length > 0;
 
-    public void Draw()
+    /// <summary>
+    /// One shelf, by its number, without the strip: the home screen shows each as an app. Zero is
+    /// Plex, then the media server, YouTube, Twitch, Dailymotion, Pluto, Red Bull, PBS, NASA, TED,
+    /// the Archive, and Local.
+    /// </summary>
+    public void DrawShelf(int index)
     {
-        var serverLabel = ui.Config.MediaServerKind.Equals("Emby", StringComparison.OrdinalIgnoreCase) ? "EMBY" : "JELLYFIN";
-        Ui.Strip("shelf", ["PLEX", serverLabel, "YOUTUBE", "TWITCH", "DAILYMOTION", "PLUTO", "RED BULL", "PBS", "NASA", "TED", "ARCHIVE", "LOCAL"], ref this.shelf);
-        switch (this.shelf)
+        switch (index)
         {
             case 1: this.MediaServer.Draw(); return;
             case 2: this.YouTube.Draw(); return;
@@ -119,8 +122,12 @@ internal sealed class LibraryTab(UiContext ui)
             case 9: this.Ted.Draw(); return;
             case 10: this.Archive.Draw(); return;
             case 11: this.Local.Draw(); return;
+            default: this.DrawPlex(); return;
         }
+    }
 
+    private void DrawPlex()
+    {
         if (!this.Configured)
         {
             this.DrawSignIn();
