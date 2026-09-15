@@ -58,9 +58,8 @@ public sealed partial class Plugin
                 return;
             }
 
-            this.config.LiveTvAlternates[channel.Url] = found;
+            this.SetAlternate(channel.Url, found);
             this.MarkAlive(channel.Url);
-            this.configDirty = true;
             this.log.Information($"[health] '{channel.Name}' moved to another address: {found}");
 
             if (play && string.Equals(this.config.Source, channel.Url, StringComparison.OrdinalIgnoreCase))
