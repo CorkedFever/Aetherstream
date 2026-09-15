@@ -64,12 +64,33 @@ internal static class Ui
     public static void Section(string title) => Theme.Heading(title);
 
     /// <summary>
-    /// A row of chips that wraps to the panel, one lit. Returns the index pressed this frame, or
-    /// -1 when none was; the caller keeps the selection, which may legitimately be none.
+    /// A way to pick one of a shelf's listings: a row of chips while there are few enough to read
+    /// at a glance, a dropdown once there are more, since rows of chips become a wall. Returns
+    /// the index pressed this frame, or -1 when none was; the caller keeps the selection, which
+    /// may legitimately be none.
     /// </summary>
     public static int Chips(string id, IReadOnlyList<string> labels, int selected)
     {
         var pressed = -1;
+        if (labels.Count > 6)
+        {
+            ImGui.SetNextItemWidth(Math.Min(320f, ImGui.GetContentRegionAvail().X));
+            var preview = selected >= 0 && selected < labels.Count ? labels[selected] : "Choose a shelf…";
+            using var combo = ImRaii.Combo($"##{id}pick", preview);
+            if (combo)
+            {
+                for (var i = 0; i < labels.Count; i++)
+                {
+                    if (ImGui.Selectable($"{labels[i]}##{id}{i}", i == selected))
+                        pressed = i;
+                    if (i == selected)
+                        ImGui.SetItemDefaultFocus();
+                }
+            }
+
+            return pressed;
+        }
+
         var rightEdge = ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X;
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         for (var i = 0; i < labels.Count; i++)

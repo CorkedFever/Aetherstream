@@ -7,7 +7,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherstream.Plugin.UI.Tabs;
 
-/// <summary>Red Bull TV: its shelves as chips, a search, and wide tiles with the cover art. Free, no account.</summary>
+/// <summary>Red Bull TV: its shelves to pick from, a search, and wide tiles with the cover art. Free, no account.</summary>
 internal sealed class RedBullTab(UiContext ui)
 {
     private List<RedBullTv.Shelf> shelves = [];
@@ -59,28 +59,14 @@ internal sealed class RedBullTab(UiContext ui)
 
         Ui.Hint("Red Bull TV: films, documentaries, shows and replays. Free, worldwide, no account.");
 
-        var rightEdge = ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X;
-        var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var first = true;
-        foreach (var s in this.shelves)
+        var picked = Ui.Chips("rb", this.shelves.Select(s => s.Label).ToList(), this.shelves.FindIndex(s => s.Id == this.shelf));
+        if (picked >= 0)
         {
-            var width = ImGui.CalcTextSize(s.Label).X + (ImGui.GetStyle().FramePadding.X * 2);
-            if (!first && ImGui.GetItemRectMax().X + spacing + width < rightEdge)
-                ImGui.SameLine();
-            first = false;
-
-            var selected = s.Id == this.shelf;
-            using var colours = ImRaii.PushColor(ImGuiCol.Button, selected ? Theme.GlassLit : Theme.Glass)
-                .Push(ImGuiCol.Border, selected ? Theme.Accent : Theme.GlassEdge)
-                .Push(ImGuiCol.Text, selected ? Theme.Accent : Theme.Text);
-            using var border = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 1f);
-            if (ImGui.Button($"{s.Label}##rb{s.Id}"))
-            {
-                this.shelf = s.Id;
-                this.items = [];
-                this.status = $"Looking in {s.Label}…";
-                this.OpenShelf?.Invoke(s);
-            }
+            var s = this.shelves[picked];
+            this.shelf = s.Id;
+            this.items = [];
+            this.status = $"Looking in {s.Label}…";
+            this.OpenShelf?.Invoke(s);
         }
 
         ImGui.Spacing();

@@ -8,7 +8,7 @@ using Dalamud.Interface.Utility.Raii;
 namespace Aetherstream.Plugin.UI.Tabs;
 
 /// <summary>
-/// Pluto TV on demand: its shelves as chips, a search, posters, and a series opened into its
+/// Pluto TV on demand: its shelves to pick from, a search, posters, and a series opened into its
 /// seasons and episodes. Free, with Pluto's own ad breaks in the stream.
 /// </summary>
 internal sealed class PlutoTab(UiContext ui)
@@ -102,27 +102,14 @@ internal sealed class PlutoTab(UiContext ui)
         if (this.categories.Count == 0)
             return;
 
-        var rightEdge = ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X;
-        var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var first = true;
-        foreach (var c in this.categories.Take(28))
+        var labels = this.categories.Select(c => c.Name).ToList();
+        var picked = Ui.Chips("plutoshelf", labels, labels.IndexOf(this.shelf));
+        if (picked >= 0)
         {
-            var width = ImGui.CalcTextSize(c.Name).X + (ImGui.GetStyle().FramePadding.X * 2);
-            if (!first && ImGui.GetItemRectMax().X + spacing + width < rightEdge)
-                ImGui.SameLine();
-            first = false;
-
-            var selected = c.Name == this.shelf;
-            using var colours = ImRaii.PushColor(ImGuiCol.Button, selected ? Theme.GlassLit : Theme.Glass)
-                .Push(ImGuiCol.Border, selected ? Theme.Accent : Theme.GlassEdge)
-                .Push(ImGuiCol.Text, selected ? Theme.Accent : Theme.Text);
-            using var border = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 1f);
-            if (ImGui.Button($"{c.Name}##shelf{c.Name}"))
-            {
-                this.shelf = c.Name;
-                this.items = c.Items;
-                this.status = string.Empty;
-            }
+            var c = this.categories[picked];
+            this.shelf = c.Name;
+            this.items = c.Items;
+            this.status = string.Empty;
         }
     }
 

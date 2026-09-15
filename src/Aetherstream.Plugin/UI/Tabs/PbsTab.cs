@@ -41,24 +41,9 @@ internal sealed class PbsTab(UiContext ui)
 
         Ui.Hint("PBS's shows, read from their pages. Free; Passport titles are left out, and some are only for viewers in the United States.");
 
-        var rightEdge = ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X;
-        var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var first = true;
-        foreach (var show in PbsShows.Shows)
-        {
-            var width = ImGui.CalcTextSize(show.Name).X + (ImGui.GetStyle().FramePadding.X * 2);
-            if (!first && ImGui.GetItemRectMax().X + spacing + width < rightEdge)
-                ImGui.SameLine();
-            first = false;
-
-            var selected = show.Slug == this.slug;
-            using var colours = ImRaii.PushColor(ImGuiCol.Button, selected ? Theme.GlassLit : Theme.Glass)
-                .Push(ImGuiCol.Border, selected ? Theme.Accent : Theme.GlassEdge)
-                .Push(ImGuiCol.Text, selected ? Theme.Accent : Theme.Text);
-            using var border = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 1f);
-            if (ImGui.Button($"{show.Name}##pbs{show.Slug}"))
-                this.Go(show.Slug);
-        }
+        var picked = Ui.Chips("pbs", PbsShows.Shows.Select(s => s.Name).ToList(), Array.FindIndex(PbsShows.Shows, s => s.Slug == this.slug));
+        if (picked >= 0)
+            this.Go(PbsShows.Shows[picked].Slug);
 
         ImGui.Spacing();
         if (this.status.Length > 0)
