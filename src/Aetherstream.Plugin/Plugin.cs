@@ -229,6 +229,12 @@ public sealed partial class Plugin : IDalamudPlugin
         this.window.Library.RedBull.Search = this.SearchRedBull;
         this.window.Library.RedBull.Play = this.PlayRedBull;
         this.window.Library.Pbs.Open = this.OpenPbs;
+        this.window.Library.MediaServer.SignIn = this.SignInMediaServer;
+        this.window.Library.MediaServer.Browse = this.BrowseMediaServer;
+        this.window.Library.MediaServer.Open = this.OpenMediaServer;
+        this.window.Library.MediaServer.OpenSeries = this.OpenMediaServerSeries;
+        this.window.Library.MediaServer.Addresses = this.MediaServerAddresses;
+        this.window.Setup.SignOutMediaServer = this.SignOutMediaServer;
         this.window.Library.Nasa.Browse = this.BrowseNasa;
         this.window.Library.Nasa.Open = this.OpenNasa;
         this.window.Library.Ted.Browse = this.BrowseTed;

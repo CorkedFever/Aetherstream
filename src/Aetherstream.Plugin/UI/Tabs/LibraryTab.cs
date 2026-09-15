@@ -28,6 +28,9 @@ internal sealed class LibraryTab(UiContext ui)
     /// <summary>The other library: the Internet Archive's films, no account needed.</summary>
     internal ArchiveTab Archive { get; } = new(ui);
 
+    /// <summary>Your Jellyfin or Emby server.</summary>
+    internal MediaServerTab MediaServer { get; } = new(ui);
+
     /// <summary>Videos on this machine.</summary>
     internal LocalTab Local { get; } = new(ui);
 
@@ -101,65 +104,21 @@ internal sealed class LibraryTab(UiContext ui)
 
     public void Draw()
     {
-        Ui.Strip("shelf", ["PLEX", "YOUTUBE", "TWITCH", "DAILYMOTION", "PLUTO", "RED BULL", "PBS", "NASA", "TED", "ARCHIVE", "LOCAL"], ref this.shelf);
-        if (this.shelf == 1)
+        var serverLabel = ui.Config.MediaServerKind.Equals("Emby", StringComparison.OrdinalIgnoreCase) ? "EMBY" : "JELLYFIN";
+        Ui.Strip("shelf", ["PLEX", serverLabel, "YOUTUBE", "TWITCH", "DAILYMOTION", "PLUTO", "RED BULL", "PBS", "NASA", "TED", "ARCHIVE", "LOCAL"], ref this.shelf);
+        switch (this.shelf)
         {
-            this.YouTube.Draw();
-            return;
-        }
-
-        if (this.shelf == 2)
-        {
-            this.Twitch.Draw();
-            return;
-        }
-
-        if (this.shelf == 3)
-        {
-            this.Dailymotion.Draw();
-            return;
-        }
-
-        if (this.shelf == 4)
-        {
-            this.Pluto.Draw();
-            return;
-        }
-
-        if (this.shelf == 5)
-        {
-            this.RedBull.Draw();
-            return;
-        }
-
-        if (this.shelf == 6)
-        {
-            this.Pbs.Draw();
-            return;
-        }
-
-        if (this.shelf == 7)
-        {
-            this.Nasa.Draw();
-            return;
-        }
-
-        if (this.shelf == 8)
-        {
-            this.Ted.Draw();
-            return;
-        }
-
-        if (this.shelf == 9)
-        {
-            this.Archive.Draw();
-            return;
-        }
-
-        if (this.shelf == 10)
-        {
-            this.Local.Draw();
-            return;
+            case 1: this.MediaServer.Draw(); return;
+            case 2: this.YouTube.Draw(); return;
+            case 3: this.Twitch.Draw(); return;
+            case 4: this.Dailymotion.Draw(); return;
+            case 5: this.Pluto.Draw(); return;
+            case 6: this.RedBull.Draw(); return;
+            case 7: this.Pbs.Draw(); return;
+            case 8: this.Nasa.Draw(); return;
+            case 9: this.Ted.Draw(); return;
+            case 10: this.Archive.Draw(); return;
+            case 11: this.Local.Draw(); return;
         }
 
         if (!this.Configured)

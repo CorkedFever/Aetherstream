@@ -52,7 +52,9 @@ internal sealed class SetupTab(UiContext ui)
             case 0: this.DrawScreen?.Invoke(); break;
             case 1: this.DrawSound?.Invoke(); break;
             case 2: this.DrawChannelSettings(); break;
-            case 3: this.DrawTools(); this.DrawPlex(); break;
+            case 3: this.DrawTools(); this.DrawPlex();
+        ImGui.Spacing();
+        this.DrawMediaServer(); break;
             default: this.DrawDecoding(); this.DrawDiagnostics(); break;
         }
     }
@@ -341,6 +343,27 @@ internal sealed class SetupTab(UiContext ui)
             "to it. \"Original file\" sends the untouched file and is only sensible on a LAN.\n\n" +
             "Transcoding is also what puts the sound out of step with the picture, so direct play " +
             "is worth trying first if your line can take it.");
+    }
+
+    /// <summary>Signs out of the Jellyfin or Emby server, forgetting its token.</summary>
+    internal Action? SignOutMediaServer;
+
+    private void DrawMediaServer()
+    {
+        Ui.Section("Jellyfin or Emby server");
+
+        if (ui.Config.MediaServerToken.Length == 0)
+        {
+            Ui.Hint("Sign in on the Library tab, under the Jellyfin shelf. The password goes to your server once; only its token is kept.");
+            return;
+        }
+
+        ImGui.TextUnformatted($"{ui.Config.MediaServerName} ({ui.Config.MediaServerKind}) at {ui.Config.MediaServerUrl}, as {ui.Config.MediaServerUserName}");
+        ImGui.SameLine();
+        Ui.Dot(Ui.Good, "signed in");
+        if (ImGui.Button("Sign out##ms"))
+            this.SignOutMediaServer?.Invoke();
+        Ui.Tip("Forgets the token here. The session stays listed on the server until you remove it there.");
     }
 
     private void DrawDecoding()

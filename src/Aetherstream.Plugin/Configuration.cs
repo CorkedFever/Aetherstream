@@ -186,6 +186,24 @@ public sealed class Configuration : IPluginConfiguration
     public int PlexMaxKilobits { get; set; }
 
     /// <summary>
+    /// Your Jellyfin or Emby server and the sign-in kept for it: the token the server gave back
+    /// for a name and password, never the password. Only ever sent to this address.
+    /// </summary>
+    public string MediaServerUrl { get; set; } = string.Empty;
+
+    public string MediaServerToken { get; set; } = string.Empty;
+
+    public string MediaServerUserId { get; set; } = string.Empty;
+
+    public string MediaServerUserName { get; set; } = string.Empty;
+
+    /// <summary>The server's own name, for the shelf.</summary>
+    public string MediaServerName { get; set; } = string.Empty;
+
+    /// <summary>"Jellyfin" or "Emby", as the server described itself.</summary>
+    public string MediaServerKind { get; set; } = "Jellyfin";
+
+    /// <summary>
     /// This install's identity to Plex. Generated once per install.
     /// <para>
     /// Plex keys transcode sessions and "now playing" on the client identifier. When every
