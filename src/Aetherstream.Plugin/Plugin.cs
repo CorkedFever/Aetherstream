@@ -224,6 +224,11 @@ public sealed partial class Plugin : IDalamudPlugin
         this.window.Library.Pluto.Search = this.SearchPluto;
         this.window.Library.Pluto.OpenSeries = this.OpenPlutoSeries;
         this.window.Library.Pluto.Play = this.PlayPluto;
+        this.window.Library.RedBull.Browse = this.BrowseRedBull;
+        this.window.Library.RedBull.OpenShelf = this.OpenRedBullShelf;
+        this.window.Library.RedBull.Search = this.SearchRedBull;
+        this.window.Library.RedBull.Play = this.PlayRedBull;
+        this.window.Library.Pbs.Open = this.OpenPbs;
         this.broadcast.Log = message => log.Information(message);
         this.window.Share.Session = () => this.broadcast;
         this.window.Share.StartBroadcast = this.StartBroadcast;
