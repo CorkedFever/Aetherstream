@@ -52,6 +52,9 @@ internal sealed class UiContext
     /// <summary>Where yt-dlp would be found right now, or null. For the Setup tab's readout.</summary>
     public required Func<string?> LocateYtDlp { get; init; }
 
+    /// <summary>Whether the music source had nothing and the bundled tracks are standing in. For the Music tab.</summary>
+    public Func<bool>? MusicFellBack { get; init; }
+
     /// <summary>The plugin's file picker. Shared, because only one dialog can sensibly be open at a time.</summary>
     public required FileDialogManager FileDialogs { get; init; }
 

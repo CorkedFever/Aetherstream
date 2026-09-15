@@ -13,6 +13,9 @@ public sealed partial class Plugin
     private long musicScannedAtMs = -1;
     private List<string> plexMusicTracks = [];
 
+    /// <summary>Whether the chosen source had nothing and the bundled tracks are standing in.</summary>
+    private bool musicFellBack;
+
     private void WireMusic()
     {
         this.window.Sound.LoadPlexPlaylists = this.LoadPlexPlaylists;
@@ -77,6 +80,24 @@ public sealed partial class Plugin
         catch (Exception ex)
         {
             this.log.Warning(ex, "[music] could not list the tracks.");
+        }
+
+        // A source with nothing in it, no rolls ticked, a folder gone, a feed not read yet, falls
+        // back to the bundled tracks rather than to silence; the Music tab says so.
+        this.musicFellBack = false;
+        if (found.Count == 0 && this.config.ChannelMusicSource != "bundled")
+        {
+            try
+            {
+                var bundled = Path.Combine(this.pluginInterface.AssemblyLocation.Directory?.FullName ?? AppContext.BaseDirectory, "music");
+                if (Directory.Exists(bundled))
+                    found.AddRange(ScanFolder(bundled, 50));
+                this.musicFellBack = found.Count > 0;
+            }
+            catch (Exception ex)
+            {
+                this.log.Warning(ex, "[music] could not list the bundled tracks.");
+            }
         }
 
         // Only replaced when the contents differ, so a rescan that finds the same files does not

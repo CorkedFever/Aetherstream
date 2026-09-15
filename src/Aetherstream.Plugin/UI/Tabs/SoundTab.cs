@@ -38,16 +38,19 @@ internal sealed class SoundTab(UiContext ui)
         Ui.Section("Channel music");
 
         var on = ui.Config.ChannelMusic;
-        if (ImGui.Checkbox("Play music on the guide and weather channels", ref on))
+        if (ImGui.Checkbox("Play music under the drawn channels", ref on))
         {
             ui.Config.ChannelMusic = on;
             ui.SaveConfig();
         }
 
-        Ui.Tip("The smooth jazz under the forecast. The weather covers the picture, so its sound gives way to the music; the guide keeps the picture in the corner, so a film playing keeps its sound and the music only fills in when nothing is on.");
+        Ui.Tip("The music under the shows and the info channels, and what the Radio channel plays. The weather covers the picture, so its sound gives way to the music; the guide keeps the picture in the corner, so a film playing keeps its sound and the music only fills in when nothing is on.");
 
         if (!on)
+        {
+            Ui.Hint("Off: the shows, the info channels and the Radio channel are silent until this is on.");
             return;
+        }
 
         var level = ui.Config.ChannelMusicVolume;
         if (ImGui.SliderFloat("Music level", ref level, 0f, 1f, "%.2f"))
@@ -101,6 +104,9 @@ internal sealed class SoundTab(UiContext ui)
                 Ui.Hint("A few royalty-free lounge tracks that ship with the plugin. Credits are in the music folder.");
                 break;
         }
+
+        if (ui.MusicFellBack?.Invoke() == true)
+            ImGui.TextColored(Theme.Warn, "That source has nothing to play yet, so the bundled tracks are standing in.");
 
         if (ui.Session.MusicNowPlaying is { Length: > 0 } track)
             ImGui.TextColored(Theme.TextDim, $"Now playing: {track}");

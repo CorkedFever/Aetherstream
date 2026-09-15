@@ -195,6 +195,7 @@ public sealed partial class Plugin : IDalamudPlugin
             FindAnchor = () => this.FindAnchor(this.config.Placement),
             UnbindSurface = this.UnbindSurfaces,
             LocateYtDlp = () => YtDlpResolver.Locate(this.config.YtDlpPath, this.ToolDirectories()),
+            MusicFellBack = () => this.musicFellBack,
             FileDialogs = this.fileDialogs,
             Guide = this.guideChannel,
             Weather = this.weatherChannel,
