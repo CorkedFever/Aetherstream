@@ -484,6 +484,31 @@ internal sealed class StreamSession(
     }
 
     /// <summary>
+    /// Where the picture sits inside the texture, as texture coordinates: the whole of it when
+    /// there is no fit, else the rectangle <see cref="Fit"/> paints into. The furnishing shows the
+    /// texture entire, since the fit exists for its sake; the window shows only this part, so its
+    /// picture is never squashed or boxed by a fit meant for a wall.
+    /// </summary>
+    public (System.Numerics.Vector2 Uv0, System.Numerics.Vector2 Uv1) PictureUv
+    {
+        get
+        {
+            if (!config.HasFit)
+                return (System.Numerics.Vector2.Zero, System.Numerics.Vector2.One);
+
+            var drawWidth = Math.Clamp((int)(Width * config.FitScaleX), 1, Width);
+            var drawHeight = Math.Clamp((int)(Height * config.FitScaleY), 1, Height);
+            var left = (int)(((Width - drawWidth) * 0.5f) + (config.FitOffsetX * Width));
+            var top = (int)(((Height - drawHeight) * 0.5f) + (config.FitOffsetY * Height));
+            var u0 = Math.Clamp(left / (float)Width, 0f, 1f);
+            var v0 = Math.Clamp(top / (float)Height, 0f, 1f);
+            var u1 = Math.Clamp((left + drawWidth) / (float)Width, 0f, 1f);
+            var v1 = Math.Clamp((top + drawHeight) / (float)Height, 0f, 1f);
+            return (new System.Numerics.Vector2(u0, v0), new System.Numerics.Vector2(u1, v1));
+        }
+    }
+
+    /// <summary>
     /// Places the picture inside the texture at the configured scale and offset, leaving the rest
     /// black. Nearest-neighbour, on the render thread, once per decoded frame — a 720p resample is
     /// cheap next to the decode that produced it.

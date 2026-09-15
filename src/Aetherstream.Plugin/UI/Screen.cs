@@ -93,8 +93,13 @@ internal sealed class Screen(UiContext ui)
         var playing = session.IsPlaying;
         var hasFrame = uploader is { HasFrame: true };
 
+        // The window's picture is the picture, not the fitted texture the furnishing gets: a
+        // fit that letterboxes or shrinks it for a wall would otherwise show here shrunk too.
         if (hasFrame)
-            drawList.AddImage(uploader!.Handle, p0, p1);
+        {
+            var (uv0, uv1) = session.PictureUv;
+            drawList.AddImage(uploader!.Handle, p0, p1, uv0, uv1);
+        }
         else
             drawList.AddRectFilled(p0, p1, Theme.U32(Theme.Tube));
 
