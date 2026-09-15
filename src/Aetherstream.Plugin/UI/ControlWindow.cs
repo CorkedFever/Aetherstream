@@ -28,7 +28,7 @@ internal sealed class ControlWindow : Window
     private Vector2 unfoldedSize = new(820f, 720f);
 
     /// <summary>The folded window's content width. Fixed, or auto-resize would keep whatever width the window had.</summary>
-    private const float FoldedWidth = RemoteWidget.Width;
+    private const float FoldedWidth = RemoteWidget.BodyWidth;
     private Vector2? sizeToRestore;
     private bool loggedDrawFailure;
 

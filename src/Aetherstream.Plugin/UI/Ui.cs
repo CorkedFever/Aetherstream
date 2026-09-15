@@ -216,6 +216,17 @@ internal static class Ui
         return source;
     }
 
+    /// <summary>The text cut with an ellipsis to fit a width in the current font, so a line never wraps or runs off.</summary>
+    public static string Fit(string text, float width)
+    {
+        if (ImGui.CalcTextSize(text).X <= width)
+            return text;
+        var keep = text.Length;
+        while (keep > 1 && ImGui.CalcTextSize(string.Concat(text.AsSpan(0, keep), "…")).X > width)
+            keep -= Math.Max(1, keep / 12);
+        return string.Concat(text.AsSpan(0, Math.Max(1, keep)), "…");
+    }
+
     public static string Ellipsis(string text, int max) =>
         text.Length <= max ? text : string.Concat(text.AsSpan(0, Math.Max(1, max - 1)), "…");
 }

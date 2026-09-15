@@ -9,23 +9,30 @@ using Dalamud.Interface.Utility.Raii;
 namespace Aetherstream.Plugin.UI;
 
 /// <summary>
-/// The set's home screen, as a smart television has one: what is on, and a grid of apps. Each
-/// app is one of the panels that used to be a tab or a shelf; opening one takes the whole screen
-/// with a Home button in the corner, and the grid shows only the apps that have not been put
-/// away under Setup. Adding a source means adding a tile here and nothing else.
+/// The set's home screen, laid out the way a tablet lays out its own: one line saying what is
+/// on, a grid of app icons with their names beneath, and a dock along the bottom for the things
+/// that are not sources. Each app is one of the panels that used to be a tab or a shelf; opening
+/// one takes the whole screen with a Home button in the corner, and the grid shows only the apps
+/// that have not been put away under Setup. Adding a source means adding an icon here and
+/// nothing else.
 /// </summary>
 internal sealed class HomeScreen
 {
-    internal readonly record struct App(string Key, string Name, FontAwesomeIcon Icon, Func<string> Status, Action Draw);
+    internal readonly record struct App(string Key, string Name, FontAwesomeIcon Icon, Vector4 Colour, Func<string> Status, Action Draw, Action<string>? SearchFor = null);
 
-    private const float TileWidth = 150f;
-    private const float TileHeight = 62f;
+    private const float IconSize = 52f;
+    private const float CellWidth = 96f;
+    private const float DockHeight = 82f;
+
+    private static readonly Vector4 Purple = new(0.61f, 0.50f, 0.87f, 1f);
+    private static readonly Vector4 Plain = Theme.TextDim;
 
     private readonly UiContext ui;
     private readonly Screen screen;
     private readonly List<App> apps;
-    private readonly App setup;
+    private readonly List<App> dock;
     private string? open;
+    private string search = string.Empty;
 
     public HomeScreen(UiContext ui, Screen screen, ChannelDial dial, WatchTab watch, LibraryTab library, LiveTvTab liveTv, ChannelsTab channels, SoundTab sound, ShareTab share, SetupTab setupTab)
     {
@@ -35,32 +42,36 @@ internal sealed class HomeScreen
 
         this.apps =
         [
-            new("channels", "Aetherstream", FontAwesomeIcon.Tv, () => $"{ui.Channels.Count} drawn channels", channels.Draw),
-            new("livetv", "Live TV", FontAwesomeIcon.BroadcastTower, () => dial.HasChannels ? "guide and dial" : "no lineup yet", liveTv.Draw),
-            new("plex", "Plex", FontAwesomeIcon.Server, () => config.PlexServer.Length > 0 && config.PlexToken.Length > 0 ? "connected" : "not signed in", () => library.DrawShelf(0)),
-            new("server", "Media server", FontAwesomeIcon.Database, () => config.MediaServerToken.Length > 0 ? $"{config.MediaServerKind}, as {config.MediaServerUserName}" : "Jellyfin or Emby", () => library.DrawShelf(1)),
-            new("local", "Local videos", FontAwesomeIcon.Folder, () => config.LocalVideoFolders.Count == 1 ? "1 folder" : $"{config.LocalVideoFolders.Count} folders", () => library.DrawShelf(11)),
-            new("youtube", "YouTube", FontAwesomeIcon.Video, () => "your feed, lists, search", () => library.DrawShelf(2)),
-            new("twitch", "Twitch", FontAwesomeIcon.Gamepad, () => "followed, top, DJs", () => library.DrawShelf(3)),
-            new("dailymotion", "Dailymotion", FontAwesomeIcon.PhotoVideo, () => "trending and channels", () => library.DrawShelf(4)),
-            new("pluto", "Pluto TV", FontAwesomeIcon.Film, () => "free films and series", () => library.DrawShelf(5)),
-            new("redbull", "Red Bull TV", FontAwesomeIcon.Trophy, () => "films and documentaries", () => library.DrawShelf(6)),
-            new("pbs", "PBS", FontAwesomeIcon.Newspaper, () => "NOVA, Nature, FRONTLINE", () => library.DrawShelf(7)),
-            new("nasa", "NASA+", FontAwesomeIcon.Rocket, () => "documentaries and series", () => library.DrawShelf(8)),
-            new("ted", "TED", FontAwesomeIcon.Microphone, () => "talks and playlists", () => library.DrawShelf(9)),
-            new("archive", "Internet Archive", FontAwesomeIcon.Archive, () => "public domain films", () => library.DrawShelf(10)),
-            new("music", "Music", FontAwesomeIcon.Music, () => MusicStatus(config), () => sound.DrawPart(0)),
-            new("rolls", "Orchestrion", FontAwesomeIcon.CompactDisc, () => "your rolls", () => sound.DrawPart(1)),
-            new("radio", "Radio", FontAwesomeIcon.Headphones, () => "internet radio", () => sound.DrawPart(2)),
-            new("podcasts", "Podcasts", FontAwesomeIcon.Podcast, () => "shows and episodes", () => sound.DrawPart(3)),
-            new("party", "Watch party", FontAwesomeIcon.Users, () => "share or join", share.Draw),
-            new("link", "Paste a link", FontAwesomeIcon.Link, () => "any address, and history", watch.Draw),
+            new("channels", "Aetherstream", FontAwesomeIcon.Tv, Theme.Accent, () => $"{ui.Channels.Count} drawn channels", channels.Draw),
+            new("livetv", "Live TV", FontAwesomeIcon.BroadcastTower, Theme.Accent, () => dial.HasChannels ? "guide and dial" : "no lineup yet", liveTv.Draw),
+            new("plex", "Plex", FontAwesomeIcon.Server, Theme.Warn, () => config.PlexServer.Length > 0 && config.PlexToken.Length > 0 ? "connected" : "not signed in", () => library.DrawShelf(0)),
+            new("server", "Media server", FontAwesomeIcon.Database, Purple, () => config.MediaServerToken.Length > 0 ? $"{config.MediaServerKind}, as {config.MediaServerUserName}" : "Jellyfin or Emby", () => library.DrawShelf(1), library.MediaServer.SearchFor),
+            new("local", "Local videos", FontAwesomeIcon.Folder, Plain, () => config.LocalVideoFolders.Count == 1 ? "1 folder" : $"{config.LocalVideoFolders.Count} folders", () => library.DrawShelf(11)),
+            new("youtube", "YouTube", FontAwesomeIcon.Video, Theme.Bad, () => "your feed, lists, search", () => library.DrawShelf(2), library.YouTube.SearchFor),
+            new("twitch", "Twitch", FontAwesomeIcon.Gamepad, Purple, () => "followed, top, DJs", () => library.DrawShelf(3), library.Twitch.SearchFor),
+            new("dailymotion", "Dailymotion", FontAwesomeIcon.PhotoVideo, Theme.Accent, () => "trending and channels", () => library.DrawShelf(4), library.Dailymotion.SearchFor),
+            new("pluto", "Pluto TV", FontAwesomeIcon.Film, Theme.Warn, () => "free films and series", () => library.DrawShelf(5), library.Pluto.SearchFor),
+            new("redbull", "Red Bull TV", FontAwesomeIcon.Trophy, Theme.Bad, () => "films and documentaries", () => library.DrawShelf(6), library.RedBull.SearchFor),
+            new("pbs", "PBS", FontAwesomeIcon.Newspaper, Theme.Accent, () => "NOVA, Nature, FRONTLINE", () => library.DrawShelf(7)),
+            new("nasa", "NASA+", FontAwesomeIcon.Rocket, Theme.Accent, () => "documentaries and series", () => library.DrawShelf(8), library.Nasa.SearchFor),
+            new("ted", "TED", FontAwesomeIcon.Microphone, Theme.Bad, () => "talks and playlists", () => library.DrawShelf(9), library.Ted.SearchFor),
+            new("archive", "Archive", FontAwesomeIcon.Archive, Plain, () => "public domain films", () => library.DrawShelf(10), library.Archive.SearchFor),
+            new("music", "Music", FontAwesomeIcon.Music, Theme.Good, () => MusicStatus(config), () => sound.DrawPart(0)),
+            new("rolls", "Orchestrion", FontAwesomeIcon.CompactDisc, Theme.Good, () => "your rolls", () => sound.DrawPart(1)),
+            new("radio", "Radio", FontAwesomeIcon.Headphones, Theme.Good, () => "internet radio", () => sound.DrawPart(2)),
+            new("podcasts", "Podcasts", FontAwesomeIcon.Podcast, Theme.Good, () => "shows and episodes", () => sound.DrawPart(3)),
         ];
 
-        this.setup = new App("setup", "Setup", FontAwesomeIcon.Cog, () => string.Empty, setupTab.Draw);
+        this.dock =
+        [
+            new("search", "Search", FontAwesomeIcon.Search, Theme.Accent, () => "type, then pick where", this.DrawSearch),
+            new("link", "Paste a link", FontAwesomeIcon.Link, Theme.Accent, () => "any address, and history", watch.Draw),
+            new("party", "Watch party", FontAwesomeIcon.Users, Theme.Accent, () => "share or join", share.Draw),
+            new("setup", "Setup", FontAwesomeIcon.Cog, Plain, () => string.Empty, setupTab.Draw),
+        ];
     }
 
-    /// <summary>Every app that can be shown or put away, for Setup's tick boxes.</summary>
+    /// <summary>Every app that can be shown or put away, for Setup's tick boxes. The dock stays.</summary>
     public IReadOnlyList<(string Key, string Name)> Apps => this.apps.Select(a => (a.Key, a.Name)).ToList();
 
     /// <summary>What is open, or null for the grid.</summary>
@@ -70,15 +81,14 @@ internal sealed class HomeScreen
 
     public void OpenApp(string key) => this.open = key;
 
-    /// <summary>A name for the display strip: the open app's, or nothing on the grid.</summary>
-    public string Title() => this.open is { } key ? (key == "setup" ? this.setup : this.apps.FirstOrDefault(a => a.Key == key)).Name ?? string.Empty : string.Empty;
+    /// <summary>A name for the title bar: the open app's, or nothing on the grid.</summary>
+    public string Title() => this.open is { } key ? this.Find(key)?.Name ?? string.Empty : string.Empty;
 
     public void Draw()
     {
         if (this.open is { } key)
         {
-            var app = key == "setup" ? this.setup : this.apps.FirstOrDefault(a => a.Key == key);
-            if (app.Draw is null)
+            if (this.Find(key) is not { } app)
             {
                 this.open = null;
                 return;
@@ -91,15 +101,21 @@ internal sealed class HomeScreen
             return;
         }
 
-        using var home = ImRaii.Child("##home", new Vector2(-1f, -1f), false);
-        if (!home)
-            return;
+        this.DrawNowOn();
 
-        this.DrawNowPlaying();
-        this.DrawGrid();
+        using (var grid = ImRaii.Child("##grid", new Vector2(-1f, -DockHeight), false))
+        {
+            if (grid)
+                this.DrawGrid(this.apps.Where(a => !this.ui.Config.HiddenApps.Contains(a.Key)).ToList(), "grid");
+        }
+
+        this.DrawDock();
     }
 
-    /// <summary>The way back, and the app's name, on one line above it.</summary>
+    private App? Find(string key) =>
+        this.apps.Concat(this.dock).Where(a => a.Key == key).Select(a => (App?)a).FirstOrDefault();
+
+    /// <summary>The way back, the app's name, and its status, on one line above it.</summary>
     private void DrawAppHeader(App app)
     {
         using (Theme.PushDisplay())
@@ -115,6 +131,13 @@ internal sealed class HomeScreen
             ImGui.TextColored(Theme.Accent, app.Name.ToUpperInvariant());
         }
 
+        var status = app.Status();
+        if (status.Length > 0)
+        {
+            ImGui.SameLine(0f, 10f);
+            ImGui.TextColored(Theme.TextFaint, status);
+        }
+
         var drawList = ImGui.GetWindowDrawList();
         var y = ImGui.GetItemRectMax().Y + 5f;
         var left = ImGui.GetCursorScreenPos().X;
@@ -122,96 +145,143 @@ internal sealed class HomeScreen
         ImGui.Dummy(new Vector2(0f, 8f));
     }
 
-    /// <summary>What is on, what is next, and the way to what was on before, above the grid.</summary>
-    private void DrawNowPlaying()
+    /// <summary>One line: what is on and how far in, or what was on last and a way to bring it back.</summary>
+    private void DrawNowOn()
     {
         var session = this.ui.Session;
         var onAir = session.IsPlaying || session.Channel is not null;
 
-        Theme.Panel("##nowplaying", () =>
+        ImGui.AlignTextToFramePadding();
+        using (Theme.PushDisplay())
+            ImGui.TextColored(onAir ? Theme.Accent : Theme.TextFaint, onAir ? "NOW ON" : "NOTHING ON");
+
+        ImGui.SameLine(0f, 12f);
+
+        if (onAir)
         {
-            using (Theme.PushDisplay())
-                ImGui.TextColored(onAir ? Theme.Accent : Theme.TextFaint, onAir ? "NOW ON" : "NOTHING ON");
-
-            if (onAir)
-            {
-                var title = session.Channel is not null && !session.IsPlaying
-                    ? this.ui.Channels.FirstOrDefault(c => ReferenceEquals(c.Channel, session.Channel)).Name ?? "a drawn channel"
-                    : this.screen.Title();
-                ImGui.TextUnformatted(Ui.Ellipsis(title, 60));
-
-                var detail = session.IsPlaying
-                    ? session.DurationMs > 0 ? $"{Ui.Clock(session.PositionMs)} of {Ui.Clock(session.DurationMs)}" : "live"
-                    : "drawn by the set";
-                if (this.ui.NextUp.Count > 0)
-                    detail += $"  ·  next: {Ui.Ellipsis(this.ui.NextUp[0].Label, 40)}";
-                ImGui.TextColored(Theme.TextDim, detail);
-            }
-            else if (this.ui.Config.Recents.Count > 0)
-            {
-                var last = this.ui.Config.Recents[0];
-                ImGui.TextColored(Theme.TextDim, $"Last on: {Ui.Ellipsis(last.Label, 50)}");
-                ImGui.SameLine();
-                if (ImGui.SmallButton("Play it again"))
-                    this.ui.PlayAndRemember(last.Source, last.Label, last.Thumb);
-            }
-            else
-            {
-                ImGui.TextColored(Theme.TextDim, "Pick an app, or dial a channel on the remote.");
-            }
-        }, lit: onAir);
+            var title = session.Channel is not null && !session.IsPlaying
+                ? this.ui.Channels.FirstOrDefault(c => ReferenceEquals(c.Channel, session.Channel)).Name ?? "a drawn channel"
+                : this.screen.Title();
+            var detail = session.IsPlaying
+                ? session.DurationMs > 0 ? $"  ·  {Ui.Clock(session.PositionMs)} of {Ui.Clock(session.DurationMs)}" : "  ·  live"
+                : string.Empty;
+            if (this.ui.NextUp.Count > 0)
+                detail += $"  ·  next: {this.ui.NextUp[0].Label}";
+            ImGui.TextColored(Theme.TextDim, Ui.Fit(title + detail, ImGui.GetContentRegionAvail().X));
+        }
+        else if (this.ui.Config.Recents.Count > 0)
+        {
+            var last = this.ui.Config.Recents[0];
+            var buttonWidth = ImGui.CalcTextSize("Play again").X + 16f;
+            ImGui.TextColored(Theme.TextDim, Ui.Fit("Last: " + last.Label, ImGui.GetContentRegionAvail().X - buttonWidth - 12f));
+            ImGui.SameLine(0f, 10f);
+            if (ImGui.SmallButton("Play again"))
+                this.ui.PlayAndRemember(last.Source, last.Label, last.Thumb);
+        }
+        else
+        {
+            ImGui.TextColored(Theme.TextDim, "Pick an app, or dial a channel on the remote.");
+        }
 
         ImGui.Dummy(new Vector2(0f, 6f));
     }
 
-    private void DrawGrid()
+    /// <summary>Icons with names under them, the width deciding how many to a row.</summary>
+    private void DrawGrid(List<App> shown, string id)
     {
-        var hidden = this.ui.Config.HiddenApps;
-        var shown = this.apps.Where(a => !hidden.Contains(a.Key)).ToList();
         if (shown.Count == 0)
         {
             Ui.Hint("Every app is put away. Setup, System brings them back.");
             return;
         }
 
-        var spacing = 8f;
-        var columns = Math.Max(1, (int)((ImGui.GetContentRegionAvail().X + spacing) / (TileWidth + spacing)));
-        var width = (ImGui.GetContentRegionAvail().X - ((columns - 1) * spacing)) / columns;
-        var tile = new Vector2(width, TileHeight);
-        var drawList = ImGui.GetWindowDrawList();
+        var available = ImGui.GetContentRegionAvail().X;
+        var columns = Math.Max(1, (int)(available / CellWidth));
+        var cell = available / columns;
 
         for (var i = 0; i < shown.Count; i++)
         {
             if (i % columns != 0)
-                ImGui.SameLine(0f, spacing);
+                ImGui.SameLine(0f, 0f);
 
-            var app = shown[i];
-            var origin = ImGui.GetCursorScreenPos();
-
-            using var colours = ImRaii.PushColor(ImGuiCol.Button, Theme.Glass)
-                .Push(ImGuiCol.ButtonHovered, Theme.GlassLit)
-                .Push(ImGuiCol.ButtonActive, Theme.GlassLit)
-                .Push(ImGuiCol.Border, Theme.GlassEdge);
-            using var border = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 1f);
-            using var rounding = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 8f);
-
-            if (ImGui.Button($"##app{app.Key}", tile))
-                this.open = app.Key;
-
-            using (ImRaii.PushFont(UiBuilder.IconFont))
-            {
-                var icon = app.Icon.ToIconString();
-                var size = ImGui.CalcTextSize(icon);
-                drawList.AddText(origin + new Vector2(14f, (tile.Y - size.Y) / 2f), Theme.U32(Theme.Accent), icon);
-            }
-
-            using (Theme.PushDisplay())
-                drawList.AddText(origin + new Vector2(44f, 12f), Theme.U32(Theme.Text), app.Name.ToUpperInvariant());
-
-            var status = app.Status();
-            if (status.Length > 0)
-                drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), origin + new Vector2(44f, 34f), Theme.U32(Theme.TextDim), Ui.Ellipsis(status, 28), tile.X - 52f);
+            this.DrawIcon(shown[i], cell, IconSize, id);
         }
+    }
+
+    /// <summary>One app: a rounded square in its colour with the icon in it, the name below, and the status as a tooltip.</summary>
+    private void DrawIcon(App app, float cellWidth, float iconSize, string id)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var height = iconSize + 6f + ImGui.GetTextLineHeight() + 10f;
+
+        if (ImGui.InvisibleButton($"##{id}{app.Key}", new Vector2(cellWidth, height)))
+        {
+            if (this.open == "search" && app.SearchFor is { } into && this.search.Trim().Length > 0)
+                into(this.search.Trim());
+            this.open = app.Key;
+        }
+
+        var hovered = ImGui.IsItemHovered();
+        var status = app.Status();
+        if (hovered && status.Length > 0)
+            ImGui.SetTooltip(status);
+
+        var plain = app.Colour == Plain;
+        var tint = plain ? Theme.Glass : app.Colour with { W = hovered ? 0.32f : 0.18f };
+        var p0 = origin + new Vector2((cellWidth - iconSize) / 2f, 4f);
+        var p1 = p0 + new Vector2(iconSize, iconSize);
+        drawList.AddRectFilled(p0, p1, Theme.U32(tint), iconSize * 0.27f);
+        drawList.AddRect(p0, p1, Theme.U32(plain ? Theme.GlassEdge : app.Colour with { W = hovered ? 0.9f : 0.45f }), iconSize * 0.27f);
+
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+        {
+            var icon = app.Icon.ToIconString();
+            var size = ImGui.CalcTextSize(icon);
+            drawList.AddText(p0 + ((new Vector2(iconSize) - size) / 2f), Theme.U32(plain ? Theme.TextDim : app.Colour), icon);
+        }
+
+        var label = Ui.Fit(app.Name, cellWidth - 8f);
+        var labelSize = ImGui.CalcTextSize(label);
+        drawList.AddText(origin + new Vector2((cellWidth - labelSize.X) / 2f, iconSize + 8f), Theme.U32(hovered ? Theme.Text : Theme.TextDim), label);
+    }
+
+    /// <summary>The dock: search, a pasted link, the party, and setup, on a shelf of their own at the foot.</summary>
+    private void DrawDock()
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var start = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var end = start + new Vector2(width, DockHeight - 4f);
+        drawList.AddRectFilled(start, end, Theme.U32(Theme.Glass), 14f);
+        drawList.AddRect(start, end, Theme.U32(Theme.GlassEdge), 14f);
+
+        var cell = Math.Min(140f, (width - 24f) / this.dock.Count);
+        var inset = (width - (cell * this.dock.Count)) / 2f;
+        ImGui.SetCursorScreenPos(start + new Vector2(inset, 6f));
+        for (var i = 0; i < this.dock.Count; i++)
+        {
+            if (i > 0)
+                ImGui.SameLine(0f, 0f);
+            this.DrawIcon(this.dock[i], cell, 44f, "dock");
+        }
+
+        ImGui.SetCursorScreenPos(start);
+        ImGui.Dummy(new Vector2(width, DockHeight - 4f));
+    }
+
+    /// <summary>Search: a box, then the apps that can be searched. Type, then pick where.</summary>
+    private void DrawSearch()
+    {
+        ImGui.SetNextItemWidth(-1f);
+        ImGui.InputTextWithHint("##everysearch", "What are you looking for?", ref this.search, 120);
+        Ui.Hint(this.search.Trim().Length > 0
+            ? "Now pick where to look. The app opens with the search run."
+            : "Type something, then pick an app to search it in. Each app searches its own service; there is no one index of them all.");
+        ImGui.Dummy(new Vector2(0f, 6f));
+
+        var searchable = this.apps.Where(a => a.SearchFor is not null && !this.ui.Config.HiddenApps.Contains(a.Key)).ToList();
+        this.DrawGrid(searchable, "find");
     }
 
     private static string MusicStatus(Configuration config) =>

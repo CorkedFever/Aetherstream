@@ -21,6 +21,11 @@ internal sealed class RemoteWidget(UiContext ui, ChannelDial dial, Screen screen
 {
     public const float Width = 176f;
 
+    /// <summary>The body around the keys, and its width: what the folded window and the left column measure.</summary>
+    private const float Pad = 8f;
+
+    public const float BodyWidth = Width + (Pad * 2f);
+
     private static readonly Vector2 Key = new(52f, 34f);
     private const float Gap = 8f;
 
@@ -53,6 +58,15 @@ internal sealed class RemoteWidget(UiContext ui, ChannelDial dial, Screen screen
         using var padding = ImRaii.PushStyle(ImGuiStyleVar.FramePadding, new Vector2(0f, 0f));
         using var spacing = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(Gap, Gap));
         using var rounding = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 8f);
+
+        // The body is drawn under the keys once their height is known: two draw channels, the
+        // keys on top, the slab filled in afterwards on the one beneath.
+        var drawList = ImGui.GetWindowDrawList();
+        var start = ImGui.GetCursorScreenPos();
+        drawList.ChannelsSplit(2);
+        drawList.ChannelsSetCurrent(1);
+        ImGui.SetCursorScreenPos(start + new Vector2(Pad, Pad));
+        ImGui.BeginGroup();
 
         this.DrawDisplay(session, now);
 
@@ -165,6 +179,15 @@ internal sealed class RemoteWidget(UiContext ui, ChannelDial dial, Screen screen
 
         // -- what is on ---------------------------------------------------------------------
         this.DrawInfo(session);
+
+        ImGui.EndGroup();
+        var end = new Vector2(start.X + BodyWidth, ImGui.GetItemRectMax().Y + Pad);
+        drawList.ChannelsSetCurrent(0);
+        drawList.AddRectFilled(start, end, Theme.U32(Theme.Glass), 16f);
+        drawList.AddRect(start, end, Theme.U32(Theme.GlassEdge), 16f);
+        drawList.ChannelsMerge();
+        ImGui.SetCursorScreenPos(start);
+        ImGui.Dummy(end - start);
     }
 
     // -- the display -----------------------------------------------------------------------------

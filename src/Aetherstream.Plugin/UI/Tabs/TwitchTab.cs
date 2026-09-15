@@ -17,6 +17,15 @@ internal sealed class TwitchTab(UiContext ui)
     private List<TwitchBrowser.Game> games = [];
     private string status = string.Empty;
     private string query = string.Empty;
+
+    private bool pendingSearch;
+
+    /// <summary>A search handed in from the home screen's Search: run as soon as the app is drawn.</summary>
+    public void SearchFor(string text)
+    {
+        this.query = text;
+        this.pendingSearch = true;
+    }
     private string mode = "top";
     private string game = string.Empty;
     private bool autoBrowsed;
@@ -61,6 +70,11 @@ internal sealed class TwitchTab(UiContext ui)
         ImGui.Spacing();
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 90f);
         var go = ImGui.InputTextWithHint("##twquery", "Search channels and games", ref this.query, 80, ImGuiInputTextFlags.EnterReturnsTrue);
+        if (this.pendingSearch)
+        {
+            this.pendingSearch = false;
+            go = true;
+        }
         ImGui.SameLine();
         if ((ImGui.Button("Search##tw") || go) && this.query.Trim().Length > 0)
             this.Go("search");

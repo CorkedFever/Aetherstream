@@ -21,8 +21,8 @@ internal sealed class Screen(UiContext ui)
     /// <summary>Set by the plugin — restarting a stalled stream needs the already-resolved source.</summary>
     internal Action? ResumeStalled;
 
-    /// <summary>Tallest the picture goes, so a wide window grows the library, not the monitor.</summary>
-    private const float MaxPictureHeight = 300f;
+    /// <summary>Tallest the picture goes, so a wide window grows the apps, not the monitor.</summary>
+    private const float MaxPictureHeight = 340f;
 
     private const float BezelPadding = 8f;
 
@@ -75,17 +75,13 @@ internal sealed class Screen(UiContext ui)
             pictureWidth = pictureHeight * 16f / 9f;
         }
 
-        var outer = new Vector2(pictureWidth, pictureHeight) + new Vector2(BezelPadding * 2f);
-
-        // Centred: a monitor that hugs the left edge of a widened window stops looking like the
-        // thing the window is built around.
-        var slack = available - outer.X;
-        if (slack > 0f)
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (slack / 2f));
+        // The bezel spans the column whatever the picture's size, so the set reads as one piece
+        // of furniture; a picture narrower than the column sits centred in it.
+        var outer = new Vector2(available, pictureHeight + (BezelPadding * 2f));
 
         var drawList = ImGui.GetWindowDrawList();
         var start = ImGui.GetCursorScreenPos();
-        var p0 = start + new Vector2(BezelPadding);
+        var p0 = start + new Vector2((available - pictureWidth) / 2f, BezelPadding);
         var p1 = p0 + new Vector2(pictureWidth, pictureHeight);
         this.Picture = (p0, p1);
 

@@ -14,6 +14,15 @@ internal sealed class TedTab(UiContext ui)
     private List<TedTalks.Item> items = [];
     private string status = string.Empty;
     private string query = string.Empty;
+
+    private bool pendingSearch;
+
+    /// <summary>A search handed in from the home screen's Search: run as soon as the app is drawn.</summary>
+    public void SearchFor(string text)
+    {
+        this.query = text;
+        this.pendingSearch = true;
+    }
     private string listing = string.Empty;
     private bool autoBrowsed;
 
@@ -60,6 +69,11 @@ internal sealed class TedTab(UiContext ui)
         ImGui.Spacing();
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 90f);
         var go = ImGui.InputTextWithHint("##tedquery", "Search talks", ref this.query, 80, ImGuiInputTextFlags.EnterReturnsTrue);
+        if (this.pendingSearch)
+        {
+            this.pendingSearch = false;
+            go = true;
+        }
         ImGui.SameLine();
         if ((ImGui.Button("Search##ted") || go) && this.query.Trim().Length > 0)
             this.Go(null, this.query.Trim());

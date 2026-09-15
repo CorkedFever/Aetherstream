@@ -20,6 +20,15 @@ internal sealed class MediaServerTab(UiContext ui)
     private MediaServer.Item? series;
     private string status = string.Empty;
     private string query = string.Empty;
+
+    private bool pendingSearch;
+
+    /// <summary>A search handed in from the home screen's Search: run as soon as the app is drawn.</summary>
+    public void SearchFor(string text)
+    {
+        this.query = text;
+        this.pendingSearch = true;
+    }
     private string listing = string.Empty;
     private string address = string.Empty;
     private string user = string.Empty;
@@ -115,6 +124,11 @@ internal sealed class MediaServerTab(UiContext ui)
         ImGui.Spacing();
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 90f);
         var go = ImGui.InputTextWithHint("##msquery", "Search films, series and episodes", ref this.query, 80, ImGuiInputTextFlags.EnterReturnsTrue);
+        if (this.pendingSearch)
+        {
+            this.pendingSearch = false;
+            go = true;
+        }
         ImGui.SameLine();
         if ((ImGui.Button("Search##ms") || go) && this.query.Trim().Length > 0)
             this.Go(string.Empty, this.query.Trim());

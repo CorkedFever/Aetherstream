@@ -16,6 +16,15 @@ internal sealed class ArchiveTab(UiContext ui)
     private List<ArchiveLibrary.Film> films = [];
     private string status = string.Empty;
     private string query = string.Empty;
+
+    private bool pendingSearch;
+
+    /// <summary>A search handed in from the home screen's Search: run as soon as the app is drawn.</summary>
+    public void SearchFor(string text)
+    {
+        this.query = text;
+        this.pendingSearch = true;
+    }
     private string shelf = ArchiveLibrary.Shelves[0].Collection;
     private string shelfTitle = ArchiveLibrary.Shelves[0].Title;
     private string opening = string.Empty;
@@ -90,6 +99,11 @@ internal sealed class ArchiveTab(UiContext ui)
         ImGui.Spacing();
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 90f);
         var go = ImGui.InputTextWithHint("##archivequery", $"Search {this.shelfTitle}, or leave empty for the popular ones", ref this.query, 120, ImGuiInputTextFlags.EnterReturnsTrue);
+        if (this.pendingSearch)
+        {
+            this.pendingSearch = false;
+            go = true;
+        }
         ImGui.SameLine();
         if (ImGui.Button("Search##archive") || go)
         {

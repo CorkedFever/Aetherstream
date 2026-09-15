@@ -17,6 +17,15 @@ internal sealed class YouTubeTab(UiContext ui)
     private List<YtDlpBrowser.Video> videos = [];
     private string status = string.Empty;
     private string query = string.Empty;
+
+    private bool pendingSearch;
+
+    /// <summary>A search handed in from the home screen's Search: run as soon as the app is drawn.</summary>
+    public void SearchFor(string text)
+    {
+        this.query = text;
+        this.pendingSearch = true;
+    }
     private string target = string.Empty;
     private string title = string.Empty;
 
@@ -67,6 +76,11 @@ internal sealed class YouTubeTab(UiContext ui)
         ImGui.Spacing();
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 90f);
         var go = ImGui.InputTextWithHint("##ytquery", "Search YouTube, or paste a playlist or channel link", ref this.query, 300, ImGuiInputTextFlags.EnterReturnsTrue);
+        if (this.pendingSearch)
+        {
+            this.pendingSearch = false;
+            go = true;
+        }
         ImGui.SameLine();
         if ((ImGui.Button("Search##yt") || go) && this.query.Trim().Length > 0)
         {
