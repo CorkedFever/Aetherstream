@@ -42,8 +42,12 @@ internal static class PosterCard
         bool container,
         bool wide = false,
         float progress = 0f) =>
-        Draw(ui, id, () => thumb.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? ui.Art.GetUrl(thumb) : Path.IsPathRooted(thumb) ? ui.Art.GetFile(thumb) : ui.Art.Get(ui.Config.PlexServer, ui.Config.PlexToken, thumb),
+        Draw(ui, id, () => thumb.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? ui.Art.GetUrl(thumb) : IsDiskPath(thumb) ? ui.Art.GetFile(thumb) : ui.Art.Get(ui.Config.PlexServer, ui.Config.PlexToken, thumb),
              title, subtitle, container, wide, progress);
+
+    /// <summary>A Windows path, drive or share, as opposed to a Plex path, which also starts with a slash.</summary>
+    private static bool IsDiskPath(string thumb) =>
+        (thumb.Length > 2 && thumb[1] == ':' && (thumb[2] == '\\' || thumb[2] == '/')) || thumb.StartsWith(@"\\", StringComparison.Ordinal);
 
     /// <summary>
     /// A tile whose art comes from anywhere.
