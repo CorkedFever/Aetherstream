@@ -602,6 +602,11 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Packed RGBA, red in the low bits. White by default.</summary>
     public uint MaskColour { get; set; } = 0xFFFFFFFF;
 
+    /// <summary>When the mask is a model's texture rather than an effect's, which slot. Zero for an effect.</summary>
+    public int SurfaceMaskMaterialIndex { get; set; }
+
+    public int SurfaceMaskTextureIndex { get; set; }
+
     /// <summary>
     /// Brightens the picture before it goes onto a surface. An effect that blends additively shows
     /// dark pixels as see-through, and brightness is the only lever against that.

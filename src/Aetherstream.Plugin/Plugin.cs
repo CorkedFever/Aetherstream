@@ -41,6 +41,7 @@ public sealed partial class Plugin : IDalamudPlugin
     private readonly SurfaceBinding maskBinding;
     private readonly ITextureProvider textures;
     private SolidTexture? mask;
+    private uint maskColourApplied = 0xFFFFFFFF;
     private readonly ControlWindow window;
     private readonly MirrorChannel mirror;
     private readonly PlexArt art;
@@ -735,10 +736,20 @@ public sealed partial class Plugin : IDalamudPlugin
         }
 
         this.mask ??= new SolidTexture(this.textures, this.config.MaskColour);
+        if (this.maskColourApplied != this.config.MaskColour)
+        {
+            this.mask.Fill(this.config.MaskColour);
+            this.maskColourApplied = this.config.MaskColour;
+        }
 
-        var slot = new SurfaceSlot(0, 0, this.config.SurfaceMaskPath, string.Empty, string.Empty, 0, 0);
-        if (this.maskBinding.Bound?.ModelPath != slot.ModelPath)
+        var slot = new SurfaceSlot(this.config.SurfaceMaskMaterialIndex, this.config.SurfaceMaskTextureIndex, this.config.SurfaceMaskPath, string.Empty, string.Empty, 0, 0);
+        var bound = this.maskBinding.Bound;
+        if (bound?.ModelPath != slot.ModelPath || bound?.MaterialIndex != slot.MaterialIndex || bound?.TextureIndex != slot.TextureIndex)
+        {
+            if (bound is not null)
+                this.maskBinding.Unbind(position);
             this.maskBinding.Bind(slot);
+        }
 
         this.maskBinding.Apply(position, this.mask);
     }

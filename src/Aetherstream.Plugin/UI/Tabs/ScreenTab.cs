@@ -438,6 +438,31 @@ internal sealed class ScreenTab(UiContext ui)
             if (name.Length == 0)
                 name = "(no path)";
 
+            var isMaskSlot = ui.Config.SurfaceMaskPath == slot.ModelPath
+                && ui.Config.SurfaceMaskMaterialIndex == slot.MaterialIndex
+                && ui.Config.SurfaceMaskTextureIndex == slot.TextureIndex;
+
+            if (ImGui.SmallButton($"{(isMaskSlot ? "unmask" : "mask")}##ms{slot.MaterialIndex}_{slot.TextureIndex}"))
+            {
+                ui.Config.SurfaceMaskPath = isMaskSlot ? string.Empty : slot.ModelPath;
+                ui.Config.SurfaceMaskMaterialIndex = slot.MaterialIndex;
+                ui.Config.SurfaceMaskTextureIndex = slot.TextureIndex;
+                if (!isMaskSlot)
+                    ui.Config.MaskColour = 0xFF000000u;
+                ui.SaveConfig();
+            }
+
+            Ui.Tip(
+                "Fill this texture with a flat colour. Black on a shine map (_s) or a glow map takes " +
+                "the shine off a screen so the picture reads; white on a mask makes a panel solid.");
+
+            if (isMaskSlot)
+            {
+                ImGui.SameLine();
+                this.DrawMaskColour();
+            }
+
+            ImGui.SameLine();
             if (ImGui.Selectable(
                 $"{name}  ·  {slot.Width}x{slot.Height}##{slot.MaterialIndex}_{slot.TextureIndex}",
                 selected))
@@ -508,12 +533,20 @@ internal sealed class ScreenTab(UiContext ui)
             if (ImGui.SmallButton($"{(isMask ? "unmask" : "mask")}##m{effect.Path}"))
             {
                 ui.Config.SurfaceMaskPath = isMask ? string.Empty : tagged;
+                ui.Config.SurfaceMaskMaterialIndex = 0;
+                ui.Config.SurfaceMaskTextureIndex = 0;
                 ui.SaveConfig();
             }
 
             Ui.Tip(
-                "Fill this texture with flat white instead of the picture. An effect's mask is what " +
-                "fades the panel out and lets the wall through; whiting it out makes it solid.");
+                "Fill this texture with a flat colour instead of the picture. White makes a fading " +
+                "panel solid; black switches off a glow or scanline layer drawn over the picture.");
+
+            if (isMask)
+            {
+                ImGui.SameLine();
+                this.DrawMaskColour();
+            }
         }
     }
 
@@ -900,6 +933,19 @@ internal sealed class ScreenTab(UiContext ui)
         }
 
         return false;
+    }
+
+    /// <summary>Black or white, for whichever texture the mask is on.</summary>
+    private void DrawMaskColour()
+    {
+        var black = ui.Config.MaskColour == 0xFF000000u;
+        if (ImGui.SmallButton(black ? "black##maskcolour" : "white##maskcolour"))
+        {
+            ui.Config.MaskColour = black ? 0xFFFFFFFFu : 0xFF000000u;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip("The colour the mask is filled with. Press to switch.");
     }
 
     private static string DeriveEffectFilter(string avfxPath)
