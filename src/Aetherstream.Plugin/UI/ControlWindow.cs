@@ -50,8 +50,9 @@ internal sealed class ControlWindow : Window
         this.Sound = new SoundTab(context);
         this.Channels = new ChannelsTab(context);
         this.Share = new ShareTab(context);
+        this.Mirror = new MirrorTab(context);
         this.Setup = new SetupTab(context) { LineupChoices = () => this.LiveTv.Choices, DrawScreen = screen.Draw, DrawSound = this.Sound.DrawOutput };
-        this.Home = new HomeScreen(context, this.Screen, this.Dial, watch, this.Library, this.LiveTv, this.Channels, this.Sound, this.Share, this.Setup);
+        this.Home = new HomeScreen(context, this.Screen, this.Dial, watch, this.Library, this.LiveTv, this.Channels, this.Sound, this.Share, this.Mirror, this.Setup);
         this.Setup.Apps = () => this.Home.Apps;
 
         // Wide enough for the remote, four poster columns and a 16:9 picture worth looking at.
@@ -69,6 +70,8 @@ internal sealed class ControlWindow : Window
     internal LibraryTab Library { get; }
 
     internal ShareTab Share { get; }
+
+    internal MirrorTab Mirror { get; }
 
     internal LiveTvTab LiveTv { get; }
 

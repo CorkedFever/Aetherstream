@@ -34,7 +34,7 @@ internal sealed class HomeScreen
     private string? open;
     private string search = string.Empty;
 
-    public HomeScreen(UiContext ui, Screen screen, ChannelDial dial, WatchTab watch, LibraryTab library, LiveTvTab liveTv, ChannelsTab channels, SoundTab sound, ShareTab share, SetupTab setupTab)
+    public HomeScreen(UiContext ui, Screen screen, ChannelDial dial, WatchTab watch, LibraryTab library, LiveTvTab liveTv, ChannelsTab channels, SoundTab sound, ShareTab share, MirrorTab mirror, SetupTab setupTab)
     {
         this.ui = ui;
         this.screen = screen;
@@ -44,6 +44,7 @@ internal sealed class HomeScreen
         [
             new("channels", "Aetherstream", FontAwesomeIcon.Tv, Theme.Accent, () => $"{ui.Channels.Count} drawn channels", channels.Draw),
             new("livetv", "Live TV", FontAwesomeIcon.BroadcastTower, Theme.Accent, () => dial.HasChannels ? "guide and dial" : "no lineup yet", liveTv.Draw),
+            new("mirror", "Mirror", FontAwesomeIcon.Desktop, Theme.Accent, () => mirror.State?.Invoke().Status ?? "another window, on the set", mirror.Draw),
             new("plex", "Plex", FontAwesomeIcon.Server, Theme.Warn, () => config.PlexServer.Length > 0 && config.PlexToken.Length > 0 ? "connected" : "not signed in", () => library.DrawShelf(0)),
             new("server", "Media server", FontAwesomeIcon.Database, Purple, () => config.MediaServerToken.Length > 0 ? $"{config.MediaServerKind}, as {config.MediaServerUserName}" : "Jellyfin or Emby", () => library.DrawShelf(1), library.MediaServer.SearchFor),
             new("local", "Local videos", FontAwesomeIcon.Folder, Plain, () => config.LocalVideoFolders.Count == 1 ? "1 folder" : $"{config.LocalVideoFolders.Count} folders", () => library.DrawShelf(11)),

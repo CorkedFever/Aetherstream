@@ -312,6 +312,19 @@ Royal Levin in the Forelands is Coeurlregina, Quicklevin in the Lochs is Ixion, 
 in Azys Lla is Proto Ultima. It has to be seen from that zone; a set in a housing ward cannot
 know what the Shroud's sky is doing.
 
+## Mirror
+
+`Video\WindowCapture.cs` captures another window with Windows Graphics Capture, the API OBS
+uses for game capture, through raw COM vtables rather than the WinRT projections, so nothing
+extra ships. It runs on its own thread with its own Direct3D device: frame pool, capture
+session, copy each frame to a staging texture, map it, convert BGRA to RGBA, keep the newest.
+`MirrorChannel` is an ordinary drawn channel that scales that frame into the picture, so it
+shows on the furnishing and in the window with no change to the session. The capture stops
+itself a few seconds after the channel is no longer up. Two things that cost time: the CPU
+access flag for a staging texture is `0x20000` (read), not `0x10000` (write), and every
+interface's methods start at slot 6, after IInspectable's three. Protected video captures as
+black by design.
+
 ## Channel music
 
 The guide and the weather play music underneath, the way the real ones did. The Music app's

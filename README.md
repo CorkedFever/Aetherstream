@@ -13,6 +13,7 @@ game lights it and walks in front of it like anything else in the room, and it c
 - **Your own stuff.** Plex, Jellyfin or Emby, and any folder of videos on your PC.
 - **Free services.** Pluto TV, Red Bull TV, PBS, NASA+, TED, Dailymotion and the Internet Archive.
 - **Sites.** YouTube (with your subscriptions and watch later if you sign in), Twitch, Kick, and pretty much anything yt-dlp can open.
+- **Mirror.** Any window on your PC, put on the set: a game running beside this one, a video in any player, a second screen.
 - **Paste a link.** Any stream URL, a Twitch channel name, a party code.
 - **Watch parties.** Make a party, send a six-character code, and a room full of friends sees what you're broadcasting.
 - **Radio and podcasts.** Thirty thousand internet radio stations, any podcast feed, and your orchestrion rolls.

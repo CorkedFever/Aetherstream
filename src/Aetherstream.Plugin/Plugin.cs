@@ -42,6 +42,7 @@ public sealed partial class Plugin : IDalamudPlugin
     private readonly ITextureProvider textures;
     private SolidTexture? mask;
     private readonly ControlWindow window;
+    private readonly MirrorChannel mirror;
     private readonly PlexArt art;
     private readonly BroadcastSession broadcast = new();
     private readonly UiContext uiContext;
@@ -213,6 +214,19 @@ public sealed partial class Plugin : IDalamudPlugin
         // The display face is loaded before the window so the first frame is drawn in it.
         Theme.Display = new DisplayFont(pluginInterface, log);
         this.window = new ControlWindow(this.uiContext, this.SaveConfig);
+        this.mirror = new MirrorChannel(face);
+        this.window.Mirror.Show = (handle, title) =>
+        {
+            this.mirror.Show(handle, title);
+            this.session.Channel = this.mirror;
+        };
+        this.window.Mirror.Stop = () =>
+        {
+            if (ReferenceEquals(this.session.Channel, this.mirror))
+                this.session.Channel = null;
+            this.mirror.Stop();
+        };
+        this.window.Mirror.State = () => (this.mirror.Status, this.mirror.Window, ReferenceEquals(this.session.Channel, this.mirror));
 
         // The account calls are network work and must not run inside Draw.
         this.plex = new PlexAccount(this.http, this.config.ClientId);
@@ -325,6 +339,7 @@ public sealed partial class Plugin : IDalamudPlugin
 
         this.session.Dispose();
         this.log.Information("[unload] session down");
+        this.mirror.Dispose();
 
         // Poster textures are ours alone — the game never sees them, only our own draw lists — so
         // unlike the video texture they can be released outright once drawing has stopped.
@@ -346,6 +361,11 @@ public sealed partial class Plugin : IDalamudPlugin
 
     private void OnDraw()
     {
+        // A mirror nobody is looking at is put away, so a game is not captured for nothing
+        // behind a film; three seconds covers a channel change that comes straight back.
+        if (this.mirror.Showing && !ReferenceEquals(this.session.Channel, this.mirror) && this.mirror.IdleMs > 3000)
+            this.mirror.Stop();
+
         // Queued starts, stops and texture work are applied before anything draws, so no draw list
         // can be holding a texture that is about to be released.
         this.session.Update();
