@@ -34,7 +34,24 @@ internal static unsafe class VfxLookup
     /// so "1604" narrows it to that piece of furniture.
     /// </para>
     /// </summary>
-    public static List<Effect> List(string filter, int limit = 200)
+    public static List<Effect> List(string filter, int limit = 300)
+    {
+        var found = new List<Effect>();
+        var all = Gather(filter);
+
+        // Biggest first: a screen's texture is large, the sparks and glows around it are tiny,
+        // so when the filter is empty or vague the one worth trying is near the top.
+        foreach (var effect in all.OrderByDescending(e => (long)e.Width * e.Height))
+        {
+            if (found.Count >= limit)
+                break;
+            found.Add(effect);
+        }
+
+        return found;
+    }
+
+    private static List<Effect> Gather(string filter)
     {
         var found = new List<Effect>();
 
@@ -62,9 +79,6 @@ internal static unsafe class VfxLookup
 
             foreach (var entry in *inner)
             {
-                if (found.Count >= limit)
-                    return found;
-
                 var handle = entry.Item2.Value;
                 if (!SafeMemory.CanRead<ResourceHandle>(handle))
                     continue;
