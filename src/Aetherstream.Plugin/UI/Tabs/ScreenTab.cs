@@ -35,6 +35,10 @@ internal sealed class ScreenTab(UiContext ui)
     private Vector3? pickedPoint;
     private long pickedAtTicks;
     private string pickReport = string.Empty;
+    private bool mouseWasDown;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int key);
 
     public void Draw()
     {
@@ -233,14 +237,19 @@ internal sealed class ScreenTab(UiContext ui)
             if (ImGui.IsKeyPressed(ImGuiKey.Escape))
                 this.picking = false;
 
-            // A click that a window took is the window's; only one that reached the world counts.
-            // Both the press and the release are watched, since the game can swallow one of them.
-            var clicked = ImGui.IsMouseClicked(ImGuiMouseButton.Left) || ImGui.IsMouseReleased(ImGuiMouseButton.Left);
+            // The button is read from Windows itself rather than through ImGui, which only sees
+            // the clicks the game lets it see; a press that lands in the world is the game's, and
+            // ImGui may never hear of it. The position is ImGui's, which is in the same space
+            // the game's screen-to-world expects.
+            var down = (GetAsyncKeyState(0x01) & 0x8000) != 0;
+            var clicked = down && !this.mouseWasDown;
+            this.mouseWasDown = down;
             var overWindow = ImGui.IsWindowHovered(ImGuiHoveredFlags.AnyWindow) || ImGui.IsAnyItemHovered();
             if (clicked && !overWindow)
             {
                 this.picking = false;
                 var mouse = ImGui.GetMousePos();
+                ui.Log.Information($"[pick] click seen at {mouse.X:F0},{mouse.Y:F0}");
                 if (ui.GameGui.ScreenToWorld(mouse, out var hit))
                 {
                     this.pickReport = $"Click at {mouse.X:F0},{mouse.Y:F0} landed at {hit.X:F1}, {hit.Y:F1}, {hit.Z:F1}.";
@@ -260,7 +269,9 @@ internal sealed class ScreenTab(UiContext ui)
         else if (ImGui.Button("Click to pick"))
         {
             this.picking = true;
+            this.mouseWasDown = true;
             this.pickReport = string.Empty;
+            ui.Log.Information("[pick] armed");
         }
 
         Ui.Tip("Then click the screen, wall or sign in the world. Whatever is placed nearest to where the click lands is chosen, and the rest are listed under it to try instead.");
@@ -832,10 +843,29 @@ internal sealed class ScreenTab(UiContext ui)
     /// effect, but they share the furnishing's number — igene_1604_c1.avfx and its textures both
     /// carry 1604 — so the digits are what narrows the search.
     /// </summary>
+    /// <summary>
+    /// The filter that finds an effect's textures. Tried from the most specific: the effect's
+    /// whole name, then the name without its last piece (x6t1_scrn1_y shares x6t1_scrn1 with its
+    /// textures), then the digits alone, which is how a furnishing's effect names itself
+    /// (igene_1604_c1 and its 1604 textures). The first that matches anything wins.
+    /// </summary>
     private static string DeriveEffectFilter(string avfxPath)
     {
         var name = Path.GetFileNameWithoutExtension(avfxPath);
+        var candidates = new List<string> { name };
+        var cut = name.LastIndexOf('_');
+        if (cut > 0)
+            candidates.Add(name[..cut]);
         var digits = new string(name.Where(char.IsDigit).ToArray());
-        return digits.Length >= 3 ? digits : name;
+        if (digits.Length >= 3)
+            candidates.Add(digits);
+
+        foreach (var candidate in candidates)
+        {
+            if (VfxLookup.List(candidate, 1).Count > 0)
+                return candidate;
+        }
+
+        return name;
     }
 }
