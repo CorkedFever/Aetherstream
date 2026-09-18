@@ -194,8 +194,11 @@ internal static unsafe class LayoutLookup
                 Vector3 translation;
                 instance->GetTranslation(&translation);
 
+                // Nearest of the instances with this path wins. The cap is loose on purpose: a
+                // part of the zone is placed by its model's origin, which for a stadium's board
+                // sits a hundred yalms from the face, and the path already says which part.
                 var d = Vector3.Distance(translation, position);
-                if (d >= bestDistance || d > 40f)
+                if (d >= bestDistance || d > 400f)
                     continue;
 
                 // Shared groups carry furnishings in their children, so the match has to look
