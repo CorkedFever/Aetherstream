@@ -22,11 +22,18 @@
     "Tags": [
       "stream",
       "video",
+      "tv",
+      "television",
       "twitch",
+      "youtube",
       "plex",
+      "jellyfin",
       "watch-together",
       "live-tv",
-      "iptv"
+      "iptv",
+      "housing",
+      "furnishing",
+      "media"
     ],
     "TestingAssemblyVersion": "0.3.1.0",
     "TestingDalamudApiLevel": 15,
