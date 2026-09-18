@@ -508,6 +508,14 @@ internal sealed class StreamSession(
             ? ring.Count * 1000L / this.source.SampleRate
             : 0;
 
+        // With libvlc owning the sound, nothing passes through the ring, and a line of zeroes
+        // reads as sound that never came; say what is actually happening instead.
+        if (config.UsesVlcAudio)
+        {
+            log.Information($"[sync] elapsed {elapsed}ms | sound is libvlc's own output | video last at {this.source.LastVideoAtMs}ms | frames {this.source.Stats.FramesPresented}");
+            return;
+        }
+
         log.Information(
             $"[sync] elapsed {elapsed}ms | audio delivered {deliveredMs}ms " +
             $"(lead {deliveredMs - elapsed:+#;-#;0}ms) | waiting in ring {ringMs}ms " +
