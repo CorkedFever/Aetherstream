@@ -17,7 +17,7 @@ internal interface IFrameOverlay
     /// <summary>Whether there is anything to paint right now. Asked every frame; keep it cheap.</summary>
     bool Active { get; }
 
-    void Paint(uint[] target, DateTime now, double seconds);
+    void Paint(uint[] target, int width, int height, DateTime now, double seconds);
 }
 
 /// <summary>
@@ -26,12 +26,10 @@ internal interface IFrameOverlay
 /// </summary>
 internal sealed class MaintenanceBanner(BitmapFont font)
 {
-    private const int Width = Playback.StreamSession.Width;
-    private const int Height = Playback.StreamSession.Height;
     private const int BandHeight = 56;
     private const uint White = Canvas.White;
 
-    public void Paint(Span<uint> span, MaintenanceNotice notice, DateTime now, double seconds)
+    public void Paint(Span<uint> span, int Width, int Height, MaintenanceNotice notice, DateTime now, double seconds)
     {
         var top = Height - BandHeight;
         var pulse = (int)(seconds * 2) % 2 == 0;

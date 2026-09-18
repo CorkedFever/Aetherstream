@@ -260,6 +260,13 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Folded down to the title bar. The picture carries on wherever it is showing.</summary>
     public bool WindowMinimised { get; set; }
 
+    /// <summary>
+    /// The picture's height in pixels, 720 or 1080. The width follows at 16:9. Video is decoded
+    /// to this size and the texture on the surface is this size; the drawn channels are always
+    /// painted at 720 and scaled up. Takes effect when the next thing starts.
+    /// </summary>
+    public int PictureHeight { get; set; } = 720;
+
     /// <summary>Apps put away from the home screen, by key. Setup, System brings them back.</summary>
     public List<string> HiddenApps { get; set; } = [];
 

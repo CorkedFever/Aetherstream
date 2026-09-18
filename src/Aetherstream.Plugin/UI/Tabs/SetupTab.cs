@@ -402,6 +402,21 @@ internal sealed class SetupTab(UiContext ui)
     {
         Ui.Section("Decoding");
 
+        var sizes = new[] { 720, 1080 };
+        var sizeLabels = new[] { "720p — lighter", "1080p — sharper" };
+        var sizeIndex = Math.Max(0, Array.IndexOf(sizes, ui.Config.PictureHeight));
+        ImGui.SetNextItemWidth(220);
+        if (ImGui.Combo("Picture size", ref sizeIndex, sizeLabels, sizeLabels.Length))
+        {
+            ui.Config.PictureHeight = sizes[sizeIndex];
+            ui.SaveConfig();
+        }
+
+        Ui.Tip(
+            "How many pixels the picture has, on the surface and in the window. 720p is what it has " +
+            "always been; 1080p reads sharper up close on a large screen, decodes a bigger stream, " +
+            "and costs more of each frame. Takes effect when the next thing starts.");
+
         var buffer = ui.Config.NetworkCachingMs / 1000;
         ImGui.SetNextItemWidth(220);
         if (ImGui.SliderInt("Buffer before playing", ref buffer, 2, 20, "%d s"))

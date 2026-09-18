@@ -25,7 +25,13 @@ internal sealed class StreamSession(
     IPluginLog log,
     Configuration config) : IDisposable
 {
-    private readonly uint[] frame = new uint[Width * Height];
+    /// <summary>The picture at the output size: what libvlc decodes into and what is uploaded.</summary>
+    private uint[] frame = new uint[CanvasWidth * CanvasHeight];
+
+    /// <summary>The drawn things' canvas, always 1280x720: the test card, a channel, the picture a channel is handed.</summary>
+    private readonly uint[] canvas = new uint[CanvasWidth * CanvasHeight];
+    private uint[]? picture720;
+    private uint[]? scaled;
 
     /// <summary>
     /// Frames to keep a retired texture alive before freeing it.
@@ -46,8 +52,68 @@ internal sealed class StreamSession(
     private bool stopRequested;
     private bool disposed;
 
-    public const int Width = 1280;
-    public const int Height = 720;
+    /// <summary>The size everything drawn is painted at. The output can be larger; see <see cref="Width"/>.</summary>
+    public const int CanvasWidth = Video.Canvas.Width;
+    public const int CanvasHeight = Video.Canvas.Height;
+
+    /// <summary>The output size: 1280x720, or 1920x1080 when the configuration asks for it.</summary>
+    public int Width { get; private set; } = CanvasWidth;
+
+    public int Height { get; private set; } = CanvasHeight;
+
+    /// <summary>
+    /// Brings the output size in line with the configuration. Only between things, since libvlc's
+    /// output format is fixed for the life of a play and the uploader's texture for the life of
+    /// the uploader; the uploader is retired here the way it is on a stop.
+    /// </summary>
+    private void EnsureOutputSize()
+    {
+        var wantHeight = config.PictureHeight >= 1080 ? 1080 : 720;
+        var wantWidth = wantHeight * 16 / 9;
+        if (wantWidth == this.Width && wantHeight == this.Height)
+            return;
+
+        if (this.uploader is not null)
+        {
+            this.retiring.Add((this.uploader, RetireFrames));
+            this.uploader = null;
+        }
+
+        this.Width = wantWidth;
+        this.Height = wantHeight;
+        this.frame = new uint[wantWidth * wantHeight];
+        this.fitted = null;
+        this.scaled = null;
+        this.retroFactor = null;
+        this.idleStamp = (-1, false, false, 0, -1);
+        log.Information($"[picture] {wantWidth}x{wantHeight}");
+    }
+
+    /// <summary>
+    /// The drawn canvas at the output size: itself when they match, else scaled up with a
+    /// bilinear filter into a buffer kept for the purpose. Text drawn at 720 comes out soft at
+    /// 1080, which is the price of drawing it once.
+    /// </summary>
+    private uint[] ToOutput(uint[] canvas720)
+    {
+        if (this.Width == CanvasWidth && this.Height == CanvasHeight)
+            return canvas720;
+
+        this.scaled ??= new uint[this.Width * this.Height];
+        Video.Resample.Bilinear(canvas720, CanvasWidth, CanvasHeight, this.scaled, this.Width, this.Height);
+        return this.scaled;
+    }
+
+    /// <summary>The output frame at canvas size, for a channel that shows the picture in a corner.</summary>
+    private uint[] PictureForCanvas()
+    {
+        if (this.Width == CanvasWidth && this.Height == CanvasHeight)
+            return this.frame;
+
+        this.picture720 ??= new uint[CanvasWidth * CanvasHeight];
+        Video.Resample.Bilinear(this.frame, this.Width, this.Height, this.picture720, CanvasWidth, CanvasHeight);
+        return this.picture720;
+    }
 
     public bool IsPlaying => this.source is not null;
 
@@ -294,7 +360,7 @@ internal sealed class StreamSession(
                 return;
         }
 
-        this.PaintOverlay(this.frame);
+        this.PaintOverlay(this.frame, this.Width, this.Height);
 
         if (config.RetroMode)
             this.Retro(this.frame);
@@ -738,6 +804,7 @@ internal sealed class StreamSession(
         var overlayTick = this.Overlay is { Active: true } ? (int)(Environment.TickCount64 / 500 % 1_000_000) : -1;
         var stamp = ((now.Hour * 60) + now.Minute, config.RetroMode, config.PaintOnSurface, config.HasFit ? config.FitStamp : 0, overlayTick);
 
+        this.EnsureOutputSize();
         if (this.uploader is null)
         {
             this.uploader = this.CreateUploader();
@@ -749,18 +816,19 @@ internal sealed class StreamSession(
             return;
 
         this.idleStamp = stamp;
-        card.Render(this.frame, now);
-        this.PaintOverlay(this.frame);
+        card.Render(this.canvas, now);
+        this.PaintOverlay(this.canvas, CanvasWidth, CanvasHeight);
+        var output = this.ToOutput(this.canvas);
 
         if (config.RetroMode)
-            this.Retro(this.frame);
+            this.Retro(output);
 
         if (config.PaintOnSurface)
-            this.MakeOpaque(this.frame);
+            this.MakeOpaque(output);
 
         try
         {
-            this.uploader.Upload(config.HasFit ? this.Fit(this.frame) : this.frame);
+            this.uploader.Upload(config.HasFit ? this.Fit(output) : output);
         }
         catch (Exception ex)
         {
@@ -783,7 +851,7 @@ internal sealed class StreamSession(
     private long overlayPaintedMs = -1;
 
     /// <summary>Paints the overlay if it is active. True when it painted.</summary>
-    private bool PaintOverlay(uint[] target)
+    private bool PaintOverlay(uint[] target, int width, int height)
     {
         if (this.Overlay is not { Active: true } overlay)
             return false;
@@ -792,7 +860,7 @@ internal sealed class StreamSession(
             this.channelClock.Restart();
 
         this.overlayPaintedMs = this.channelClock.ElapsedMilliseconds;
-        overlay.Paint(target, DateTime.Now, this.overlayPaintedMs / 1000.0);
+        overlay.Paint(target, width, height, DateTime.Now, this.overlayPaintedMs / 1000.0);
         return true;
     }
 
@@ -859,6 +927,9 @@ internal sealed class StreamSession(
             this.music?.Stop();
         }
 
+        if (this.source is null)
+            this.EnsureOutputSize();
+
         if (this.uploader is null)
         {
             this.uploader = this.CreateUploader();
@@ -881,16 +952,16 @@ internal sealed class StreamSession(
         {
             if (this.source is not null)
             {
-                picture = this.frame;
+                picture = this.PictureForCanvas();
             }
             else if (this.IdleCard is { Available: true } card)
             {
-                card.Render(this.frame, DateTime.Now);
-                picture = this.frame;
+                card.Render(this.canvas, DateTime.Now);
+                picture = this.canvas;
             }
         }
 
-        this.composed ??= new uint[Width * Height];
+        this.composed ??= new uint[CanvasWidth * CanvasHeight];
 
         // A fresh canvas whenever the channel changes: a channel that leaves part of the frame
         // untouched would otherwise show whatever the last one painted there.
@@ -901,17 +972,18 @@ internal sealed class StreamSession(
         }
 
         channel.Render(this.composed, picture, DateTime.Now, now / 1000.0);
-        this.PaintOverlay(this.composed);
+        this.PaintOverlay(this.composed, CanvasWidth, CanvasHeight);
+        var output = this.ToOutput(this.composed);
 
         if (config.RetroMode)
-            this.Retro(this.composed);
+            this.Retro(output);
 
         if (config.PaintOnSurface)
-            this.MakeOpaque(this.composed);
+            this.MakeOpaque(output);
 
         try
         {
-            this.uploader.Upload(config.HasFit ? this.Fit(this.composed) : this.composed);
+            this.uploader.Upload(config.HasFit ? this.Fit(output) : output);
         }
         catch (Exception ex)
         {
@@ -945,7 +1017,7 @@ internal sealed class StreamSession(
         }
     }
 
-    private static ushort[] BuildRetroFactor()
+    private ushort[] BuildRetroFactor()
     {
         var table = new ushort[Width * Height];
 
@@ -1061,6 +1133,7 @@ internal sealed class StreamSession(
     {
         this.TearDown();
         this.Error = null;
+        this.EnsureOutputSize();
 
         try
         {

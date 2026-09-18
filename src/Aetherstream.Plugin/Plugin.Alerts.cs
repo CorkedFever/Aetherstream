@@ -109,10 +109,10 @@ public sealed partial class Plugin
             }
         }
 
-        public void Paint(uint[] target, DateTime now, double seconds)
+        public void Paint(uint[] target, int width, int height, DateTime now, double seconds)
         {
             if (this.current is { } n)
-                banner.Paint(target, n, now, seconds);
+                banner.Paint(target, width, height, n, now, seconds);
         }
     }
 }

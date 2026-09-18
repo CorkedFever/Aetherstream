@@ -13,7 +13,7 @@ namespace Aetherstream.Playback;
 /// exists so Twitch still works with nothing installed.
 /// </para>
 /// </summary>
-public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null, string? cookiesFile = null) : IStreamResolver
+public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null, string? cookiesFile = null, int pictureHeight = 720) : IStreamResolver
 {
     /// <summary>Browsers yt-dlp can read a signed-in YouTube session from, as it names them, plus the Firefox forks it does not know by name.</summary>
     public static readonly string[] Browsers = ["floorp", "firefox", "librewolf", "waterfox", "zen", "brave", "chrome", "edge", "vivaldi", "opera"];
@@ -184,14 +184,14 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
         start.ArgumentList.Add("b/bv*+ba");
 
         // Within whatever the selector allows, prefer what the decoder can actually use. The
-        // framebuffer is 1280x720, so anything above that is decode work thrown away — and left to
+        // framebuffer is the configured height, so anything above it is decode work thrown away — and left to
         // its own ranking yt-dlp reaches for 2160p AV1 the moment its preferred formats are
         // missing, which they are on any machine without a JavaScript runtime for YouTube's
         // challenges. Software-decoding 4K AV1 inside the game is not a stream that plays; it is a
         // slideshow that looks like a broken plugin. H.264 first because every libvlc build decodes
         // it in hardware or cheaply in software; AAC over Opus for the same reason.
         start.ArgumentList.Add("-S");
-        start.ArgumentList.Add("res:720,vcodec:h264,acodec:aac");
+        start.ArgumentList.Add($"res:{Math.Clamp(pictureHeight, 360, 2160)},vcodec:h264,acodec:aac");
 
         // YouTube's "confirm you're not a bot" wall wants a signed-in session, and this is the
         // remedy yt-dlp itself names in that error: read the cookies of a browser the person is
