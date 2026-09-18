@@ -37,6 +37,10 @@ internal sealed class ScreenTab(UiContext ui)
     private string pickReport = string.Empty;
     private bool mouseWasDown;
 
+    /// <summary>Words to narrow the placed list and the slot list by; a space separates several, any of which matches.</summary>
+    private string placedFilter = string.Empty;
+    private string slotFilter = string.Empty;
+
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int key);
 
@@ -193,13 +197,21 @@ internal sealed class ScreenTab(UiContext ui)
         if (this.placed.Count == 0)
             return;
 
+        ImGui.SetNextItemWidth(-1);
+        ImGui.InputTextWithHint("##placedfilter", "filter: scr, screen, board, fx…", ref this.placedFilter, 64);
+        Ui.Tip("Narrows the list to names containing any of these words, separated by spaces. \"fx\" keeps only effects; \"hou\" only furnishings.");
+
+        var shownPlaced = this.placed.Where(p => Matches(p.Path, this.placedFilter)).ToList();
+        if (shownPlaced.Count < this.placed.Count)
+            ImGui.TextColored(Ui.Faint, $"{shownPlaced.Count} of {this.placed.Count} shown");
+
         // EndChild is required even when BeginChild returns false; ImRaii handles that, which is why
         // it is used here rather than the raw calls.
         using var child = ImRaii.Child("##placed", new Vector2(-1, 130), true);
         if (!child)
             return;
 
-        foreach (var item in this.placed)
+        foreach (var item in shownPlaced)
         {
             var selected = ui.Config.SurfaceModelPath == item.Path;
             var isEffect = item.Path.EndsWith(".avfx", StringComparison.OrdinalIgnoreCase);
@@ -402,11 +414,22 @@ internal sealed class ScreenTab(UiContext ui)
 
         Ui.Hint("Try them one at a time — the screen face is usually the largest.");
 
+        if (this.surfaces.Count > 6)
+        {
+            ImGui.SetNextItemWidth(-1);
+            ImGui.InputTextWithHint("##slotfilter", "filter the textures by name", ref this.slotFilter, 64);
+        }
+
+        var shownSlots = this.surfaces
+            .Where(slot => Matches(slot.TexturePath, this.slotFilter))
+            .OrderByDescending(slot => (long)slot.Width * slot.Height)
+            .ToList();
+
         using var child = ImRaii.Child("##surfacelist", new Vector2(-1, 130), true);
         if (!child)
             return;
 
-        foreach (var slot in this.surfaces)
+        foreach (var slot in shownSlots)
         {
             var selected = ui.Config.SurfaceMaterialIndex == slot.MaterialIndex
                 && ui.Config.SurfaceTextureIndex == slot.TextureIndex;
@@ -855,6 +878,30 @@ internal sealed class ScreenTab(UiContext ui)
     /// textures), then the digits alone, which is how a furnishing's effect names itself
     /// (igene_1604_c1 and its 1604 textures). The first that matches anything wins.
     /// </summary>
+    /// <summary>
+    /// Whether a path's file name contains any of the filter's words. "fx" and "hou" are read as
+    /// kinds rather than words, since an effect's name rarely says "fx" and a furnishing's never
+    /// says "hou" outside its folder.
+    /// </summary>
+    private static bool Matches(string path, string filter)
+    {
+        if (filter.Trim().Length == 0)
+            return true;
+
+        var name = Path.GetFileName(path);
+        foreach (var word in filter.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (word.Equals("fx", StringComparison.OrdinalIgnoreCase) && path.EndsWith(".avfx", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (word.Equals("hou", StringComparison.OrdinalIgnoreCase) && path.StartsWith("bgcommon/hou", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (name.Contains(word, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
     private static string DeriveEffectFilter(string avfxPath)
     {
         var name = Path.GetFileNameWithoutExtension(avfxPath);
