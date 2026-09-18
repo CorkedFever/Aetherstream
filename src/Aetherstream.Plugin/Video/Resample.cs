@@ -3,10 +3,14 @@ namespace Aetherstream.Plugin.Video;
 /// <summary>
 /// Scales one RGBA buffer into another with a bilinear filter. Used both ways: the 720 canvas
 /// up to a 1080 output, and a 1080 frame down to the canvas for a channel that shows the picture
-/// in a corner. Plain loops on the render thread; a 1080 frame is under three milliseconds.
+/// in a corner. Runs on the render thread, so it is written for speed: the column weights are
+/// worked out once per pair of sizes, the four taps are blended two channels at a time in one
+/// register, and the rows are spread over the thread pool.
 /// </summary>
-internal static class Resample
+internal static unsafe class Resample
 {
+    private static (int SourceWidth, int TargetWidth, int[] X0, int[] X1, int[] Fx)? columns;
+
     public static void Bilinear(uint[] source, int sourceWidth, int sourceHeight, uint[] target, int targetWidth, int targetHeight)
     {
         if (sourceWidth == targetWidth && sourceHeight == targetHeight)
@@ -15,43 +19,84 @@ internal static class Resample
             return;
         }
 
-        var scaleX = (sourceWidth - 1) / (float)Math.Max(1, targetWidth - 1);
+        var (x0s, x1s, fxs) = Columns(sourceWidth, targetWidth);
         var scaleY = (sourceHeight - 1) / (float)Math.Max(1, targetHeight - 1);
 
-        for (var y = 0; y < targetHeight; y++)
+        fixed (uint* src = source)
+        fixed (uint* dst = target)
+        fixed (int* px0 = x0s)
+        fixed (int* px1 = x1s)
+        fixed (int* pfx = fxs)
         {
-            var sy = y * scaleY;
-            var y0 = (int)sy;
-            var y1 = Math.Min(sourceHeight - 1, y0 + 1);
-            var fy = (int)((sy - y0) * 256f);
-            var row0 = y0 * sourceWidth;
-            var row1 = y1 * sourceWidth;
-            var outRow = y * targetWidth;
+            var s = src;
+            var d = dst;
+            var cx0 = px0;
+            var cx1 = px1;
+            var cfx = pfx;
 
-            for (var x = 0; x < targetWidth; x++)
+            // Rows in strips of sixteen: enough work per task to be worth the hand-off, few
+            // enough strips that every core gets some.
+            var strips = (targetHeight + 15) / 16;
+            Parallel.For(0, strips, strip =>
             {
-                var sx = x * scaleX;
-                var x0 = (int)sx;
-                var x1 = Math.Min(sourceWidth - 1, x0 + 1);
-                var fx = (int)((sx - x0) * 256f);
+                var yEnd = Math.Min(targetHeight, (strip + 1) * 16);
+                for (var y = strip * 16; y < yEnd; y++)
+                {
+                    var sy = y * scaleY;
+                    var y0 = (int)sy;
+                    var y1 = Math.Min(sourceHeight - 1, y0 + 1);
+                    var fy = (uint)((sy - y0) * 256f);
+                    var row0 = s + (y0 * sourceWidth);
+                    var row1 = s + (y1 * sourceWidth);
+                    var outRow = d + (y * targetWidth);
 
-                var a = source[row0 + x0];
-                var b = source[row0 + x1];
-                var c = source[row1 + x0];
-                var d = source[row1 + x1];
+                    for (var x = 0; x < targetWidth; x++)
+                    {
+                        var x0 = cx0[x];
+                        var x1 = cx1[x];
+                        var fx = (uint)cfx[x];
 
-                var r = Mix(a & 0xFF, b & 0xFF, c & 0xFF, d & 0xFF, fx, fy);
-                var g = Mix((a >> 8) & 0xFF, (b >> 8) & 0xFF, (c >> 8) & 0xFF, (d >> 8) & 0xFF, fx, fy);
-                var bl = Mix((a >> 16) & 0xFF, (b >> 16) & 0xFF, (c >> 16) & 0xFF, (d >> 16) & 0xFF, fx, fy);
-                target[outRow + x] = 0xFF000000u | (bl << 16) | (g << 8) | r;
-            }
+                        var top = Lerp(row0[x0], row0[x1], fx);
+                        var bottom = Lerp(row1[x0], row1[x1], fx);
+                        outRow[x] = Lerp(top, bottom, fy) | 0xFF000000u;
+                    }
+                }
+            });
         }
     }
 
-    private static uint Mix(uint a, uint b, uint c, uint d, int fx, int fy)
+    /// <summary>
+    /// Blends two packed pixels, red and blue in one multiply and green in another: the channels
+    /// are spread apart so an 8-bit product cannot carry into its neighbour.
+    /// </summary>
+    private static uint Lerp(uint a, uint b, uint f)
     {
-        var top = (a * (256 - fx)) + (b * fx);
-        var bottom = (c * (256 - fx)) + (d * fx);
-        return (uint)(((top * (256 - fy)) + (bottom * fy)) >> 16);
+        var inverse = 256 - f;
+        var rb = ((((a & 0x00FF00FFu) * inverse) + ((b & 0x00FF00FFu) * f)) >> 8) & 0x00FF00FFu;
+        var g = ((((a & 0x0000FF00u) * inverse) + ((b & 0x0000FF00u) * f)) >> 8) & 0x0000FF00u;
+        return rb | g;
+    }
+
+    private static (int[] X0, int[] X1, int[] Fx) Columns(int sourceWidth, int targetWidth)
+    {
+        var cached = columns;
+        if (cached is { } c && c.SourceWidth == sourceWidth && c.TargetWidth == targetWidth)
+            return (c.X0, c.X1, c.Fx);
+
+        var x0s = new int[targetWidth];
+        var x1s = new int[targetWidth];
+        var fxs = new int[targetWidth];
+        var scaleX = (sourceWidth - 1) / (float)Math.Max(1, targetWidth - 1);
+        for (var x = 0; x < targetWidth; x++)
+        {
+            var sx = x * scaleX;
+            var x0 = (int)sx;
+            x0s[x] = x0;
+            x1s[x] = Math.Min(sourceWidth - 1, x0 + 1);
+            fxs[x] = (int)((sx - x0) * 256f);
+        }
+
+        columns = (sourceWidth, targetWidth, x0s, x1s, fxs);
+        return (x0s, x1s, fxs);
     }
 }
