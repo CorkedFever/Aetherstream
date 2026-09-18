@@ -165,6 +165,36 @@ public sealed class Recent
 }
 
 [Serializable]
+/// <summary>
+/// How the picture sat on one surface: the slot, the mask, the fit and the brightness. Kept per
+/// surface path, so trying the picture on a scoreboard in town does not carry that board's fit
+/// and mask home to the monitor.
+/// </summary>
+public sealed class SurfaceMemory
+{
+    public int MaterialIndex { get; set; } = -1;
+
+    public int TextureIndex { get; set; } = -1;
+
+    public string MaskPath { get; set; } = string.Empty;
+
+    public int MaskMaterialIndex { get; set; }
+
+    public int MaskTextureIndex { get; set; }
+
+    public uint MaskColour { get; set; } = 0xFFFFFFFF;
+
+    public float Brightness { get; set; } = 1f;
+
+    public float FitScaleX { get; set; } = 1f;
+
+    public float FitScaleY { get; set; } = 1f;
+
+    public float FitOffsetX { get; set; }
+
+    public float FitOffsetY { get; set; }
+}
+
 public sealed class Configuration : IPluginConfiguration
 {
     public const int CurrentVersion = 8;
@@ -606,6 +636,68 @@ public sealed class Configuration : IPluginConfiguration
     public int SurfaceMaskMaterialIndex { get; set; }
 
     public int SurfaceMaskTextureIndex { get; set; }
+
+    /// <summary>Each surface's settings, by its path, recalled when it is chosen again.</summary>
+    public Dictionary<string, SurfaceMemory> SurfaceMemories { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Files the current surface's settings under its path.</summary>
+    public void RememberSurface()
+    {
+        if (this.SurfaceModelPath.Length == 0)
+            return;
+
+        this.SurfaceMemories[this.SurfaceModelPath] = new SurfaceMemory
+        {
+            MaterialIndex = this.SurfaceMaterialIndex,
+            TextureIndex = this.SurfaceTextureIndex,
+            MaskPath = this.SurfaceMaskPath,
+            MaskMaterialIndex = this.SurfaceMaskMaterialIndex,
+            MaskTextureIndex = this.SurfaceMaskTextureIndex,
+            MaskColour = this.MaskColour,
+            Brightness = this.SurfaceBrightness,
+            FitScaleX = this.FitScaleX,
+            FitScaleY = this.FitScaleY,
+            FitOffsetX = this.FitOffsetX,
+            FitOffsetY = this.FitOffsetY,
+        };
+    }
+
+    /// <summary>
+    /// Moves to another surface: the current one's settings are filed first, and the new one's
+    /// come back if it was ever set up, else the fit, mask and brightness start clean. The slot
+    /// is the caller's to set, since a fresh model's slots are not known until it is read.
+    /// </summary>
+    public void SwitchSurface(string path)
+    {
+        this.RememberSurface();
+        this.SurfaceModelPath = path;
+
+        if (this.SurfaceMemories.TryGetValue(path, out var memory))
+        {
+            this.SurfaceMaterialIndex = memory.MaterialIndex;
+            this.SurfaceTextureIndex = memory.TextureIndex;
+            this.SurfaceMaskPath = memory.MaskPath;
+            this.SurfaceMaskMaterialIndex = memory.MaskMaterialIndex;
+            this.SurfaceMaskTextureIndex = memory.MaskTextureIndex;
+            this.MaskColour = memory.MaskColour;
+            this.SurfaceBrightness = memory.Brightness;
+            this.FitScaleX = memory.FitScaleX;
+            this.FitScaleY = memory.FitScaleY;
+            this.FitOffsetX = memory.FitOffsetX;
+            this.FitOffsetY = memory.FitOffsetY;
+            return;
+        }
+
+        this.SurfaceMaskPath = string.Empty;
+        this.SurfaceMaskMaterialIndex = 0;
+        this.SurfaceMaskTextureIndex = 0;
+        this.MaskColour = 0xFFFFFFFF;
+        this.SurfaceBrightness = 1f;
+        this.FitScaleX = 1f;
+        this.FitScaleY = 1f;
+        this.FitOffsetX = 0f;
+        this.FitOffsetY = 0f;
+    }
 
     /// <summary>
     /// Brightens the picture before it goes onto a surface. An effect that blends additively shows

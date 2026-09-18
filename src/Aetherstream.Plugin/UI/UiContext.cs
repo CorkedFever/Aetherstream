@@ -142,10 +142,15 @@ internal sealed class UiContext
     {
         this.UnbindSurface();
 
+        // The surface being left keeps its settings; the preset then says how this one sits.
+        this.Config.RememberSurface();
         this.Config.SurfaceModelPath = screen.SurfacePath;
         this.Config.SurfaceMaterialIndex = screen.MaterialIndex;
         this.Config.SurfaceTextureIndex = screen.TextureIndex;
         this.Config.SurfaceMaskPath = screen.MaskPath;
+        this.Config.SurfaceMaskMaterialIndex = 0;
+        this.Config.SurfaceMaskTextureIndex = 0;
+        this.Config.MaskColour = 0xFFFFFFFF;
         this.Config.SurfaceBrightness = screen.Brightness;
         this.Config.FitScaleX = screen.FitScaleX;
         this.Config.FitScaleY = screen.FitScaleY;

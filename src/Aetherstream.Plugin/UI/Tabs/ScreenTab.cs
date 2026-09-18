@@ -143,9 +143,11 @@ internal sealed class ScreenTab(UiContext ui)
             if (Ui.IconButton(FontAwesomeIcon.Times, "Stop painting and put the surface back", "##clearsurface"))
             {
                 ui.UnbindSurface();
+                ui.Config.RememberSurface();
                 ui.Config.SurfaceModelPath = string.Empty;
                 ui.Config.SurfaceMaterialIndex = -1;
                 ui.Config.SurfaceTextureIndex = -1;
+                ui.Config.SurfaceMaskPath = string.Empty;
                 ui.Config.PaintOnSurface = false;
                 ui.SaveConfig();
             }
@@ -378,7 +380,12 @@ internal sealed class ScreenTab(UiContext ui)
             return;
         }
 
-        ui.Config.SurfaceModelPath = item.Path;
+        if (!ui.Config.SurfaceModelPath.Equals(item.Path, StringComparison.OrdinalIgnoreCase))
+        {
+            ui.UnbindSurface();
+            ui.Config.SwitchSurface(item.Path);
+        }
+
         ui.Config.SurfacePosition = anchorPos;
         this.surfaces = SurfaceBinding.Enumerate(anchorPos, item.Path, out this.surfaceReport);
         this.surfacesScanned = true;
@@ -529,7 +536,12 @@ internal sealed class ScreenTab(UiContext ui)
                 $"{Path.GetFileName(effect.Path)}  ·  {effect.Width}x{effect.Height}##{effect.Path}",
                 selected))
             {
-                ui.Config.SurfaceModelPath = tagged;
+                if (!ui.Config.SurfaceModelPath.Equals(tagged, StringComparison.OrdinalIgnoreCase))
+                {
+                    ui.UnbindSurface();
+                    ui.Config.SwitchSurface(tagged);
+                }
+
                 ui.Config.SurfaceMaterialIndex = 0;
                 ui.Config.SurfaceTextureIndex = 0;
                 ui.Config.PaintOnSurface = true;
