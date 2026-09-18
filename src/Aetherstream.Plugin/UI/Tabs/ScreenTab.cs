@@ -159,8 +159,12 @@ internal sealed class ScreenTab(UiContext ui)
 
         Ui.Hint("Stand next to the thing you want to paint on, then scan.");
 
+        // Up to two hundred yalms: a furnishing sits where it stands, but a part of the zone
+        // itself, a stadium's scoreboard say, is placed by its model's origin, which can be
+        // half the building away from the face you are looking at.
         ImGui.SetNextItemWidth(130);
-        ImGui.SliderFloat("##range", ref this.placedRange, 1f, 25f, "%.0f yalms");
+        ImGui.SliderFloat("##range", ref this.placedRange, 1f, 200f, "%.0f yalms");
+        Ui.Tip("How far around you to look. A furnishing is close; a part of the building or the zone can be placed far from where it appears, so widen this for those.");
 
         ImGui.SameLine();
         if (ImGui.Button("Scan"))
@@ -231,7 +235,7 @@ internal sealed class ScreenTab(UiContext ui)
 
         LayoutLookup.DumpLayout(anchorPos, line => ui.Log.Information(line));
 
-        foreach (var item in this.placed.Take(20))
+        foreach (var item in this.placed.Take(60))
             ui.Log.Information($"[scan]   placed     {item.Distance:F1}y {item.Path}");
     }
 
