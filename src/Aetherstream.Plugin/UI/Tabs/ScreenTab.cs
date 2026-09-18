@@ -495,6 +495,15 @@ internal sealed class ScreenTab(UiContext ui)
             "Leave it empty to list everything loaded — there are thousands.");
 
         ImGui.SameLine();
+        if (ImGui.Button("Dump to log"))
+        {
+            VfxLookup.Dump(this.effectFilter, line => ui.Log.Information(line));
+            this.surfaceReport = $"Everything loaded whose path contains '{this.effectFilter}' is in the Dalamud log, under [dump].";
+        }
+
+        Ui.Tip("Writes every loaded resource whose path contains the filter, any kind of file, to the Dalamud log, with a count of what is loaded by type. For when a screen's texture cannot be found by name.");
+
+        ImGui.SameLine();
         if (ImGui.Button("Find effects"))
         {
             this.effects = VfxLookup.List(this.effectFilter);

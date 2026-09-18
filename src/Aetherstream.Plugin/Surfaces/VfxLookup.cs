@@ -102,6 +102,82 @@ internal static unsafe class VfxLookup
         return found;
     }
 
+    /// <summary>
+    /// Writes what the resource graph holds: a count per file extension, then every path
+    /// containing the filter whatever its extension, with a texture's size where it has one.
+    /// For when a screen's texture cannot be found by any name guessed for it.
+    /// </summary>
+    public static void Dump(string filter, Action<string> write, int limit = 400)
+    {
+        var manager = ResourceManager.Instance();
+        if (!SafeMemory.CanRead<ResourceManager>(manager))
+        {
+            write("[dump] no resource manager");
+            return;
+        }
+
+        var graph = manager->ResourceGraph;
+        if (!SafeMemory.CanRead<ResourceGraph>(graph))
+        {
+            write("[dump] no resource graph");
+            return;
+        }
+
+        var byExtension = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var matched = new List<string>();
+        var total = 0;
+
+        foreach (var container in graph->Containers)
+        {
+            var map = container.MainMap;
+            if (map is null)
+                continue;
+
+            foreach (var byType in *map)
+            {
+                var inner = byType.Item2.Value;
+                if (inner is null)
+                    continue;
+
+                foreach (var entry in *inner)
+                {
+                    var handle = entry.Item2.Value;
+                    if (!SafeMemory.CanRead<ResourceHandle>(handle))
+                        continue;
+
+                    var path = handle->FileName.ToString();
+                    if (path.Length == 0)
+                        continue;
+
+                    total++;
+                    var dot = path.LastIndexOf('.');
+                    var ext = dot >= 0 ? path[dot..] : "(none)";
+                    byExtension[ext] = byExtension.GetValueOrDefault(ext) + 1;
+
+                    if (filter.Length > 0 && !path.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    if (matched.Count >= limit)
+                        continue;
+
+                    var size = string.Empty;
+                    if (ext.Equals(".atex", StringComparison.OrdinalIgnoreCase) || ext.Equals(".tex", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var texture = ((TextureResourceHandle*)handle)->Texture;
+                        if (SafeMemory.CanRead<FFXIVClientStructs.FFXIV.Client.Graphics.Kernel.Texture>(texture))
+                            size = $" {texture->ActualWidth}x{texture->ActualHeight}";
+                    }
+
+                    matched.Add($"{path}{size}");
+                }
+            }
+        }
+
+        write($"[dump] {total} resources loaded; " + string.Join(", ", byExtension.OrderByDescending(kv => kv.Value).Take(12).Select(kv => $"{kv.Key} {kv.Value}")));
+        write($"[dump] {matched.Count} paths contain '{filter}'" + (matched.Count >= limit ? " (list capped)" : string.Empty));
+        foreach (var line in matched)
+            write("[dump]   " + line);
+    }
+
     /// <summary>Resolves an effect texture by path. Re-walked each frame, like the model path is.</summary>
     public static FFXIVClientStructs.FFXIV.Client.Graphics.Kernel.Texture* FindByPath(string path)
     {
