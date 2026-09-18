@@ -523,23 +523,45 @@ internal sealed class StreamSession(
         var left = (int)(((Width - drawWidth) * 0.5f) + (config.FitOffsetX * Width));
         var top = (int)(((Height - drawHeight) * 0.5f) + (config.FitOffsetY * Height));
 
+        // The turn is applied in the sampling: for a quarter turn the picture's columns run
+        // down the drawn region and its rows across it, so a surface that wraps the texture on
+        // its side shows the picture upright.
+        var turn = ((config.FitRotation % 4) + 4) % 4;
         for (var y = 0; y < drawHeight; y++)
         {
             var destinationY = top + y;
             if (destinationY < 0 || destinationY >= Height)
                 continue;
 
-            var sourceY = y * Height / drawHeight;
-            var sourceRow = sourceY * Width;
             var destinationRow = destinationY * Width;
-
             for (var x = 0; x < drawWidth; x++)
             {
                 var destinationX = left + x;
                 if (destinationX < 0 || destinationX >= Width)
                     continue;
 
-                this.fitted[destinationRow + destinationX] = source[sourceRow + (x * Width / drawWidth)];
+                int sourceX, sourceY;
+                switch (turn)
+                {
+                    case 1:
+                        sourceX = y * Width / drawHeight;
+                        sourceY = Height - 1 - (x * Height / drawWidth);
+                        break;
+                    case 2:
+                        sourceX = Width - 1 - (x * Width / drawWidth);
+                        sourceY = Height - 1 - (y * Height / drawHeight);
+                        break;
+                    case 3:
+                        sourceX = Width - 1 - (y * Width / drawHeight);
+                        sourceY = x * Height / drawWidth;
+                        break;
+                    default:
+                        sourceX = x * Width / drawWidth;
+                        sourceY = y * Height / drawHeight;
+                        break;
+                }
+
+                this.fitted[destinationRow + destinationX] = source[(sourceY * Width) + sourceX];
             }
         }
 
@@ -690,7 +712,7 @@ internal sealed class StreamSession(
     /// <summary>Whether the uploader currently holds the test card rather than video.</summary>
     public bool IdleShowing { get; private set; }
 
-    private (int Minute, bool Retro, bool Opaque, bool Fit, int Overlay) idleStamp = (-1, false, false, false, -1);
+    private (int Minute, bool Retro, bool Opaque, int Fit, int Overlay) idleStamp = (-1, false, false, 0, -1);
 
     /// <summary>Where the last resume landed, or -1; and when, for the OSD and the start-over button.</summary>
     public long ResumedAtMs { get; private set; } = -1;
@@ -714,13 +736,13 @@ internal sealed class StreamSession(
         var now = DateTime.Now;
         // While the banner is up the card repaints twice a second, for the countdown and the pulse.
         var overlayTick = this.Overlay is { Active: true } ? (int)(Environment.TickCount64 / 500 % 1_000_000) : -1;
-        var stamp = ((now.Hour * 60) + now.Minute, config.RetroMode, config.PaintOnSurface, config.HasFit, overlayTick);
+        var stamp = ((now.Hour * 60) + now.Minute, config.RetroMode, config.PaintOnSurface, config.HasFit ? config.FitStamp : 0, overlayTick);
 
         if (this.uploader is null)
         {
             this.uploader = this.CreateUploader();
             this.IdleShowing = true;
-            this.idleStamp = (-1, false, false, false, -1);
+            this.idleStamp = (-1, false, false, 0, -1);
         }
 
         if (stamp == this.idleStamp)
@@ -844,7 +866,7 @@ internal sealed class StreamSession(
         }
 
         // The test card path must repaint from scratch once the channel comes down.
-        this.idleStamp = (-1, false, false, false, -1);
+        this.idleStamp = (-1, false, false, 0, -1);
         this.IdleShowing = this.source is null;
 
         var moved = this.PullVideo();

@@ -620,14 +620,59 @@ internal sealed class ScreenTab(UiContext ui)
             ui.SaveConfig();
         }
 
+        ImGui.TextColored(Ui.Faint, "Turn");
+        ImGui.SameLine();
+        if (ImGui.SmallButton("<##turnleft"))
+        {
+            ui.Config.FitRotation = (ui.Config.FitRotation + 3) % 4;
+            ui.SaveConfig();
+        }
+
+        ImGui.SameLine();
+        ImGui.TextUnformatted(ui.Config.FitRotation switch { 1 => "90° right", 2 => "upside down", 3 => "90° left", _ => "upright" });
+        ImGui.SameLine();
+        if (ImGui.SmallButton(">##turnright"))
+        {
+            ui.Config.FitRotation = (ui.Config.FitRotation + 1) % 4;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip("For a surface that wraps the texture on its side or upside down: turn the picture until it reads.");
+
+        ImGui.SameLine(0f, 16f);
         if (ImGui.SmallButton("Reset fit"))
         {
             ui.Config.FitScaleX = 1f;
             ui.Config.FitScaleY = 1f;
             ui.Config.FitOffsetX = 0f;
             ui.Config.FitOffsetY = 0f;
+            ui.Config.FitRotation = 0;
             ui.SaveConfig();
         }
+
+        this.DrawFitPreview();
+    }
+
+    /// <summary>
+    /// The whole texture as the surface receives it, small: the picture inside it at the fit's
+    /// size and place, black around. Moving a slider moves it here at once, so the fit can be
+    /// worked out without craning at the furnishing.
+    /// </summary>
+    private void DrawFitPreview()
+    {
+        if (ui.Session.Uploader is not { HasFrame: true } uploader)
+            return;
+
+        ImGui.Spacing();
+        ImGui.TextColored(Ui.Faint, "What the surface receives");
+        var width = Math.Min(320f, ImGui.GetContentRegionAvail().X);
+        var size = new Vector2(width, width * 9f / 16f);
+        var origin = ImGui.GetCursorScreenPos();
+        var draw = ImGui.GetWindowDrawList();
+        draw.AddRectFilled(origin, origin + size, Theme.U32(Theme.Bezel));
+        draw.AddImage(uploader.Handle, origin, origin + size);
+        draw.AddRect(origin, origin + size, Theme.U32(Theme.GlassEdge));
+        ImGui.Dummy(size);
     }
 
     // -- Floating panel ----------------------------------------------------------------------------

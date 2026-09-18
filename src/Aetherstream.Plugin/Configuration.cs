@@ -193,6 +193,8 @@ public sealed class SurfaceMemory
     public float FitOffsetX { get; set; }
 
     public float FitOffsetY { get; set; }
+
+    public int FitRotation { get; set; }
 }
 
 public sealed class Configuration : IPluginConfiguration
@@ -659,6 +661,7 @@ public sealed class Configuration : IPluginConfiguration
             FitScaleY = this.FitScaleY,
             FitOffsetX = this.FitOffsetX,
             FitOffsetY = this.FitOffsetY,
+            FitRotation = this.FitRotation,
         };
     }
 
@@ -685,6 +688,7 @@ public sealed class Configuration : IPluginConfiguration
             this.FitScaleY = memory.FitScaleY;
             this.FitOffsetX = memory.FitOffsetX;
             this.FitOffsetY = memory.FitOffsetY;
+            this.FitRotation = memory.FitRotation;
             return;
         }
 
@@ -697,6 +701,7 @@ public sealed class Configuration : IPluginConfiguration
         this.FitScaleY = 1f;
         this.FitOffsetX = 0f;
         this.FitOffsetY = 0f;
+        this.FitRotation = 0;
     }
 
     /// <summary>
@@ -713,12 +718,19 @@ public sealed class Configuration : IPluginConfiguration
 
     public float FitOffsetY { get; set; }
 
+    /// <summary>Quarter turns clockwise, 0 to 3: for a surface that wraps the texture on its side or upside down.</summary>
+    public int FitRotation { get; set; }
+
     /// <summary>True when the picture is not simply filling the whole texture.</summary>
     public bool HasFit =>
         Math.Abs(this.FitScaleX - 1f) > 0.001f
         || Math.Abs(this.FitScaleY - 1f) > 0.001f
         || Math.Abs(this.FitOffsetX) > 0.001f
-        || Math.Abs(this.FitOffsetY) > 0.001f;
+        || Math.Abs(this.FitOffsetY) > 0.001f
+        || this.FitRotation != 0;
+
+    /// <summary>A number that changes whenever the fit does, for anything that repaints only on change.</summary>
+    public int FitStamp => HashCode.Combine(this.FitScaleX, this.FitScaleY, this.FitOffsetX, this.FitOffsetY, this.FitRotation);
 
     /// <summary>Which material on the object carries the picture. -1 when nothing is chosen.</summary>
     public int SurfaceMaterialIndex { get; set; } = -1;

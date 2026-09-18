@@ -156,6 +156,7 @@ internal sealed class UiContext
         this.Config.FitScaleY = screen.FitScaleY;
         this.Config.FitOffsetX = screen.FitOffsetX;
         this.Config.FitOffsetY = screen.FitOffsetY;
+        this.Config.FitRotation = 0;
 
         // The whole point is that it shows up without a second step.
         this.Config.PaintOnSurface = true;
