@@ -13,7 +13,7 @@ namespace Aetherstream.Playback;
 /// exists so Twitch still works with nothing installed.
 /// </para>
 /// </summary>
-public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null, string? cookiesFile = null, int pictureHeight = 720) : IStreamResolver
+public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null, string? cookiesFile = null, int pictureHeight = 720, bool preferH264 = false) : IStreamResolver
 {
     /// <summary>Browsers yt-dlp can read a signed-in YouTube session from, as it names them, plus the Firefox forks it does not know by name.</summary>
     public static readonly string[] Browsers = ["floorp", "firefox", "librewolf", "waterfox", "zen", "brave", "chrome", "edge", "vivaldi", "opera"];
@@ -191,7 +191,12 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
         // slideshow that looks like a broken plugin. H.264 first because every libvlc build decodes
         // it in hardware or cheaply in software; AAC over Opus for the same reason.
         start.ArgumentList.Add("-S");
-        start.ArgumentList.Add($"res:{Math.Clamp(pictureHeight, 360, 2160)},vcodec:h264,acodec:aac");
+        // Within the picture's size, the best codec the site offers unless asked to stay on
+        // H.264: YouTube's AV1 at 1080p is a third of the bits of its H.264 and looks better, and
+        // the bundled libvlc decodes it, on the GPU where the driver allows and through dav1d
+        // otherwise. H.264 remains the choice for a machine whose CPU would rather not.
+        var codecs = preferH264 ? "h264" : "av01:vp9.2:vp9:h264";
+        start.ArgumentList.Add($"res:{Math.Clamp(pictureHeight, 360, 2160)},vcodec:{codecs},acodec:aac");
 
         // YouTube's "confirm you're not a bot" wall wants a signed-in session, and this is the
         // remedy yt-dlp itself names in that error: read the cookies of a browser the person is

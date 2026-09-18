@@ -267,6 +267,14 @@ public sealed class Configuration : IPluginConfiguration
     /// </summary>
     public int PictureHeight { get; set; } = 720;
 
+    /// <summary>
+    /// Whether to take the best codec a site offers at the picture's size, AV1 and VP9 included,
+    /// or H.264 only. The bundled libvlc decodes all three, AV1 on the GPU where the driver
+    /// allows; H.264 is the one every GPU decodes in hardware, so it is the lighter choice on an
+    /// older machine.
+    /// </summary>
+    public bool PreferH264 { get; set; }
+
     /// <summary>Apps put away from the home screen, by key. Setup, System brings them back.</summary>
     public List<string> HiddenApps { get; set; } = [];
 

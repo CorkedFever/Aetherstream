@@ -417,6 +417,21 @@ internal sealed class SetupTab(UiContext ui)
             "always been; 1080p reads sharper up close on a large screen, decodes a bigger stream, " +
             "and costs more of each frame. Takes effect when the next thing starts.");
 
+        var codecIndex = ui.Config.PreferH264 ? 1 : 0;
+        var codecLabels = new[] { "Best the site offers — AV1, VP9, H.264", "H.264 only — lighter" };
+        ImGui.SetNextItemWidth(220);
+        if (ImGui.Combo("Codec", ref codecIndex, codecLabels, codecLabels.Length))
+        {
+            ui.Config.PreferH264 = codecIndex == 1;
+            ui.SaveConfig();
+        }
+
+        Ui.Tip(
+            "Which codec to ask a site for, within the picture's size. AV1 and VP9 look better for " +
+            "the bits, and the bundled decoder handles them, on the GPU where the driver allows. " +
+            "H.264 is what every GPU decodes in hardware, so it is the choice if the picture stutters. " +
+            "Takes effect on the next play.");
+
         var buffer = ui.Config.NetworkCachingMs / 1000;
         ImGui.SetNextItemWidth(220);
         if (ImGui.SliderInt("Buffer before playing", ref buffer, 2, 20, "%d s"))
