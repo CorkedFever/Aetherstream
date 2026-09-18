@@ -904,18 +904,27 @@ internal sealed class ScreenTab(UiContext ui)
 
     private static string DeriveEffectFilter(string avfxPath)
     {
+        // The name, then the name with pieces taken off its end one at a time: x6t1_scrn1_y,
+        // x6t1_scrn1, x6t1. The last of those is the zone's own prefix, which matches every
+        // texture the zone loaded; that is a long list, but it is the right list, and it sorts
+        // biggest first. The digits alone come last, for furnishings, whose effect is named
+        // by their number.
         var name = Path.GetFileNameWithoutExtension(avfxPath);
         var candidates = new List<string> { name };
-        var cut = name.LastIndexOf('_');
-        if (cut > 0)
-            candidates.Add(name[..cut]);
+        var trimmed = name;
+        while (trimmed.LastIndexOf('_') is var cut && cut > 0)
+        {
+            trimmed = trimmed[..cut];
+            candidates.Add(trimmed);
+        }
+
         var digits = new string(name.Where(char.IsDigit).ToArray());
         if (digits.Length >= 3)
             candidates.Add(digits);
 
         foreach (var candidate in candidates)
         {
-            if (VfxLookup.List(candidate, 1).Count > 0)
+            if (candidate.Length >= 3 && VfxLookup.List(candidate, 1).Count > 0)
                 return candidate;
         }
 
