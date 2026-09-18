@@ -30,6 +30,11 @@ internal sealed class ScreenTab(UiContext ui)
     private List<VfxLookup.Effect> effects = [];
     private string effectFilter = "1604";
 
+    /// <summary>Waiting for a click in the world, to pick what is under it.</summary>
+    private bool picking;
+    private Vector3? pickedPoint;
+    private long pickedAtTicks;
+
     public void Draw()
     {
         this.DrawMode();
@@ -157,7 +162,9 @@ internal sealed class ScreenTab(UiContext ui)
         // different object and still being shown whatever sat near the anchored one.
         var anchorPos = ui.Objects.LocalPlayer?.Position ?? ui.Config.Placement.AnchorPosition;
 
-        Ui.Hint("Stand next to the thing you want to paint on, then scan.");
+        Ui.Hint("Click the thing you want to paint on, or stand next to it and scan.");
+
+        this.DrawClickToPick();
 
         // Up to two hundred yalms: a furnishing sits where it stands, but a part of the zone
         // itself, a stadium's scoreboard say, is placed by its model's origin, which can be
@@ -204,6 +211,78 @@ internal sealed class ScreenTab(UiContext ui)
 
             Ui.Tip(item.Path);
         }
+    }
+
+    /// <summary>
+    /// A button that arms a pick, and the pick itself: the next click that lands in the world,
+    /// not on a window, is cast through the game's collision to a point, and what is placed
+    /// around that point is listed nearest first with the nearest chosen. Aiming at the thing
+    /// beats standing near it: a part of a zone is placed by its model's origin, which can be
+    /// nowhere near where it appears, but the ray lands on the face itself.
+    /// </summary>
+    private void DrawClickToPick()
+    {
+        if (this.picking)
+        {
+            ImGui.TextColored(Ui.Accent, "Now click the thing in the world. Escape cancels.");
+            ImGui.SameLine();
+            if (ImGui.SmallButton("Cancel##pick"))
+                this.picking = false;
+
+            if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+                this.picking = false;
+
+            // A click that a window took is the window's; only one that reached the world counts.
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.GetIO().WantCaptureMouse)
+            {
+                this.picking = false;
+                var mouse = ImGui.GetMousePos();
+                if (ui.GameGui.ScreenToWorld(mouse, out var hit))
+                    this.PickAt(hit);
+                else
+                    this.surfaceReport = "That click did not land on anything solid.";
+            }
+        }
+        else if (ImGui.Button("Click to pick"))
+        {
+            this.picking = true;
+        }
+
+        Ui.Tip("Then click the screen, wall or sign in the world. Whatever is placed nearest to where the click lands is chosen, and the rest are listed under it to try instead.");
+
+        // A ring where the click landed, for a few seconds, so a miss is visible as a miss.
+        if (this.pickedPoint is { } point && Environment.TickCount64 - this.pickedAtTicks < 4000 && ui.GameGui.WorldToScreen(point, out var screen))
+        {
+            var draw = ImGui.GetForegroundDrawList();
+            draw.AddCircle(screen, 14f, Theme.U32(Theme.Accent), 24, 2f);
+            draw.AddCircleFilled(screen, 3f, Theme.U32(Theme.Accent), 12);
+        }
+    }
+
+    private void PickAt(Vector3 hit)
+    {
+        this.pickedPoint = hit;
+        this.pickedAtTicks = Environment.TickCount64;
+
+        // Listed by distance from the click, not from the player: the thing under the cursor
+        // is the one that was meant.
+        this.placed = LayoutLookup.ListNearby(hit, 15f);
+        this.furnitureCount = this.placed.Count(p => p.Path.StartsWith("bgcommon/hou", StringComparison.OrdinalIgnoreCase));
+        this.surfaces = [];
+        this.surfacesScanned = false;
+
+        ui.Log.Information($"[pick] click landed at {hit.X:F1},{hit.Y:F1},{hit.Z:F1}: {this.placed.Count} placed within 15y");
+        foreach (var item in this.placed.Take(30))
+            ui.Log.Information($"[pick]   {item.Distance:F1}y {item.Path}");
+
+        if (this.placed.Count == 0)
+        {
+            this.surfaceReport = "Nothing placed near where the click landed. Try scanning with a wide range instead.";
+            this.surfacesScanned = true;
+            return;
+        }
+
+        this.Choose(this.placed[0], hit);
     }
 
     private void Scan(Vector3 anchorPos)

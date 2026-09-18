@@ -190,6 +190,7 @@ public sealed partial class Plugin : IDalamudPlugin
 
         this.uiContext = new UiContext
         {
+            GameGui = gameGui,
             Config = this.config,
             Session = this.session,
             ClientState = clientState,

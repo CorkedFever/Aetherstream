@@ -26,6 +26,9 @@ internal sealed class UiContext
 
     public required IPluginLog Log { get; init; }
 
+    /// <summary>The game's own GUI service: a cursor position to a point in the world, and back.</summary>
+    public required IGameGui GameGui { get; init; }
+
     public required PlexArt Art { get; init; }
 
     public required SurfaceInspector Inspector { get; init; }
