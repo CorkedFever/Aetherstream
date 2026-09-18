@@ -65,7 +65,12 @@ internal static unsafe class VfxLookup
 
         foreach (var container in graph->Containers)
         {
-            var map = container.MainMap;
+            // Every map the category keeps, not only the main one: a zone's own resources,
+            // the bg category's models, textures and effects, are filed under the zone's
+            // number in the other maps, and the main map alone never sees them.
+            foreach (var mapPointer in container.CategoryMaps)
+            {
+            var map = mapPointer.Value;
             if (map is null)
                 continue;
 
@@ -97,7 +102,9 @@ internal static unsafe class VfxLookup
                 found.Add(new Effect(path, (int)texture->ActualWidth, (int)texture->ActualHeight));
             }
             }
-        }
+        
+            }
+}
 
         return found;
     }
@@ -129,7 +136,12 @@ internal static unsafe class VfxLookup
 
         foreach (var container in graph->Containers)
         {
-            var map = container.MainMap;
+            // Every map the category keeps, not only the main one: a zone's own resources,
+            // the bg category's models, textures and effects, are filed under the zone's
+            // number in the other maps, and the main map alone never sees them.
+            foreach (var mapPointer in container.CategoryMaps)
+            {
+            var map = mapPointer.Value;
             if (map is null)
                 continue;
 
@@ -170,7 +182,9 @@ internal static unsafe class VfxLookup
                     matched.Add($"{path}{size}");
                 }
             }
-        }
+        
+            }
+}
 
         write($"[dump] {total} resources loaded; " + string.Join(", ", byExtension.OrderByDescending(kv => kv.Value).Take(12).Select(kv => $"{kv.Key} {kv.Value}")));
         write($"[dump] {matched.Count} paths contain '{filter}'" + (matched.Count >= limit ? " (list capped)" : string.Empty));
@@ -194,7 +208,12 @@ internal static unsafe class VfxLookup
 
         foreach (var container in graph->Containers)
         {
-            var map = container.MainMap;
+            // Every map the category keeps, not only the main one: a zone's own resources,
+            // the bg category's models, textures and effects, are filed under the zone's
+            // number in the other maps, and the main map alone never sees them.
+            foreach (var mapPointer in container.CategoryMaps)
+            {
+            var map = mapPointer.Value;
             if (map is null)
                 continue;
 
@@ -219,7 +238,9 @@ internal static unsafe class VfxLookup
                     : null;
             }
             }
-        }
+        
+            }
+}
 
         return null;
     }
