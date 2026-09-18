@@ -34,6 +34,7 @@ internal sealed class ScreenTab(UiContext ui)
     private bool picking;
     private Vector3? pickedPoint;
     private long pickedAtTicks;
+    private string pickReport = string.Empty;
 
     public void Draw()
     {
@@ -233,22 +234,39 @@ internal sealed class ScreenTab(UiContext ui)
                 this.picking = false;
 
             // A click that a window took is the window's; only one that reached the world counts.
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.GetIO().WantCaptureMouse)
+            // Both the press and the release are watched, since the game can swallow one of them.
+            var clicked = ImGui.IsMouseClicked(ImGuiMouseButton.Left) || ImGui.IsMouseReleased(ImGuiMouseButton.Left);
+            var overWindow = ImGui.IsWindowHovered(ImGuiHoveredFlags.AnyWindow) || ImGui.IsAnyItemHovered();
+            if (clicked && !overWindow)
             {
                 this.picking = false;
                 var mouse = ImGui.GetMousePos();
                 if (ui.GameGui.ScreenToWorld(mouse, out var hit))
+                {
+                    this.pickReport = $"Click at {mouse.X:F0},{mouse.Y:F0} landed at {hit.X:F1}, {hit.Y:F1}, {hit.Z:F1}.";
                     this.PickAt(hit);
+                }
                 else
-                    this.surfaceReport = "That click did not land on anything solid.";
+                {
+                    this.pickReport = $"Click at {mouse.X:F0},{mouse.Y:F0} did not land on anything solid. Aim at a wall or floor behind the thing.";
+                    ui.Log.Information($"[pick] {this.pickReport}");
+                }
+            }
+            else if (clicked)
+            {
+                this.pickReport = "That click was on a window, not the world. Still waiting.";
             }
         }
         else if (ImGui.Button("Click to pick"))
         {
             this.picking = true;
+            this.pickReport = string.Empty;
         }
 
         Ui.Tip("Then click the screen, wall or sign in the world. Whatever is placed nearest to where the click lands is chosen, and the rest are listed under it to try instead.");
+
+        if (this.pickReport.Length > 0)
+            ImGui.TextColored(Ui.Faint, this.pickReport);
 
         // A ring where the click landed, for a few seconds, so a miss is visible as a miss.
         if (this.pickedPoint is { } point && Environment.TickCount64 - this.pickedAtTicks < 4000 && ui.GameGui.WorldToScreen(point, out var screen))
@@ -277,11 +295,11 @@ internal sealed class ScreenTab(UiContext ui)
 
         if (this.placed.Count == 0)
         {
-            this.surfaceReport = "Nothing placed near where the click landed. Try scanning with a wide range instead.";
-            this.surfacesScanned = true;
+            this.pickReport += " Nothing is placed within fifteen yalms of that point; try scanning with a wide range instead.";
             return;
         }
 
+        this.pickReport += $" {this.placed.Count} placed nearby; chose {Path.GetFileName(this.placed[0].Path)}.";
         this.Choose(this.placed[0], hit);
     }
 
