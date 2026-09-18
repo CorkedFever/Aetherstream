@@ -37,6 +37,20 @@ internal sealed class MirrorChannel(BitmapFont font) : IFrameChannel, IDisposabl
         : this.capture.Frames == 0 ? $"Waiting for {this.title}…"
         : $"Mirroring {this.title}";
 
+    /// <summary>
+    /// Whether the whole window is shrunk to fit, or a piece of it shown at its own pixels. A
+    /// window wider than the picture loses its text to the shrink; at actual pixels it reads.
+    /// </summary>
+    public bool ActualPixels { get; set; }
+
+    /// <summary>Where the actual-pixels view sits in the window, 0 to 1 each way; a half is the middle.</summary>
+    public float PanX { get; set; } = 0.5f;
+
+    public float PanY { get; set; } = 0.5f;
+
+    /// <summary>The captured window's size, for the app to say how it relates to the picture.</summary>
+    public (int Width, int Height) Size => this.capture.TryLatest(out _, out var w, out var h) ? (w, h) : (0, 0);
+
     /// <summary>Milliseconds since the set last painted this channel; large when it is not up.</summary>
     public long IdleMs => this.lastRenderTicks == 0 ? long.MaxValue : Environment.TickCount64 - this.lastRenderTicks;
 
@@ -71,6 +85,12 @@ internal sealed class MirrorChannel(BitmapFont font) : IFrameChannel, IDisposabl
             return;
         }
 
+        if (this.ActualPixels)
+        {
+            RenderActual(target, pixels, width, height, this.PanX, this.PanY);
+            return;
+        }
+
         // Fit the window inside the frame, keeping its shape.
         var scale = Math.Min((float)W / width, (float)H / height);
         var drawW = Math.Max(1, (int)(width * scale));
@@ -81,36 +101,66 @@ internal sealed class MirrorChannel(BitmapFont font) : IFrameChannel, IDisposabl
         if (drawW < W || drawH < H)
             Canvas.Fill(span, 0, 0, W, H, Canvas.Black);
 
-        // Shrinking by two or more averages a 2x2 block so text and edges do not shimmer; at
-        // less than that a straight sample is close enough and half the work.
-        var average = width >= drawW * 2 || height >= drawH * 2;
+        if (width <= drawW && height <= drawH)
+        {
+            // Growing, or the same: a straight sample.
+            for (var y = 0; y < drawH; y++)
+            {
+                var row = (y * height / drawH) * width;
+                var outRow = ((top + y) * W) + left;
+                for (var x = 0; x < drawW; x++)
+                    target[outRow + x] = pixels[row + (x * width / drawW)];
+            }
+
+            return;
+        }
+
+        // Shrinking: every source pixel under a picture pixel is averaged, so a line of small
+        // text becomes soft grey rather than a scatter of whichever pixels were sampled. The
+        // footprint is capped so a very large window costs a bounded amount per frame.
+        var boxW = Math.Clamp(width / drawW, 1, 4);
+        var boxH = Math.Clamp(height / drawH, 1, 4);
+        var count = (uint)(boxW * boxH);
         for (var y = 0; y < drawH; y++)
         {
-            var sy = y * height / drawH;
-            var sy2 = average ? Math.Min(height - 1, sy + 1) : sy;
-            var rowA = sy * width;
-            var rowB = sy2 * width;
+            var sy = Math.Min(height - boxH, y * height / drawH);
             var outRow = ((top + y) * W) + left;
             for (var x = 0; x < drawW; x++)
             {
-                var sx = x * width / drawW;
-                if (!average)
+                var sx = Math.Min(width - boxW, x * width / drawW);
+                uint r = 0, g = 0, b = 0;
+                for (var yy = 0; yy < boxH; yy++)
                 {
-                    target[outRow + x] = pixels[rowA + sx];
-                    continue;
+                    var row = ((sy + yy) * width) + sx;
+                    for (var xx = 0; xx < boxW; xx++)
+                    {
+                        var p = pixels[row + xx];
+                        r += p & 0xFF;
+                        g += (p >> 8) & 0xFF;
+                        b += (p >> 16) & 0xFF;
+                    }
                 }
 
-                var sx2 = Math.Min(width - 1, sx + 1);
-                var a = pixels[rowA + sx];
-                var b = pixels[rowA + sx2];
-                var c = pixels[rowB + sx];
-                var d = pixels[rowB + sx2];
-                var r = ((a & 0xFF) + (b & 0xFF) + (c & 0xFF) + (d & 0xFF)) >> 2;
-                var g = (((a >> 8) & 0xFF) + ((b >> 8) & 0xFF) + ((c >> 8) & 0xFF) + ((d >> 8) & 0xFF)) >> 2;
-                var bl = (((a >> 16) & 0xFF) + ((b >> 16) & 0xFF) + ((c >> 16) & 0xFF) + ((d >> 16) & 0xFF)) >> 2;
-                target[outRow + x] = 0xFF000000u | (bl << 16) | (g << 8) | r;
+                target[outRow + x] = 0xFF000000u | ((b / count) << 16) | ((g / count) << 8) | (r / count);
             }
         }
+    }
+
+    /// <summary>A picture-sized piece of the window, pixel for pixel, placed by the pan; a smaller window sits centred.</summary>
+    private static void RenderActual(uint[] target, uint[] pixels, int width, int height, float panX, float panY)
+    {
+        var copyW = Math.Min(W, width);
+        var copyH = Math.Min(H, height);
+        var srcX = (int)Math.Round((width - copyW) * Math.Clamp(panX, 0f, 1f));
+        var srcY = (int)Math.Round((height - copyH) * Math.Clamp(panY, 0f, 1f));
+        var dstX = (W - copyW) / 2;
+        var dstY = (H - copyH) / 2;
+
+        if (copyW < W || copyH < H)
+            Canvas.Fill(target, 0, 0, W, H, Canvas.Black);
+
+        for (var y = 0; y < copyH; y++)
+            Array.Copy(pixels, ((srcY + y) * width) + srcX, target, ((dstY + y) * W) + dstX, copyW);
     }
 
     public void Dispose() => this.capture.Dispose();

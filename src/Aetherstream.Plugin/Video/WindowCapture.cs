@@ -166,6 +166,53 @@ public sealed unsafe class WindowCapture : IDisposable
         return list;
     }
 
+    /// <summary>
+    /// Resizes a window so its client area is the given size: a window the same size as the
+    /// picture mirrors pixel for pixel. A maximised window is restored first, since a maximised
+    /// one ignores a resize. False when the window would not move, a fullscreen game say.
+    /// </summary>
+    public static bool ResizeClient(nint window, int width, int height)
+    {
+        if (window == 0)
+            return false;
+        if (IsZoomed(window))
+            ShowWindow(window, 9);
+
+        Rect frame, client;
+        if (!GetWindowRect(window, &frame) || !GetClientRect(window, &client))
+            return false;
+        var extraX = (frame.Right - frame.Left) - (client.Right - client.Left);
+        var extraY = (frame.Bottom - frame.Top) - (client.Bottom - client.Top);
+        if (!SetWindowPos(window, 0, 0, 0, width + extraX, height + extraY, 0x0002 | 0x0004 | 0x0010))
+            return false;
+
+        return GetClientRect(window, &client) && client.Right - client.Left == width && client.Bottom - client.Top == height;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool IsZoomed(nint hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(nint hwnd, int command);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(nint hwnd, Rect* rect);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetClientRect(nint hwnd, Rect* rect);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(nint hwnd, nint after, int x, int y, int width, int height, uint flags);
+
     // -- capture ---------------------------------------------------------------------------------
 
     public void Start(nint window)

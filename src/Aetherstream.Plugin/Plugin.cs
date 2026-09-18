@@ -215,6 +215,7 @@ public sealed partial class Plugin : IDalamudPlugin
         Theme.Display = new DisplayFont(pluginInterface, log);
         this.window = new ControlWindow(this.uiContext, this.SaveConfig);
         this.mirror = new MirrorChannel(face);
+        this.window.Mirror.Channel = this.mirror;
         this.window.Mirror.Show = (handle, title) =>
         {
             this.mirror.Show(handle, title);
