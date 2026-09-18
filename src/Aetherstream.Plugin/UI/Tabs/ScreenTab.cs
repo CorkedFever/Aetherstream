@@ -371,6 +371,12 @@ internal sealed class ScreenTab(UiContext ui)
         this.surfaces = SurfaceBinding.Enumerate(anchorPos, item.Path, out this.surfaceReport);
         this.surfacesScanned = true;
         ui.SaveConfig();
+
+        // What the model carries, so the right slot can be worked out from the log when the
+        // list on screen is not enough: a screen face is a large texture, a light strip is not.
+        ui.Log.Information($"[surface] {this.surfaceReport}");
+        foreach (var slot in this.surfaces)
+            ui.Log.Information($"[surface]   mat {slot.MaterialIndex} tex {slot.TextureIndex} {slot.Width}x{slot.Height} {slot.TexturePath}");
     }
 
     private void DrawSurfacePicker()
