@@ -17,6 +17,8 @@ public sealed partial class Plugin
     private CancellationTokenSource? tedWork;
     private Dailymotion? dailymotion;
     private CancellationTokenSource? dailymotionWork;
+    private SouthParkStudios? southPark;
+    private CancellationTokenSource? southParkWork;
 
     private RedBullTv RedBull => this.redBull ??= new RedBullTv(this.http);
 
@@ -27,6 +29,33 @@ public sealed partial class Plugin
     private TedTalks Ted => this.ted ??= new TedTalks(this.http);
 
     private Dailymotion Daily => this.dailymotion ??= new Dailymotion(this.http);
+
+    private SouthParkStudios SouthPark => this.southPark ??= new SouthParkStudios(this.http);
+
+    private void BrowseSouthPark() =>
+        Background(ref this.southParkWork, async ct =>
+        {
+            var seasons = await this.SouthPark.SeasonsAsync(ct);
+            this.window.Library.SouthPark.SetSeasons(seasons, seasons.Count == 0 ? "South Park Studios listed no seasons." : string.Empty);
+            this.log.Information($"[southpark] {seasons.Count} seasons");
+        }, ex =>
+        {
+            this.log.Warning($"[southpark] seasons: {ex.Message}");
+            this.window.Library.SouthPark.SetStatus("South Park Studios did not answer: " + Ui.Ellipsis(ex.Message, 80));
+        });
+
+    private void OpenSouthParkSeason(SouthParkStudios.Season season) =>
+        Background(ref this.southParkWork, async ct =>
+        {
+            var episodes = await this.SouthPark.EpisodesAsync(season, ct);
+            var locked = episodes.Count(e => e.Locked);
+            this.window.Library.SouthPark.SetEpisodes(season, episodes, episodes.Count == 0 ? "The site lists no episodes for it." : locked > 0 ? $"{locked} of {episodes.Count} locked by the site right now." : string.Empty);
+            this.log.Information($"[southpark] season {season.Number}: {episodes.Count} episodes, {locked} locked");
+        }, ex =>
+        {
+            this.log.Warning($"[southpark] season {season.Number}: {ex.Message}");
+            this.window.Library.SouthPark.SetEpisodes(season, [], "South Park Studios did not answer: " + Ui.Ellipsis(ex.Message, 80));
+        });
 
     private async Task<RedBullTv.Session> RedBullSessionAsync(CancellationToken ct)
     {

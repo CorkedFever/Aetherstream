@@ -266,6 +266,8 @@ public sealed partial class Plugin : IDalamudPlugin
         this.window.Library.Ted.Open = this.OpenTed;
         this.window.Library.Dailymotion.Browse = this.BrowseDailymotion;
         this.window.Library.Dailymotion.Open = this.OpenDailymotion;
+        this.window.Library.SouthPark.Browse = this.BrowseSouthPark;
+        this.window.Library.SouthPark.Open = this.OpenSouthParkSeason;
         this.broadcast.Log = message => log.Information(message);
         this.window.Share.Session = () => this.broadcast;
         this.window.Share.StartBroadcast = this.StartBroadcast;

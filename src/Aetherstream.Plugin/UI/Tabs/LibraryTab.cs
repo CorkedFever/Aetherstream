@@ -58,6 +58,9 @@ internal sealed class LibraryTab(UiContext ui)
     /// <summary>Dailymotion's trending videos and channels.</summary>
     internal DailymotionTab Dailymotion { get; } = new(ui);
 
+    /// <summary>South Park Studios' free episodes, by season.</summary>
+    internal SouthParkTab SouthPark { get; } = new(ui);
+
     /// <summary>
     /// How deep into a show we are: empty at the library, one entry inside a show, two inside a
     /// season. Held here rather than as a single label so "back" can go up one level instead of
@@ -122,6 +125,7 @@ internal sealed class LibraryTab(UiContext ui)
             case 9: this.Ted.Draw(); return;
             case 10: this.Archive.Draw(); return;
             case 11: this.Local.Draw(); return;
+            case 12: this.SouthPark.Draw(); return;
             default: this.DrawPlex(); return;
         }
     }
