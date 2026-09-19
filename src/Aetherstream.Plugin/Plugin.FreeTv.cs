@@ -21,6 +21,8 @@ public sealed partial class Plugin
     private CancellationTokenSource? dailymotionWork;
     private SouthParkStudios? southPark;
     private CancellationTokenSource? southParkWork;
+    private AdultSwim? adultSwim;
+    private CancellationTokenSource? adultSwimWork;
 
     /// <summary>What the site played last time it was asked, so the app opens at once; it is asked again after twelve hours.</summary>
     private string SouthParkCachePath => Path.Combine(this.pluginInterface.GetPluginConfigDirectory(), "southpark.json");
@@ -43,6 +45,50 @@ public sealed partial class Plugin
     private Dailymotion Daily => this.dailymotion ??= new Dailymotion(this.http);
 
     private SouthParkStudios SouthPark => this.southPark ??= new SouthParkStudios(this.http);
+
+    private AdultSwim Swim => this.adultSwim ??= new AdultSwim(this.http);
+
+    /// <summary>The marathon streams that have a playlist behind them and, a few at a time, what each is showing.</summary>
+    private void BrowseAdultSwim() =>
+        Background(ref this.adultSwimWork, async ct =>
+        {
+            var listed = await this.Swim.StreamsAsync(ct);
+            var live = new bool[listed.Count];
+            var schedules = new Dictionary<string, List<AdultSwim.Showing>>();
+            using var gate = new SemaphoreSlim(4);
+            await Task.WhenAll(listed.Select(async (stream, i) =>
+            {
+                await gate.WaitAsync(ct);
+                try
+                {
+                    // The list carries seasonal marathons between their runs and the simulcasts
+                    // behind a provider's login; only what the video API has a playlist for is shown.
+                    live[i] = await this.Swim.PlaylistAsync(stream.VideoId, ct) is not null;
+                    if (live[i] && stream.MarathonId.Length > 0)
+                    {
+                        var showings = await this.Swim.ScheduleAsync(stream.MarathonId, ct);
+                        lock (schedules)
+                            schedules[stream.Id] = showings;
+                    }
+                }
+                catch (Exception) when (!ct.IsCancellationRequested)
+                {
+                    // A stream without its schedule still plays; the tile just says less.
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            }));
+
+            var streams = listed.Where((_, i) => live[i]).ToList();
+            this.window.Library.AdultSwim.SetStreams(streams, schedules, streams.Count == 0 ? "Adult Swim has no stream running right now." : string.Empty);
+            this.log.Information($"[adultswim] {streams.Count} of {listed.Count} streams running, {schedules.Count} with a schedule");
+        }, ex =>
+        {
+            this.log.Warning($"[adultswim] {ex.Message}");
+            this.window.Library.AdultSwim.SetStatus("Adult Swim did not answer: " + Ui.Ellipsis(ex.Message, 80));
+        });
 
     /// <summary>The episodes the site still plays: the remembered list at once, then the site asked again when that is stale or <paramref name="again"/>.</summary>
     private void BrowseSouthPark(bool again) =>

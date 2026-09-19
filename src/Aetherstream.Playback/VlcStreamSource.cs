@@ -273,7 +273,8 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
         ResolvedStream stream,
         bool hardwareDecode = true,
         int audioDesyncMs = 0,
-        int networkCachingMs = 1500)
+        int networkCachingMs = 1500,
+        IReadOnlyList<string>? extraOptions = null)
     {
         ObjectDisposedException.ThrowIf(this.disposed, this);
 
@@ -311,6 +312,10 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
             }
         }
 
+        // Anything the caller wants on top: libvlc's own sound leveller, for one.
+        if (extraOptions is not null)
+            options.AddRange(extraOptions);
+
         var previous = this.media;
         this.media = new Media(this.vlc, stream.PlaylistUrl, FromType.FromLocation, options.ToArray());
         // Unsubscribed first: a player that plays several media in a row (the jukebox) would
@@ -334,6 +339,37 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
     /// </summary>
     /// <summary>Whether audio leaves through libvlc's own output rather than our callbacks.</summary>
     public bool OwnsAudioOutput => this.Audio is null;
+
+    /// <summary>
+    /// A gain on the sound in decibels, applied inside libvlc through its equalizer's preamp, so
+    /// it takes effect whichever side owns the output. Media options such as :audio-filter= are
+    /// not read by the audio output in libvlc 3, so this is the one dial there is. The
+    /// equalizer's flat point is a preamp of 12 dB (VLC's own default), which is why the preamp
+    /// is 12 plus the gain; its 20 dB ceiling makes +8 the most this can give. Zero clears it.
+    /// </summary>
+    public void SetGain(float decibels)
+    {
+        lock (this.control)
+        {
+            if (this.disposed)
+                return;
+            if (Math.Abs(decibels) < 0.05f)
+            {
+                this.player.UnsetEqualizer();
+                this.equalizer?.Dispose();
+                this.equalizer = null;
+                return;
+            }
+
+            var eq = new Equalizer();
+            eq.SetPreamp(Math.Clamp(12f + decibels, -20f, 20f));
+            this.player.SetEqualizer(eq);
+            this.equalizer?.Dispose();
+            this.equalizer = eq;
+        }
+    }
+
+    private Equalizer? equalizer;
 
     /// <summary>Points libvlc's own output at an endpoint, by the same id Windows uses; empty for the default.</summary>
     public void SetOutputDevice(string? deviceId)
@@ -480,6 +516,8 @@ public sealed unsafe class VlcStreamSource : IFrameSource, IDisposable
         this.player.Stop();
         this.player.Dispose();
         this.media?.Dispose();
+        this.equalizer?.Dispose();
+        this.equalizer = null;
 
         this.disposed = true;
 

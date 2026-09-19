@@ -91,6 +91,13 @@ public static class StreamResolvers
             return new SouthParkResolver(http);
         }
 
+        // Adult Swim's marathon pages: the site's video API names the playlist, no yt-dlp needed.
+        if (AdultSwimResolver.Matches(input))
+        {
+            description = "Adult Swim";
+            return new AdultSwimResolver(http);
+        }
+
         if (IsDirectMedia(input))
         {
             description = "direct URL";

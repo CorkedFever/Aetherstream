@@ -66,4 +66,11 @@ public sealed record ResolvedStream(
     /// Whether the relay has to carry this from the start rather than after a stall: the origin
     /// insists on a header libvlc cannot send, so opened directly it would never play at all.
     /// </summary>
-    bool RelayRequired = false);
+    bool RelayRequired = false,
+
+    /// <summary>
+    /// A lift for the sound, in decibels, for a source mastered well under the level the others
+    /// play at: television masters sit five to ten decibels below YouTube. Zero for almost
+    /// everything; the player can give at most eight.
+    /// </summary>
+    float GainDb = 0);

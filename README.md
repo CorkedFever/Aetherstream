@@ -11,7 +11,7 @@ game lights it and walks in front of it like anything else in the room, and it c
 
 - **Live TV.** Thousands of free channels with a guide, channel numbers you pick, and a remote with a number pad.
 - **Your own stuff.** Plex, Jellyfin or Emby, and any folder of videos on your PC.
-- **Free services.** Pluto TV, Red Bull TV, PBS, NASA+, TED, Dailymotion, South Park Studios and the Internet Archive.
+- **Free services.** Pluto TV, Red Bull TV, PBS, NASA+, TED, Dailymotion, South Park Studios, Adult Swim's marathons and the Internet Archive.
 - **Sites.** YouTube (with your subscriptions and watch later if you sign in), Twitch, Kick, and pretty much anything yt-dlp can open.
 - **Mirror.** Any window on your PC, put on the set: a game running beside this one, a video in any player, a second screen.
 - **Paste a link.** Any stream URL, a Twitch channel name, a party code.

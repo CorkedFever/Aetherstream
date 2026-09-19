@@ -19,7 +19,7 @@ internal static class AppLogos
 
     /// <summary>Whether a mark exists for the app.</summary>
     public static bool Has(string key, string serverKind) =>
-        key is "youtube" or "twitch" or "plex" or "pluto" or "redbull" or "pbs" or "nasa" or "ted" or "dailymotion" or "archive" or "server";
+        key is "youtube" or "twitch" or "plex" or "pluto" or "redbull" or "pbs" or "nasa" or "ted" or "dailymotion" or "archive" or "server" or "adultswim";
 
     /// <summary>Draws the mark in a square at p0, background included. Rounding matches the plain icons'.</summary>
     public static void Draw(ImDrawListPtr d, string key, Vector2 p0, float size, string serverKind, bool hovered)
@@ -91,6 +91,13 @@ internal static class AppLogos
             case "dailymotion":
                 d.AddRectFilled(p0, p1, C(0f + lift, 0.40f + lift, 0.86f + lift), r);
                 Word(d, c + new Vector2(0f, -size * 0.02f), size * 0.62f, "d", White);
+                break;
+
+            case "adultswim":
+                // The bracketed lowercase mark, on the black card the channel signs off with.
+                d.AddRectFilled(p0, p1, C(0.05f + lift, 0.05f + lift, 0.06f + lift), r);
+                d.AddRect(p0, p1, C(0.35f, 0.35f, 0.38f), r);
+                Word(d, c + new Vector2(0f, -size * 0.03f), size * 0.40f, "[as]", White);
                 break;
 
             case "archive":

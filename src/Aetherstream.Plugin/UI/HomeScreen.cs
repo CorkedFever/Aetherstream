@@ -58,6 +58,7 @@ internal sealed class HomeScreen
             new("ted", "TED", FontAwesomeIcon.Microphone, Theme.Bad, () => "talks and playlists", () => library.DrawShelf(9), library.Ted.SearchFor),
             new("archive", "Archive", FontAwesomeIcon.Archive, Plain, () => "public domain films", () => library.DrawShelf(10), library.Archive.SearchFor),
             new("southpark", "South Park", FontAwesomeIcon.Snowflake, Theme.Accent, () => library.SouthPark.Summary, () => library.DrawShelf(12)),
+            new("adultswim", "Adult Swim", FontAwesomeIcon.Swimmer, Theme.Text, () => library.AdultSwim.Summary, () => library.DrawShelf(13)),
             new("music", "Music", FontAwesomeIcon.Music, Theme.Good, () => MusicStatus(config), () => sound.DrawPart(0)),
             new("rolls", "Orchestrion", FontAwesomeIcon.CompactDisc, Theme.Good, () => "your rolls", () => sound.DrawPart(1)),
             new("radio", "Radio", FontAwesomeIcon.Headphones, Theme.Good, () => "internet radio", () => sound.DrawPart(2)),

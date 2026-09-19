@@ -320,6 +320,7 @@ public sealed class SouthParkResolver(HttpClient http) : IStreamResolver
     public async Task<ResolvedStream> ResolveAsync(string input, CancellationToken ct)
     {
         var (source, title) = await new SouthParkStudios(http).StreamAsync(input.Split('?')[0], ct);
-        return new ResolvedStream(source, title, new Dictionary<string, string> { ["User-Agent"] = SouthParkStudios.UserAgent });
+        // A television master, about -24 dBFS RMS against YouTube's -18: lifted six decibels.
+        return new ResolvedStream(source, title, new Dictionary<string, string> { ["User-Agent"] = SouthParkStudios.UserAgent }, GainDb: 6);
     }
 }

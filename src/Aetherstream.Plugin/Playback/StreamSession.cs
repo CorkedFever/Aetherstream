@@ -1190,6 +1190,11 @@ internal sealed class StreamSession(
                     vlcAudio ? config.OffsetFor(config.Source) : Math.Min(0, config.OffsetFor(config.Source)),
                     config.NetworkCachingMs);
 
+                // A source mastered well under the others asks for a lift, and gets it inside
+                // libvlc, whichever side owns the output.
+                if (Math.Abs(stream.GainDb) > 0.05f)
+                    created.SetGain(stream.GainDb);
+
                 // libvlc's own output: the chosen endpoint and the starting level, on its clock.
                 if (vlcAudio)
                 {
