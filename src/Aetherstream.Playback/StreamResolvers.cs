@@ -82,6 +82,15 @@ public static class StreamResolvers
             return new TedResolver(http);
         }
 
+        // South Park Studios' pages name the site's own master playlist, whose sound is a
+        // rendition libvlc keeps in step itself; through yt-dlp the picture and sound arrive as
+        // two playlists, and libvlc's second input froze the picture on its first frame.
+        if (SouthParkResolver.Matches(input))
+        {
+            description = "South Park Studios";
+            return new SouthParkResolver(http);
+        }
+
         if (IsDirectMedia(input))
         {
             description = "direct URL";

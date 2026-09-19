@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using Aetherstream.Playback;
 using Aetherstream.Plugin.UI;
 
@@ -20,6 +22,16 @@ public sealed partial class Plugin
     private SouthParkStudios? southPark;
     private CancellationTokenSource? southParkWork;
 
+    /// <summary>What the site played last time it was asked, so the app opens at once; it is asked again after twelve hours.</summary>
+    private string SouthParkCachePath => Path.Combine(this.pluginInterface.GetPluginConfigDirectory(), "southpark.json");
+
+    private sealed class SouthParkCatalogue
+    {
+        public DateTime CheckedAtUtc { get; set; }
+
+        public List<SouthParkStudios.Episode> Episodes { get; set; } = [];
+    }
+
     private RedBullTv RedBull => this.redBull ??= new RedBullTv(this.http);
 
     private PbsShows Pbs => this.pbs ??= new PbsShows(this.http);
@@ -32,29 +44,59 @@ public sealed partial class Plugin
 
     private SouthParkStudios SouthPark => this.southPark ??= new SouthParkStudios(this.http);
 
-    private void BrowseSouthPark() =>
+    /// <summary>The episodes the site still plays: the remembered list at once, then the site asked again when that is stale or <paramref name="again"/>.</summary>
+    private void BrowseSouthPark(bool again) =>
         Background(ref this.southParkWork, async ct =>
         {
-            var seasons = await this.SouthPark.SeasonsAsync(ct);
-            this.window.Library.SouthPark.SetSeasons(seasons, seasons.Count == 0 ? "South Park Studios listed no seasons." : string.Empty);
-            this.log.Information($"[southpark] {seasons.Count} seasons");
-        }, ex =>
-        {
-            this.log.Warning($"[southpark] seasons: {ex.Message}");
-            this.window.Library.SouthPark.SetStatus("South Park Studios did not answer: " + Ui.Ellipsis(ex.Message, 80));
-        });
+            var tab = this.window.Library.SouthPark;
+            var showing = false;
+            if (!again && File.Exists(this.SouthParkCachePath))
+            {
+                try
+                {
+                    var cached = JsonSerializer.Deserialize<SouthParkCatalogue>(await File.ReadAllTextAsync(this.SouthParkCachePath, ct));
+                    if (cached is { Episodes.Count: > 0 })
+                    {
+                        var fresh = DateTime.UtcNow - cached.CheckedAtUtc < TimeSpan.FromHours(12);
+                        tab.SetEpisodes(cached.Episodes, fresh ? string.Empty : "Asking the site again…");
+                        if (fresh)
+                            return;
+                        showing = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.log.Warning($"[southpark] cache: {ex.Message}");
+                }
+            }
 
-    private void OpenSouthParkSeason(SouthParkStudios.Season season) =>
-        Background(ref this.southParkWork, async ct =>
-        {
-            var episodes = await this.SouthPark.EpisodesAsync(season, ct);
-            var locked = episodes.Count(e => e.Locked);
-            this.window.Library.SouthPark.SetEpisodes(season, episodes, episodes.Count == 0 ? "The site lists no episodes for it." : locked > 0 ? $"{locked} of {episodes.Count} locked by the site right now." : string.Empty);
-            this.log.Information($"[southpark] season {season.Number}: {episodes.Count} episodes, {locked} locked");
+            var started = DateTime.UtcNow;
+            var (episodes, unasked) = await this.SouthPark.CatalogueAsync((done, total, soFar) =>
+            {
+                var line = $"Asking the site… {done} of {total} seasons, {soFar.Count} play so far.";
+                if (showing)
+                    tab.SetStatus(line);
+                else
+                    tab.SetEpisodes(soFar, line);
+            }, ct);
+            tab.SetEpisodes(episodes, episodes.Count == 0 ? "The site plays nothing free right now." : unasked > 0 ? $"{unasked} episodes could not be asked about; check again later." : string.Empty);
+            this.log.Information($"[southpark] {episodes.Count} episodes play free, {unasked} unasked, {(DateTime.UtcNow - started).TotalSeconds:0.0}s");
+
+            if (unasked == 0 && episodes.Count > 0)
+            {
+                try
+                {
+                    await File.WriteAllTextAsync(this.SouthParkCachePath, JsonSerializer.Serialize(new SouthParkCatalogue { CheckedAtUtc = DateTime.UtcNow, Episodes = episodes }), ct);
+                }
+                catch (Exception ex)
+                {
+                    this.log.Warning($"[southpark] cache: {ex.Message}");
+                }
+            }
         }, ex =>
         {
-            this.log.Warning($"[southpark] season {season.Number}: {ex.Message}");
-            this.window.Library.SouthPark.SetEpisodes(season, [], "South Park Studios did not answer: " + Ui.Ellipsis(ex.Message, 80));
+            this.log.Warning($"[southpark] {ex.Message}");
+            this.window.Library.SouthPark.SetStatus("South Park Studios did not answer: " + Ui.Ellipsis(ex.Message, 80));
         });
 
     private async Task<RedBullTv.Session> RedBullSessionAsync(CancellationToken ct)

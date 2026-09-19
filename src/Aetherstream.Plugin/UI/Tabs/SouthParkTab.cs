@@ -7,65 +7,37 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherstream.Plugin.UI.Tabs;
 
-/// <summary>South Park: a season to pick, its episodes as stills, the rest of the season queued after the one pressed. Plays through yt-dlp.</summary>
+/// <summary>
+/// South Park: one list of the episodes the site still plays, newest season first, under a line
+/// per season; the rest of that season is queued after the one pressed. Plays from the site's
+/// own playlist, nothing to install.
+/// </summary>
 internal sealed class SouthParkTab(UiContext ui)
 {
-    private List<SouthParkStudios.Season> seasons = [];
     private List<SouthParkStudios.Episode> episodes = [];
-    private SouthParkStudios.Season? season;
+    private Dictionary<int, int> perSeason = [];
     private string status = string.Empty;
     private bool autoBrowsed;
 
     internal Action? Browse;
 
-    internal Action<SouthParkStudios.Season>? Open;
+    internal Action? Refresh;
 
-    public void SetSeasons(List<SouthParkStudios.Season> value, string message)
+    /// <summary>For the home tile: how many play, once that is known.</summary>
+    public string Summary => this.episodes.Count > 0 ? $"{this.episodes.Count} free episodes" : "the free episodes";
+
+    public void SetEpisodes(List<SouthParkStudios.Episode> value, string message)
     {
-        this.seasons = value;
-        this.status = message;
-        if (this.season is null && value.Count > 0)
-        {
-            this.autoPicking = true;
-            this.Go(value[^1]);
-        }
-    }
-
-    public void SetEpisodes(SouthParkStudios.Season forSeason, List<SouthParkStudios.Episode> value, string message)
-    {
-        if (this.season is not { } s || s.Number != forSeason.Number)
-            return;
-
-        // The newest seasons are often on the air, or kept for the paid service, so they come
-        // up empty or wholly locked; when nobody asked for one, step back to the newest season
-        // with something that plays.
-        if (this.autoPicking && value.All(e => e.Locked))
-        {
-            var index = this.seasons.FindIndex(x => x.Number == s.Number);
-            if (index > 0)
-            {
-                this.Go(this.seasons[index - 1]);
-                return;
-            }
-        }
-
-        this.autoPicking = false;
+        // Replaced, never edited: Draw may be walking the old list on the render thread.
+        this.perSeason = value.GroupBy(e => e.Season).ToDictionary(g => g.Key, g => g.Count());
         this.episodes = value;
         this.status = message;
     }
-
-    private bool autoPicking;
 
     public void SetStatus(string value) => this.status = value;
 
     public void Draw()
     {
-        if (ui.LocateYtDlp() is null)
-        {
-            Ui.Hint("South Park plays through yt-dlp. Setup, Sources says where to get it.");
-            return;
-        }
-
         if (!this.autoBrowsed)
         {
             this.autoBrowsed = true;
@@ -73,37 +45,30 @@ internal sealed class SouthParkTab(UiContext ui)
             this.Browse?.Invoke();
         }
 
-        Ui.Hint("Every episode, free with the site's own ad breaks, from Paramount's South Park Studios. A few are locked at any one time; those are greyed.");
-
-        if (this.seasons.Count > 0)
-        {
-            var labels = this.seasons.Select(s => $"Season {s.Number}").ToList();
-            var selected = this.season is { } cur ? this.seasons.FindIndex(s => s.Number == cur.Number) : -1;
-            var picked = Ui.Chips("sp", labels, selected);
-            if (picked >= 0 && picked != selected)
-            {
-                this.autoPicking = false;
-                this.Go(this.seasons[picked]);
-            }
-        }
+        Ui.Hint("What Paramount's South Park Studios still plays free, with its own ad breaks. Most episodes have moved to its paid service; these are the rest, newest season first.");
 
         if (this.status.Length > 0)
             ImGui.TextColored(Ui.Faint, this.status);
+        if (this.episodes.Count > 0 && this.Refresh is { } refresh)
+        {
+            if (this.status.Length > 0)
+                ImGui.SameLine();
+            if (ImGui.SmallButton("Check again"))
+            {
+                this.status = "Asking South Park Studios…";
+                refresh();
+            }
+
+            Ui.Tip("The list is kept for twelve hours; this asks the site now.");
+        }
 
         this.DrawGrid();
-    }
-
-    private void Go(SouthParkStudios.Season s)
-    {
-        this.season = s;
-        this.episodes = [];
-        this.status = $"Listing season {s.Number}…";
-        this.Open?.Invoke(s);
     }
 
     private void DrawGrid()
     {
         var shown = this.episodes;
+        var counts = this.perSeason;
         if (shown.Count == 0)
             return;
 
@@ -114,25 +79,30 @@ internal sealed class SouthParkTab(UiContext ui)
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var perRow = Math.Max(1, (int)(ImGui.GetContentRegionAvail().X / (PosterCard.WidthOf(true) + spacing)));
         var column = 0;
+        var season = -1;
 
         for (var i = 0; i < shown.Count; i++)
         {
             var ep = shown[i];
+            if (ep.Season != season)
+            {
+                season = ep.Season;
+                column = 0;
+                if (i > 0)
+                    ImGui.Spacing();
+                var count = counts.TryGetValue(season, out var c) ? c : 0;
+                ImGui.TextColored(Ui.Faint, count == 1 ? $"Season {season}  ·  one episode" : $"Season {season}  ·  {count} episodes");
+            }
+
             if (column > 0 && column % perRow != 0)
                 ImGui.SameLine();
 
             var still = ep.Still;
-            using (ImRaii.Disabled(ep.Locked))
+            if (PosterCard.Draw(ui, $"##sp{ep.Url}", () => still.Length > 0 ? ui.Art.GetUrl(still) : null, ep.Title, ep.Code, container: false, wide: true))
             {
-                if (PosterCard.Draw(ui, $"##sp{ep.Url}", () => still.Length > 0 ? ui.Art.GetUrl(still) : null, ep.Title, ep.Locked ? $"{ep.Code}  ·  locked" : ep.Code, container: false, wide: true) && !ep.Locked)
-                {
-                    ui.PlayAndRemember(ep.Url, $"South Park {ep.Code} · {ep.Title}", still);
-                    for (var j = i + 1; j < shown.Count; j++)
-                    {
-                        if (!shown[j].Locked)
-                            ui.NextUp.Add((shown[j].Url, $"South Park {shown[j].Code} · {shown[j].Title}", shown[j].Still, 0));
-                    }
-                }
+                ui.PlayAndRemember(ep.Url, $"South Park {ep.Code} · {ep.Title}", still);
+                for (var j = i + 1; j < shown.Count && shown[j].Season == season; j++)
+                    ui.NextUp.Add((shown[j].Url, $"South Park {shown[j].Code} · {shown[j].Title}", shown[j].Still, 0));
             }
 
             if (ep.Description.Length > 0)
