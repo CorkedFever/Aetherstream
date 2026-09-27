@@ -39,14 +39,15 @@ that draws its own channels from the game's data. They show on the furnishing li
 
 Most of it works with nothing else installed. For the rest:
 
-| For | Install | Then |
-| --- | --- | --- |
-| YouTube, Kick, Dailymotion, PBS and most other sites | `winget install --id yt-dlp.yt-dlp --exact` | Restart the game. It only looks for yt-dlp when it starts. |
-| YouTube specifically | `winget install --id DenoLand.Deno --exact` | Restart the game. yt-dlp needs it to get past YouTube's checks. |
-| Hosting a watch party | `winget install --id Gyan.FFmpeg --exact` | Watching a party needs nothing. |
+| For | Get it |
+| --- | --- |
+| YouTube, Kick, Dailymotion, PBS and most other sites | yt-dlp: press **Get yt-dlp** under Setup, YouTube and other sites. |
+| YouTube specifically | Deno: press **Get Deno** on the line below it. yt-dlp needs it to get past YouTube's checks. |
+| Hosting a watch party | `winget install --id Gyan.FFmpeg --exact`. Watching a party needs nothing. |
 
-The plugin never downloads these for you. If a YouTube link does nothing, the screen tells you why.
-If YouTube stops working one day, `yt-dlp -U` is the first thing to try.
+The Get buttons download each tool from its own project's GitHub releases into the plugin's
+folder, only when you press them. No restart needed. If YouTube stops working one day, press
+**Update** on the yt-dlp line. Already installed them with winget? They're found too.
 
 ### The first five minutes
 

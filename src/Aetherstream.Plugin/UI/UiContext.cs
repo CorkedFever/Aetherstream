@@ -55,6 +55,12 @@ internal sealed class UiContext
     /// <summary>Where yt-dlp would be found right now, or null. For the Setup tab's readout.</summary>
     public required Func<string?> LocateYtDlp { get; init; }
 
+    /// <summary>The plugin's own folder, where fetched tools go and are looked for first.</summary>
+    public required string ToolFolder { get; init; }
+
+    /// <summary>Fetches yt-dlp or Deno into <see cref="ToolFolder"/>, reporting the fraction done; returns where it landed.</summary>
+    public required Func<Aetherstream.Playback.ToolInstaller.Tool, Action<float>, Task<string>> InstallTool { get; init; }
+
     /// <summary>Whether the music source had nothing and the bundled tracks are standing in. For the Music tab.</summary>
     public Func<bool>? MusicFellBack { get; init; }
 

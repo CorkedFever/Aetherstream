@@ -27,15 +27,29 @@ the "no Opus decoder" theory that turned out to be wrong — at the cost of the 
 
 | Dependency | Needed for | Install | Licence |
 | --- | --- | --- | --- |
-| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | YouTube, Kick and most other sites | `winget install --id yt-dlp.yt-dlp --exact`, then restart the game | Unlicense |
-| [Deno](https://deno.com/) | **YouTube specifically** — yt-dlp solves YouTube's JavaScript challenges with an external runtime, and without one it warns, drops its preferred formats and hands back what is left | `winget install --id DenoLand.Deno --exact`, then restart the game | MIT |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | YouTube, Kick and most other sites | **Get yt-dlp** in Setup, or `winget install --id yt-dlp.yt-dlp --exact` | Unlicense |
+| [Deno](https://deno.com/) | **YouTube specifically** — yt-dlp solves YouTube's JavaScript challenges with an external runtime, and without one it warns, drops its preferred formats and hands back what is left | **Get Deno** in Setup, or `winget install --id DenoLand.Deno --exact` | MIT |
 | [ffmpeg](https://ffmpeg.org/) | Broadcasting to a party (not watching one) | `winget install --id Gyan.FFmpeg --exact` | LGPL 2.1+ / GPL 2+ depending on build |
 
-Both are looked up on `PATH` at the moment they are needed. yt-dlp is also found in the plugin's
-config folder, or wherever **Setup**'s file picker is pointed — so a copy downloaded by
-hand to the Desktop works, once, for good. (Not beside the plugin DLL: Dalamud installs each version into its
-own numbered folder, so anything left there vanishes on the next update.) Neither is downloaded by the plugin, deliberately —
-a plugin that fetches executables is not something to ask people to trust.
+Both are looked for when they are needed, in this order: the plugin's config folder, the game's
+`PATH`, then the `PATH` as the registry has it now plus winget's `Links` folder
+(`YtDlpResolver.Find`). The last two mean a winget install is seen without restarting the game,
+which was the step most installs got stuck on; the registry is read at most every five seconds,
+since Setup asks every frame. yt-dlp is also found wherever **Setup**'s file picker is pointed.
+(Not beside the plugin DLL: Dalamud installs each version into its own numbered folder, so
+anything left there vanishes on the next update.) The runtime is handed to yt-dlp by path with
+`--js-runtimes name:path`, so yt-dlp has it whatever `PATH` it inherited; a yt-dlp older than
+2025.11 rejects the option and is asked again without it.
+
+The plugin used to refuse to download either, on the grounds that a plugin fetching executables
+is a lot to ask people to trust. It now does, because the winget-and-restart dance lost most
+people, but only on a button press, only from each project's own GitHub releases
+(`releases/latest/download/…`), and only into the plugin's config folder (`ToolInstaller`). A
+download is written beside the target, checked to be a Windows program of a sane size, and moved
+over the old copy in one step, so a dropped connection never leaves a broken tool. Pressing it
+again is the update. A copy that came from winget or the file picker gets no button: it belongs
+to whoever put it there. There is no checksum check; the sums would come from the same release
+over the same connection, so they would catch corruption but not tampering.
 
 ### Data sources
 
@@ -379,7 +393,7 @@ Resolution goes through a chain (`StreamResolvers.For`), so no service is wired 
 2. **Plex** (`plex:` sources) — your own server, behind your own token.
 3. **Direct media URL** (`.m3u8`, `.mpd`, `.mp4`, …) — played as-is.
 4. **yt-dlp** — anything it supports. Found beside the plugin, beside the game, or on `PATH`;
-   requires `winget install --id yt-dlp.yt-dlp --exact` and a game restart.
+   one press of **Get yt-dlp** in Setup, or a winget install; neither needs a restart.
 5. **Built-in Twitch** — the fallback that still works with nothing installed.
 
 A resolution failure reaches the screen as `NO PICTURE` with the first line of the reason; the
@@ -467,8 +481,17 @@ part URL still resolves — to a 404, which surfaces as "nothing happens". Resol
 - **Redirecting a child's stderr without draining it deadlocks the child** once the pipe fills.
   Read both pipes concurrently.
 - **libvlc 3 has no generic HTTP header option** — only `:http-user-agent` and `:http-referrer`.
-- **`yt-dlp -f best` means "best muxed"** and now fails on YouTube, which publishes none. Use
-  `b/bv*+ba` and pass the audio URL via `:input-slave=`.
+- **`yt-dlp -f best` means "best muxed"**, and so does `b` at the front of a selector. YouTube
+  publishes one muxed format, 360p (18), so `b/bv*+ba` played every YouTube video at 360p whatever
+  the picture size. Use yt-dlp's own default, `bv*+ba/b`, and pass the audio URL via
+  `:input-slave=`; sites with only muxed streams still land on one.
+- **The fit pass must not divide per pixel.** It did, two divisions and a switch for every pixel
+  of the drawn region, after a separate pass that made the whole frame opaque: 9 ms a frame at
+  1080p on the render thread, which took the game from 60 fps to 45 with a painted surface. The
+  source index is now a per-column plus a per-row term, tabled when the fit changes, and the
+  opaque step rides in the same copy over the drawn region only: 0.5 ms, pixel-identical over
+  all four turns. A stream that says it is 720p or less (`ResolvedStream.SourceHeight`, from
+  yt-dlp's pick or the resolver) is drawn at 720 even with 1080 chosen.
 - **"Build succeeded" does not mean the plugin was rebuilt.** `Aetherstream.Plugin` was missing from
   the solution entirely, so a solution build compiled everything except the thing being deployed —
   and incremental builds have since been seen to skip it too. After building, compare the

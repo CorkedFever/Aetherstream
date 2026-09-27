@@ -112,16 +112,18 @@ internal sealed class SetupTab(UiContext ui)
             Theme.Displayed(Theme.Accent, this.VersionOf(found));
             ImGui.SameLine();
             ImGui.TextColored(Theme.TextDim, Ui.Ellipsis(found, 52));
-            Ui.Tip($"{found}\n\nIf this version is months old, YouTube will refuse it. Update with \"yt-dlp -U\" or reinstall with winget.");
+            Ui.Tip($"{found}\n\nIf this version is months old, YouTube will refuse it.");
+            this.DrawGet(ToolInstaller.Tool.YtDlp, found);
         }
         else
         {
             ImGui.TextColored(Theme.Warn, "yt-dlp not found — YouTube, Kick and most sites will not play.");
+            this.DrawGet(ToolInstaller.Tool.YtDlp, null);
         }
 
         // Whether YouTube can be handled at all is the second question, and it has nothing to do
         // with yt-dlp's own presence — so it gets its own line rather than being folded in.
-        var runtime = YtDlpResolver.LocateJsRuntime();
+        var runtime = YtDlpResolver.LocateJsRuntime([ui.ToolFolder]);
         Ui.Dot(runtime is not null ? Theme.Good : Theme.Warn, runtime is not null ? "found" : "not found");
         ImGui.SameLine();
         if (runtime is not null)
@@ -130,12 +132,17 @@ internal sealed class SetupTab(UiContext ui)
             ImGui.SameLine();
             ImGui.TextColored(Theme.Text, Path.GetFileNameWithoutExtension(runtime));
             Ui.Tip(runtime);
+            this.DrawGet(ToolInstaller.Tool.Deno, runtime);
         }
         else
         {
             ImGui.TextColored(Theme.Warn, "no JavaScript runtime — YouTube will half-work at best.");
-            Ui.Tip("yt-dlp solves YouTube's challenges with Deno. \"winget install --id DenoLand.Deno --exact\", then restart the game.");
+            Ui.Tip("yt-dlp solves YouTube's challenges with Deno.");
+            this.DrawGet(ToolInstaller.Tool.Deno, null);
         }
+
+        if (this.installStatus.Length > 0)
+            ImGui.TextColored(this.installFailed ? Theme.Warn : Theme.TextDim, this.installStatus);
 
         // A picker, not a text box. Nobody should be typing a path into a game.
         if (ImGui.Button(found is null ? "Find yt-dlp.exe…" : "Use a different yt-dlp.exe…"))
@@ -171,9 +178,9 @@ internal sealed class SetupTab(UiContext ui)
         }
 
         Ui.Hint(
-            "Easiest: in PowerShell run \"winget install --id yt-dlp.yt-dlp --exact\" and \"winget install --id DenoLand.Deno --exact\", " +
-            "then restart the game. Deno is what yt-dlp uses to handle YouTube; without it YouTube " +
-            "half-works at best.");
+            "Press Get on each line and they land in the plugin's own folder; no restart. Press it again later to update. " +
+            "Deno is what yt-dlp uses to handle YouTube; without it YouTube half-works at best. " +
+            "A copy installed with winget is found too, also without a restart.");
 
         this.DrawSignIn();
     }
@@ -304,6 +311,76 @@ internal sealed class SetupTab(UiContext ui)
         }
 
         return this.versionText;
+    }
+
+    private ToolInstaller.Tool? installing;
+    private float installProgress;
+    private string installStatus = string.Empty;
+    private bool installFailed;
+
+    /// <summary>
+    /// The Get button after a tool's line, or Update when the copy found is the plugin's own. A
+    /// copy from winget or picked by hand is left to whoever put it there. While a fetch runs, the
+    /// button is the progress.
+    /// </summary>
+    private void DrawGet(ToolInstaller.Tool tool, string? found)
+    {
+        var name = tool == ToolInstaller.Tool.YtDlp ? "yt-dlp" : "Deno";
+        var ours = found is not null && Path.GetDirectoryName(found) is { } folder
+            && Path.GetFullPath(folder).TrimEnd('\\').Equals(Path.GetFullPath(ui.ToolFolder).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+        if (found is not null && !ours)
+            return;
+
+        ImGui.SameLine();
+        if (this.installing == tool)
+        {
+            ImGui.TextColored(Theme.Accent, this.installProgress >= 0 ? $"fetching {this.installProgress:P0}" : "fetching…");
+            return;
+        }
+
+        using (ImRaii.Disabled(this.installing is not null))
+        {
+            if (ImGui.SmallButton(found is null ? $"Get {name}##get{name}" : $"Update##get{name}"))
+                this.Install(tool, name);
+        }
+
+        Ui.Tip(found is null
+            ? $"Downloads {name} ({ToolInstaller.SizeOf(tool)}) from its project's own GitHub releases into the plugin's folder."
+            : $"Downloads the newest {name} over this copy.");
+    }
+
+    private void Install(ToolInstaller.Tool tool, string name)
+    {
+        this.installing = tool;
+        this.installProgress = -1f;
+        this.installStatus = string.Empty;
+        this.installFailed = false;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var landed = await ui.InstallTool(tool, fraction => this.installProgress = fraction);
+                this.installStatus = $"{name} is in place.";
+                ui.Log.Information($"[tools] {name} fetched to {landed}");
+
+                // A fresh copy gets its version asked again.
+                if (tool == ToolInstaller.Tool.YtDlp)
+                    this.versionForPath = null;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                this.installStatus = $"{name} could not be fetched: {ex.Message}";
+                this.installFailed = true;
+                ui.Log.Warning($"[tools] {name}: {ex.Message}");
+            }
+            finally
+            {
+                this.installing = null;
+            }
+        });
     }
 
     /// <summary>

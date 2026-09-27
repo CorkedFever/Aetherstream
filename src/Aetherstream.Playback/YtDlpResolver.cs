@@ -13,7 +13,7 @@ namespace Aetherstream.Playback;
 /// exists so Twitch still works with nothing installed.
 /// </para>
 /// </summary>
-public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null, string? cookiesFile = null, int pictureHeight = 720, bool preferH264 = false) : IStreamResolver
+public sealed class YtDlpResolver(string executable, string? cookiesBrowser = null, string? cookiesFile = null, int pictureHeight = 720, bool preferH264 = false, string? jsRuntime = null) : IStreamResolver
 {
     /// <summary>Browsers yt-dlp can read a signed-in YouTube session from, as it names them, plus the Firefox forks it does not know by name.</summary>
     public static readonly string[] Browsers = ["floorp", "firefox", "librewolf", "waterfox", "zen", "brave", "chrome", "edge", "vivaldi", "opera"];
@@ -55,23 +55,87 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
     /// yt-dlp enables by default; node and bun are recognised but have to be opted into on the
     /// yt-dlp side, so they are reported for information rather than relied on.
     /// </summary>
-    public static string? LocateJsRuntime()
+    public static string? LocateJsRuntime(IReadOnlyList<string>? directories = null)
     {
-        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
         foreach (var name in new[] { "deno.exe", "node.exe", "bun.exe" })
         {
-            foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            if (Find(name, directories) is { } found)
+                return found;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Every folder a tool might be in, in order: the ones given (the plugin's own), the game's
+    /// PATH, then the PATH as Windows has it now and winget's links folder. The last two are why
+    /// nothing has to be restarted any more: the game's PATH is the one it started with, so a
+    /// yt-dlp or Deno installed by winget while it runs was invisible until a relaunch, which is
+    /// the step people most often missed. The registry is read at most every few seconds, since
+    /// the Setup tab asks every frame.
+    /// </summary>
+    private static IEnumerable<string> SearchFolders(IReadOnlyList<string>? directories)
+    {
+        foreach (var directory in directories ?? [])
+            yield return directory;
+        yield return AppContext.BaseDirectory;
+
+        foreach (var directory in SplitPath(Environment.GetEnvironmentVariable("PATH")))
+            yield return directory;
+
+        foreach (var directory in CurrentPath())
+            yield return directory;
+    }
+
+    private static readonly object PathGate = new();
+    private static (DateTime At, string[] Folders) pathCache = (DateTime.MinValue, []);
+
+    private static string[] CurrentPath()
+    {
+        lock (PathGate)
+        {
+            if (DateTime.UtcNow - pathCache.At < TimeSpan.FromSeconds(5))
+                return pathCache.Folders;
+
+            var folders = new List<string>();
+            try
             {
-                try
-                {
-                    var candidate = Path.Combine(directory.Trim('"'), name);
-                    if (File.Exists(candidate))
-                        return candidate;
-                }
-                catch (ArgumentException)
-                {
-                    // A malformed PATH entry is not worth failing over.
-                }
+                folders.AddRange(SplitPath(Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User)));
+                folders.AddRange(SplitPath(Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine)));
+            }
+            catch (Exception)
+            {
+                // A registry that cannot be read leaves the game's own PATH, which is what there was before.
+            }
+
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (local.Length > 0)
+                folders.Add(Path.Combine(local, "Microsoft", "WinGet", "Links"));
+
+            pathCache = (DateTime.UtcNow, folders.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+            return pathCache.Folders;
+        }
+    }
+
+    private static IEnumerable<string> SplitPath(string? path) =>
+        (path ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Select(d => Environment.ExpandEnvironmentVariables(d.Trim().Trim('"')))
+            .Where(d => d.Length > 0);
+
+    /// <summary>The first copy of <paramref name="exe"/> in <see cref="SearchFolders"/>, or null.</summary>
+    public static string? Find(string exe, IReadOnlyList<string>? directories = null)
+    {
+        foreach (var directory in SearchFolders(directories))
+        {
+            try
+            {
+                var candidate = Path.Combine(directory, exe);
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+            catch (ArgumentException)
+            {
+                // A malformed PATH entry is not worth failing over.
             }
         }
 
@@ -136,36 +200,23 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
                 return inFolder;
         }
 
-        foreach (var directory in directories ?? [])
-        {
-            var candidate = Path.Combine(directory, "yt-dlp.exe");
-            if (File.Exists(candidate))
-                return candidate;
-        }
-
-        var local = Path.Combine(AppContext.BaseDirectory, "yt-dlp.exe");
-        if (File.Exists(local))
-            return local;
-
-        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            try
-            {
-                var candidate = Path.Combine(directory.Trim('"'), "yt-dlp.exe");
-                if (File.Exists(candidate))
-                    return candidate;
-            }
-            catch (ArgumentException)
-            {
-                // A malformed PATH entry is not worth failing over.
-            }
-        }
-
-        return null;
+        return Find("yt-dlp.exe", directories);
     }
 
     public async Task<ResolvedStream> ResolveAsync(string input, CancellationToken ct)
+    {
+        var (exitCode, stdout, stderr) = await this.RunAsync(input, jsRuntime, ct);
+
+        // --js-runtimes arrived in yt-dlp 2025.11; an older copy stops at the unknown option.
+        // Such a copy fails YouTube anyway, but everything else it can still play, so it is
+        // asked again without.
+        if (exitCode != 0 && jsRuntime is not null && stderr.Contains("--js-runtimes", StringComparison.Ordinal))
+            (exitCode, stdout, stderr) = await this.RunAsync(input, null, ct);
+
+        return Parse(input, exitCode, stdout, stderr);
+    }
+
+    private async Task<(int ExitCode, string Stdout, string Stderr)> RunAsync(string input, string? runtime, CancellationToken ct)
     {
         var start = new ProcessStartInfo(executable)
         {
@@ -178,10 +229,13 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
         start.ArgumentList.Add("--no-playlist");
         start.ArgumentList.Add("-f");
 
-        // Prefer a single muxed stream, which is one URL and nothing to synchronise (Twitch, files).
-        // Fall back to a video+audio pair, which is all YouTube offers now. Plain "best" is wrong
-        // here: it means "best muxed" and simply fails on sites that no longer publish one.
-        start.ArgumentList.Add("b/bv*+ba");
+        // The best video with the best audio, else the best single stream: yt-dlp's own default.
+        // It used to be the other way round, a muxed stream first as one URL with nothing to
+        // synchronise, until YouTube started publishing a muxed 360p again (format 18): "b"
+        // matched it first, and every YouTube video played at 360p whatever the picture size.
+        // Sites that only publish muxed streams (Twitch, Dailymotion) still land on one, since
+        // their best video is the muxed stream itself.
+        start.ArgumentList.Add("bv*+ba/b");
 
         // Within whatever the selector allows, prefer what the decoder can actually use. The
         // framebuffer is the configured height, so anything above it is decode work thrown away — and left to
@@ -217,6 +271,14 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
             start.ArgumentList.Add(CookiesArgument(cookiesBrowser));
         }
 
+        // The runtime by its path, so yt-dlp has it whatever PATH it inherited from the game,
+        // and node or bun work too, which yt-dlp only uses when told to.
+        if (runtime is not null)
+        {
+            start.ArgumentList.Add("--js-runtimes");
+            start.ArgumentList.Add($"{Path.GetFileNameWithoutExtension(runtime).ToLowerInvariant()}:{runtime}");
+        }
+
         start.ArgumentList.Add("--dump-single-json");
 
         // Everything after this is the input, whatever it looks like. Without it a source that
@@ -235,11 +297,15 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
         var stdout = await stdoutTask;
         var stderr = await stderrTask;
         await process.WaitForExitAsync(ct);
+        return (process.ExitCode, stdout, stderr);
+    }
 
-        if (process.ExitCode != 0)
+    private static ResolvedStream Parse(string input, int exitCode, string stdout, string stderr)
+    {
+        if (exitCode != 0)
         {
             var reason = stderr.Split('\n').FirstOrDefault(l => l.Contains("ERROR"))?.Trim();
-            throw new InvalidOperationException(reason ?? $"yt-dlp failed ({process.ExitCode}).");
+            throw new InvalidOperationException(reason ?? $"yt-dlp failed ({exitCode}).");
         }
 
         using var json = JsonDocument.Parse(stdout);
@@ -285,6 +351,8 @@ public sealed class YtDlpResolver(string executable, string? cookiesBrowser = nu
             }
         }
 
-        return new ResolvedStream(url, title ?? uploader ?? input, headers, audioUrl);
+        // The picked format's own height, so a 480p video is not drawn at 1080 for nothing.
+        var height = root.TryGetProperty("height", out var hv) && hv.ValueKind == JsonValueKind.Number ? hv.GetInt32() : 0;
+        return new ResolvedStream(url, title ?? uploader ?? input, headers, audioUrl, SourceHeight: height);
     }
 }

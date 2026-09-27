@@ -107,7 +107,7 @@ public static class StreamResolvers
         if (YtDlpResolver.Locate(tools.YtDlpPath, tools.Directories ?? []) is { } ytDlp)
         {
             description = "yt-dlp";
-            return new YtDlpResolver(ytDlp, tools.CookiesBrowser, tools.CookiesFile, tools.PictureHeight, tools.PreferH264);
+            return new YtDlpResolver(ytDlp, tools.CookiesBrowser, tools.CookiesFile, tools.PictureHeight, tools.PreferH264, YtDlpResolver.LocateJsRuntime(tools.Directories));
         }
 
         if (TwitchResolver.Matches(input))
@@ -120,7 +120,7 @@ public static class StreamResolvers
         // not optional: PATH is read when the game starts, so yt-dlp installed while it is
         // running stays invisible until it is relaunched.
         throw new InvalidOperationException(
-            "yt-dlp not found — \"winget install --id yt-dlp.yt-dlp --exact\" and restart, or point Setup at your copy.\n\n" +
+            "yt-dlp not found — Setup, YouTube and other sites, has a button that fetches it.\n\n" +
             $"Nothing here can resolve '{input}' without it. yt-dlp plays YouTube, Kick and most " +
             "other sites; without it, only Twitch, Plex, live TV and direct stream URLs work. If " +
             "you already downloaded yt-dlp.exe somewhere, paste that location on the Setup tab.");

@@ -61,6 +61,9 @@ public sealed partial class Plugin : IDalamudPlugin
     /// <summary>Stream path of the group currently selected to broadcast to.</summary>
     private string currentStreamPath = string.Empty;
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(20) };
+
+    /// <summary>For fetching yt-dlp and Deno: tens of megabytes, which the listing client's twenty seconds would cut off.</summary>
+    private readonly HttpClient downloads = new() { Timeout = TimeSpan.FromMinutes(10) };
     private readonly HlsRelay relay;
 
     /// <summary>Set off the render thread to ask <see cref="OnDraw"/> to persist the config.</summary>
@@ -206,6 +209,8 @@ public sealed partial class Plugin : IDalamudPlugin
             FindAnchor = () => this.FindAnchor(this.config.Placement),
             UnbindSurface = this.UnbindSurfaces,
             LocateYtDlp = () => YtDlpResolver.Locate(this.config.YtDlpPath, this.ToolDirectories()),
+            ToolFolder = this.pluginInterface.GetPluginConfigDirectory(),
+            InstallTool = (tool, progress) => ToolInstaller.InstallAsync(this.downloads, tool, this.pluginInterface.GetPluginConfigDirectory(), progress, this.unloading.Token),
             MusicFellBack = () => this.musicFellBack,
             FileDialogs = this.fileDialogs,
             Guide = this.guideChannel,
@@ -360,6 +365,7 @@ public sealed partial class Plugin : IDalamudPlugin
         // released when the process exits, which is soon enough.
         this.relay.Dispose();
         this.http.Dispose();
+        this.downloads.Dispose();
 
         this.SaveConfig();
         this.log.Information("[unload] done");
