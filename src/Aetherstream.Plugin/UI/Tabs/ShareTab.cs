@@ -22,6 +22,9 @@ internal sealed class ShareTab(UiContext ui)
     private string joinBuffer = string.Empty;
     private string startAt = string.Empty;
 
+    /// <summary>Set by an empty Join, so the code box takes the keyboard on the next frame.</summary>
+    private bool focusJoin;
+
     /// <summary>Set by the plugin — every one of these is a network call or a process spawn.</summary>
     internal Action<string, string>? StartBroadcast;
 
@@ -70,8 +73,6 @@ internal sealed class ShareTab(UiContext ui)
         if (ImGui.CollapsingHeader("Connection"))
             this.DrawConnect();
 
-        if (this.status.Length > 0)
-            ImGui.TextColored(Ui.Faint, this.status);
     }
 
     // -- groups ----------------------------------------------------------------------------------
@@ -80,16 +81,31 @@ internal sealed class ShareTab(UiContext ui)
     {
         Ui.Section("Parties");
 
+        // Both buttons are always live. Greyed out until their box was filled, they read as broken:
+        // people clicked them first and nothing happened. An empty Join now says what it wants and
+        // puts the cursor there; an empty Create just makes a party with a plain name.
+        if (this.focusJoin)
+        {
+            ImGui.SetKeyboardFocusHere();
+            this.focusJoin = false;
+        }
+
         ImGui.SetNextItemWidth(-160);
         var joined = ImGui.InputTextWithHint(
             "##join", "join with a code, e.g. 0ZY-6HH", ref this.joinBuffer, 32,
             ImGuiInputTextFlags.EnterReturnsTrue);
 
         ImGui.SameLine();
-        using (ImRaii.Disabled(this.joinBuffer.Trim().Length == 0))
+        if (ImGui.Button("Join") || joined)
         {
-            if (ImGui.Button("Join") || (joined && this.joinBuffer.Trim().Length > 0))
+            if (this.joinBuffer.Trim().Length == 0)
             {
+                this.status = "Paste the code someone sent you in the box first.";
+                this.focusJoin = true;
+            }
+            else
+            {
+                this.status = "Joining…";
                 this.FollowParty?.Invoke(this.joinBuffer.Trim(), string.Empty);
                 this.joinBuffer = string.Empty;
             }
@@ -107,16 +123,18 @@ internal sealed class ShareTab(UiContext ui)
             ImGuiInputTextFlags.EnterReturnsTrue);
 
         ImGui.SameLine();
-        using (ImRaii.Disabled(this.newPartyName.Trim().Length == 0))
+        if (ImGui.Button("Create") || named)
         {
-            if (ImGui.Button("Create") || (named && this.newPartyName.Trim().Length > 0))
-            {
-                this.CreateParty?.Invoke(this.newPartyName.Trim());
-                this.newPartyName = string.Empty;
-            }
+            var name = this.newPartyName.Trim();
+            this.status = "Making the party…";
+            this.CreateParty?.Invoke(name.Length > 0 ? name : "Watch party");
+            this.newPartyName = string.Empty;
         }
 
-        Ui.Tip("You own what you make, and only you can broadcast to it.");
+        Ui.Tip("You own what you make, and only you can broadcast to it. Leave the name empty for \"Watch party\".");
+
+        if (this.status.Length > 0)
+            ImGui.TextColored(Theme.Accent, this.status);
 
         if (this.groups.Count == 0)
         {
