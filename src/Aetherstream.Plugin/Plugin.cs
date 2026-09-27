@@ -1036,15 +1036,6 @@ public sealed partial class Plugin : IDalamudPlugin
     /// </summary>
     private void StartBroadcast(string input, string startAt)
     {
-        // The path belongs to the group; the key is who we are. The relay asks the service whether
-        // that user owns that path before it accepts a byte.
-        var target = BroadcastTarget.ForGroup(
-            this.config.PartyServer,
-            this.currentStreamPath,
-            this.config.PartyKey,
-            this.config.PartySrtPassphrase,
-            this.config.PartyWatchHost);
-
         // Once it is up, our own screen moves to the relay output.
         this.watchOwnPartyWhenLive = true;
 
@@ -1056,6 +1047,23 @@ public sealed partial class Plugin : IDalamudPlugin
         {
             try
             {
+                // Signed in first if the sign-in at load did not take, since the relay's address,
+                // passphrase and our group's path all come from it.
+                if (!await this.SignedInOrSay())
+                {
+                    this.watchOwnPartyWhenLive = false;
+                    return;
+                }
+
+                // The path belongs to the group; the key is who we are. The relay asks the service
+                // whether that user owns that path before it accepts a byte.
+                var target = BroadcastTarget.ForGroup(
+                    this.config.PartyServer,
+                    this.currentStreamPath,
+                    this.config.PartyKey,
+                    this.config.PartySrtPassphrase,
+                    this.config.PartyWatchHost);
+
                 var probe = await BroadcastSession.ProbeAsync(input, CancellationToken.None);
 
                 this.log.Information(

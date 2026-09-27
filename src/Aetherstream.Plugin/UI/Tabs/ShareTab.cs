@@ -58,12 +58,9 @@ internal sealed class ShareTab(UiContext ui)
         var session = this.Session?.Invoke();
         var running = session?.IsRunning ?? false;
 
-        if (!this.Connected)
-        {
-            this.DrawConnect();
-            return;
-        }
-
+        // Join and Create sign in on their own, to the Aetherstream server unless another is set,
+        // so the parties come first even before the service has answered. The server box only
+        // matters for someone running their own, and lives in the folded section below.
         this.DrawGroups(running);
 
         ImGui.Spacing();
@@ -214,8 +211,9 @@ internal sealed class ShareTab(UiContext ui)
         Ui.Section("Party server");
 
         Ui.Hint(
-            "The address of the Aetherstream party server. Your identity is generated here and " +
-            "never typed — there is no account and no password.");
+            "Only for running your own party server; everyone else can leave this alone. Join and " +
+            "Create sign in by themselves. Your identity is generated here and never typed: there " +
+            "is no account and no password.");
 
         ImGui.SetNextItemWidth(-110);
         var submitted = ImGui.InputTextWithHint(
@@ -232,9 +230,9 @@ internal sealed class ShareTab(UiContext ui)
             this.hostBuffer = string.Empty;
         }
 
-        Ui.Dot(this.Connected ? Ui.Good : Ui.Faint, this.Connected ? "connected" : "not connected");
+        Ui.Dot(this.Connected ? Ui.Good : Ui.Faint, this.Connected ? "server" : "default server");
         ImGui.SameLine();
-        ImGui.TextColored(Ui.Faint, this.Connected ? ui.Config.PartyApiHost : "no server yet");
+        ImGui.TextColored(Ui.Faint, this.Connected ? ui.Config.PartyApiHost : Configuration.DefaultPartyApiHost);
 
         if (BroadcastSession.HasFfmpeg)
             Ui.Hint("Watching needs nothing. Hosting uses ffmpeg, which is in place.");

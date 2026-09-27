@@ -120,11 +120,37 @@ public sealed partial class Plugin
         }
     }
 
-    private async Task RefreshGroupsAsync(CancellationToken ct)
+    /// <summary>Whether the service has answered this session, so the relay details below are current.</summary>
+    private volatile bool signedIn;
+
+    /// <summary>
+    /// Signs in now if this session has not managed to yet. Join, Create and Broadcast each call
+    /// it first, so none of them depends on the sign-in at load having worked: that one can meet
+    /// a network that is not up yet, and a broadcast without the relay details it hands back
+    /// used to say "not configured" until the loop's next refresh, a minute later. An install
+    /// with no server set gets the Aetherstream one; there is nothing to press.
+    /// </summary>
+    private async Task<bool> EnsureSignedInAsync(CancellationToken ct)
+    {
+        if (this.config.PartyApiHost.Length == 0)
+        {
+            this.config.PartyApiHost = Configuration.DefaultPartyApiHost;
+            this.configDirty = true;
+        }
+
+        if (this.signedIn && this.config.PartyServer.Length > 0)
+            return true;
+
+        return await this.RefreshGroupsAsync(ct);
+    }
+
+    private async Task<bool> RefreshGroupsAsync(CancellationToken ct)
     {
         var me = await this.directory.MeAsync(this.config.PartyApiHost, this.config.PartyKey, ct);
         if (me is not { } details)
-            return;
+            return false;
+
+        this.signedIn = true;
 
         // Told to us rather than typed. Reconnecting is how any of it gets corrected.
         this.config.PartyServer = details.Relay;
@@ -138,6 +164,7 @@ public sealed partial class Plugin
             .StreamPath ?? string.Empty;
 
         this.window.Share.SetParties([.. details.Groups]);
+        return true;
     }
 
     /// <summary>
@@ -179,6 +206,7 @@ public sealed partial class Plugin
             this.config.PartyWatchHost = details.WatchHost;
             this.config.PartySrtPassphrase = details.SrtPassphrase;
             this.configDirty = true;
+            this.signedIn = true;
 
             this.window.Share.SetParties([.. details.Groups]);
             this.window.Share.SetStatus(
@@ -190,6 +218,9 @@ public sealed partial class Plugin
 
     private void CreateGroup(string name) => this.PartyWork(async () =>
     {
+        if (!await this.SignedInOrSay())
+            return;
+
         var group = await this.directory.CreateAsync(
             this.config.PartyApiHost, this.config.PartyKey, name, CancellationToken.None);
 
@@ -217,6 +248,9 @@ public sealed partial class Plugin
             this.window.Share.SetStatus("A party code is six characters.");
             return;
         }
+
+        if (!await this.SignedInOrSay())
+            return;
 
         var group = await this.directory.JoinAsync(
             this.config.PartyApiHost, this.config.PartyKey, code, CancellationToken.None);
@@ -274,6 +308,16 @@ public sealed partial class Plugin
             string.Empty,
             null,
             CancellationToken.None));
+    }
+
+    /// <summary>Signs in if needed, and says so on the tab when the server cannot be reached.</summary>
+    private async Task<bool> SignedInOrSay()
+    {
+        if (await this.EnsureSignedInAsync(CancellationToken.None))
+            return true;
+
+        this.window.Share.SetStatus($"Could not reach the party server ({this.config.PartyApiHost}). Check your connection and try again.");
+        return false;
     }
 
     private void PartyWork(Func<Task> work) => _ = Task.Run(async () =>
