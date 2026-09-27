@@ -62,18 +62,28 @@ internal sealed class ShareTab(UiContext ui)
         var running = session?.IsRunning ?? false;
 
         // Join and Create sign in on their own, to the Aetherstream server unless another is set,
-        // so the parties come first even before the service has answered. The server box only
-        // matters for someone running their own, and lives in the folded section below.
+        // so the parties come first even before the service has answered.
         this.DrawGroups(running);
 
         ImGui.Spacing();
         this.DrawBroadcast(session, running);
 
         ImGui.Spacing();
-        if (ImGui.CollapsingHeader("Connection"))
-            this.DrawConnect();
+        if (BroadcastSession.HasFfmpeg)
+            Ui.Hint("Watching needs nothing. Hosting uses ffmpeg, which is in place.");
+        else
+            ImGui.TextColored(Theme.Warn, "Hosting needs ffmpeg: press Get ffmpeg under Setup, Sources. Watching needs nothing.");
 
+        // The party server's address is not offered here any more: everyone uses the Aetherstream
+        // one, and the box only confused the tab people were already struggling with. Everything
+        // behind it still works, and a config that already points elsewhere keeps it. To offer
+        // it again, call DrawServer from here or from Setup.
+        if (ShowServerBox)
+            this.DrawServer();
     }
+
+    /// <summary>Off: see the note in <see cref="Draw"/>. Kept so a custom server can be offered again.</summary>
+    private const bool ShowServerBox = false;
 
     // -- groups ----------------------------------------------------------------------------------
 
@@ -224,7 +234,8 @@ internal sealed class ShareTab(UiContext ui)
 
     // -- connecting ------------------------------------------------------------------------------
 
-    private void DrawConnect()
+    /// <summary>The party server's address, for someone running their own. Not shown at present.</summary>
+    private void DrawServer()
     {
         Ui.Section("Party server");
 
@@ -251,11 +262,6 @@ internal sealed class ShareTab(UiContext ui)
         Ui.Dot(this.Connected ? Ui.Good : Ui.Faint, this.Connected ? "server" : "default server");
         ImGui.SameLine();
         ImGui.TextColored(Ui.Faint, this.Connected ? ui.Config.PartyApiHost : Configuration.DefaultPartyApiHost);
-
-        if (BroadcastSession.HasFfmpeg)
-            Ui.Hint("Watching needs nothing. Hosting uses ffmpeg, which is in place.");
-        else
-            ImGui.TextColored(Theme.Warn, "Hosting needs ffmpeg: press Get ffmpeg under Setup, YouTube and other sites. Watching needs nothing.");
     }
 
     // -- broadcasting ----------------------------------------------------------------------------
