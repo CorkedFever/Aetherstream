@@ -137,11 +137,11 @@ internal sealed class ShareTab(UiContext ui)
         {
             var name = this.newPartyName.Trim();
             this.status = "Making the party…";
-            this.CreateParty?.Invoke(name.Length > 0 ? name : "Watch party");
+            this.CreateParty?.Invoke(name.Length > 0 ? name : RandomName());
             this.newPartyName = string.Empty;
         }
 
-        Ui.Tip("You own what you make, and only you can broadcast to it. Leave the name empty for \"Watch party\".");
+        Ui.Tip("You own what you make, and only you can broadcast to it. Leave the name empty and it gets one made up for it.");
 
         if (this.status.Length > 0)
             ImGui.TextColored(Theme.Accent, this.status);
@@ -231,6 +231,30 @@ internal sealed class ShareTab(UiContext ui)
             }
         }
     }
+
+    // -- names -----------------------------------------------------------------------------------
+
+    private static readonly string[] Moods =
+    [
+        "Midnight", "Cozy", "Chaotic", "Sleepy", "Loud", "Secret", "Fancy", "Questionable", "Lazy",
+        "Late-Night", "Rainy", "Glorious", "Cursed", "Tiny", "Legendary", "Snack-Fuelled", "Unhinged", "Wholesome",
+    ];
+
+    private static readonly string[] Hosts =
+    [
+        "Moogle", "Chocobo", "Cactuar", "Tonberry", "Namazu", "Lalafell", "Goblin", "Carbuncle", "Mandragora",
+        "Bomb", "Coeurl", "Morbol", "Fat Cat", "Behemoth", "Sprite", "Kupo",
+    ];
+
+    private static readonly string[] Gatherings =
+    [
+        "Movie Night", "Matinee", "Marathon", "Watch Club", "Screening", "Double Feature", "Film Club",
+        "Couch Party", "Premiere", "Binge", "Theatre", "Picture Show",
+    ];
+
+    /// <summary>A made-up name for a party created with the box left empty, e.g. "Cozy Tonberry Matinee".</summary>
+    private static string RandomName() =>
+        $"{Moods[Random.Shared.Next(Moods.Length)]} {Hosts[Random.Shared.Next(Hosts.Length)]} {Gatherings[Random.Shared.Next(Gatherings.Length)]}";
 
     // -- connecting ------------------------------------------------------------------------------
 
