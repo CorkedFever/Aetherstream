@@ -29,7 +29,7 @@ the "no Opus decoder" theory that turned out to be wrong — at the cost of the 
 | --- | --- | --- | --- |
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp) | YouTube, Kick and most other sites | **Get yt-dlp** in Setup, or `winget install --id yt-dlp.yt-dlp --exact` | Unlicense |
 | [Deno](https://deno.com/) | **YouTube specifically** — yt-dlp solves YouTube's JavaScript challenges with an external runtime, and without one it warns, drops its preferred formats and hands back what is left | **Get Deno** in Setup, or `winget install --id DenoLand.Deno --exact` | MIT |
-| [ffmpeg](https://ffmpeg.org/) | Broadcasting to a party (not watching one) | `winget install --id Gyan.FFmpeg --exact` | LGPL 2.1+ / GPL 2+ depending on build |
+| [ffmpeg](https://ffmpeg.org/) | Broadcasting to a party (not watching one) | **Get ffmpeg** in Setup (gyan.dev's essentials build, ffmpeg and ffprobe), or `winget install --id Gyan.FFmpeg --exact` | LGPL 2.1+ / GPL 2+ depending on build |
 
 Both are looked for when they are needed, in this order: the plugin's config folder, the game's
 `PATH`, then the `PATH` as the registry has it now plus winget's `Links` folder
@@ -43,8 +43,12 @@ anything left there vanishes on the next update.) The runtime is handed to yt-dl
 
 The plugin used to refuse to download either, on the grounds that a plugin fetching executables
 is a lot to ask people to trust. It now does, because the winget-and-restart dance lost most
-people, but only on a button press, only from each project's own GitHub releases
-(`releases/latest/download/…`), and only into the plugin's config folder (`ToolInstaller`). A
+people, but only on a button press, only from the official source (yt-dlp and Deno from their own
+GitHub releases, `releases/latest/download/…`; ffmpeg from gyan.dev's `ffmpeg-release-essentials.zip`,
+the Windows build ffmpeg.org links and winget installs), and only into the plugin's config folder
+(`ToolInstaller`). The broadcast starts ffmpeg and ffprobe through the same search
+(`BroadcastSession.Locate`), not by bare name: by bare name they were looked up on the game's
+`PATH`, so hosting needed a restart after installing ffmpeg too. A
 download is written beside the target, checked to be a Windows program of a sane size, and moved
 over the old copy in one step, so a dropped connection never leaves a broken tool. Pressing it
 again is the update. A copy that came from winget or the file picker gets no button: it belongs

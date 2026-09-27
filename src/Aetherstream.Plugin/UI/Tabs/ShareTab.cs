@@ -236,7 +236,10 @@ internal sealed class ShareTab(UiContext ui)
         ImGui.SameLine();
         ImGui.TextColored(Ui.Faint, this.Connected ? ui.Config.PartyApiHost : "no server yet");
 
-        Ui.Hint("ffmpeg must be on PATH to broadcast. Watching needs nothing.");
+        if (BroadcastSession.HasFfmpeg)
+            Ui.Hint("Watching needs nothing. Hosting uses ffmpeg, which is in place.");
+        else
+            ImGui.TextColored(Theme.Warn, "Hosting needs ffmpeg: press Get ffmpeg under Setup, YouTube and other sites. Watching needs nothing.");
     }
 
     // -- broadcasting ----------------------------------------------------------------------------

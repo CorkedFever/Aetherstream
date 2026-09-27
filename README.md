@@ -43,10 +43,10 @@ Most of it works with nothing else installed. For the rest:
 | --- | --- |
 | YouTube, Kick, Dailymotion, PBS and most other sites | yt-dlp: press **Get yt-dlp** under Setup, YouTube and other sites. |
 | YouTube specifically | Deno: press **Get Deno** on the line below it. yt-dlp needs it to get past YouTube's checks. |
-| Hosting a watch party | `winget install --id Gyan.FFmpeg --exact`. Watching a party needs nothing. |
+| Hosting a watch party | ffmpeg: press **Get ffmpeg** on the line below those. Watching a party needs nothing. |
 
-The Get buttons download each tool from its own project's GitHub releases into the plugin's
-folder, only when you press them. No restart needed. If YouTube stops working one day, press
+The Get buttons download each tool into the plugin's folder, only when you press them: yt-dlp
+and Deno from their own GitHub releases, ffmpeg from gyan.dev, the Windows build ffmpeg.org points to. No restart needed. If YouTube stops working one day, press
 **Update** on the yt-dlp line. Already installed them with winget? They're found too.
 
 ### The first five minutes

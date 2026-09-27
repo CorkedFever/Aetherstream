@@ -69,6 +69,18 @@ public readonly record struct SourceProbe(string VideoCodec, string AudioCodec, 
 /// </summary>
 public sealed class BroadcastSession : IDisposable
 {
+    /// <summary>
+    /// Where a program is, by file name ("ffmpeg.exe"), or null to leave it to PATH. Set by the
+    /// plugin to the same search yt-dlp uses, so an ffmpeg fetched from Setup or installed with
+    /// winget while the game runs is found; the game's own PATH is the one it started with.
+    /// </summary>
+    public static Func<string, string?>? Locate { get; set; }
+
+    private static string Program(string name) => Locate?.Invoke(name + ".exe") ?? name;
+
+    /// <summary>Whether ffmpeg can be found at all, for the Share tab.</summary>
+    public static bool HasFfmpeg => Locate?.Invoke("ffmpeg.exe") is not null;
+
     private readonly object gate = new();
     private Process? process;
     private volatile string status = string.Empty;
@@ -146,7 +158,7 @@ public sealed class BroadcastSession : IDisposable
     {
         try
         {
-            using var probe = Process.Start(new ProcessStartInfo("ffprobe", arguments)
+            using var probe = Process.Start(new ProcessStartInfo(Program("ffprobe"), arguments)
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -199,7 +211,7 @@ public sealed class BroadcastSession : IDisposable
 
         try
         {
-            var started = Process.Start(new ProcessStartInfo("ffmpeg", arguments)
+            var started = Process.Start(new ProcessStartInfo(Program("ffmpeg"), arguments)
             {
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -208,7 +220,7 @@ public sealed class BroadcastSession : IDisposable
 
             if (started is null)
             {
-                this.error = "Could not start ffmpeg. Is it on PATH?";
+                this.error = "Could not start ffmpeg. Setup has a Get ffmpeg button.";
                 return;
             }
 
@@ -224,7 +236,9 @@ public sealed class BroadcastSession : IDisposable
         }
         catch (Exception ex)
         {
-            this.error = $"Could not start ffmpeg: {ex.Message}";
+            this.error = HasFfmpeg || Locate is null
+                ? $"Could not start ffmpeg: {ex.Message}"
+                : "ffmpeg is not installed. Press Get ffmpeg under Setup, YouTube and other sites.";
             this.Log?.Invoke($"[broadcast] start failed: {ex}");
         }
     }

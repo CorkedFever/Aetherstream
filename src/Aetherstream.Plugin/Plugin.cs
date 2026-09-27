@@ -275,6 +275,7 @@ public sealed partial class Plugin : IDalamudPlugin
         this.window.Library.SouthPark.Refresh = () => this.BrowseSouthPark(true);
         this.window.Library.AdultSwim.Browse = this.BrowseAdultSwim;
         this.broadcast.Log = message => log.Information(message);
+        BroadcastSession.Locate = exe => YtDlpResolver.Find(exe, this.ToolDirectories());
         this.window.Share.Session = () => this.broadcast;
         this.window.Share.StartBroadcast = this.StartBroadcast;
         this.window.Share.StopBroadcast = this.StopBroadcast;
@@ -366,6 +367,7 @@ public sealed partial class Plugin : IDalamudPlugin
         this.relay.Dispose();
         this.http.Dispose();
         this.downloads.Dispose();
+        BroadcastSession.Locate = null;
 
         this.SaveConfig();
         this.log.Information("[unload] done");

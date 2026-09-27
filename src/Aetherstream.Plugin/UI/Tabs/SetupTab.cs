@@ -141,6 +141,15 @@ internal sealed class SetupTab(UiContext ui)
             this.DrawGet(ToolInstaller.Tool.Deno, null);
         }
 
+        // The third tool is only for hosting a party; missing it is not a warning for everyone.
+        var ffmpeg = YtDlpResolver.Find("ffmpeg.exe", [ui.ToolFolder]);
+        Ui.Dot(ffmpeg is not null ? Theme.Good : Theme.TextFaint, ffmpeg is not null ? "found" : "not found");
+        ImGui.SameLine();
+        ImGui.TextColored(Theme.TextDim, ffmpeg is not null ? "ffmpeg, for hosting a watch party" : "no ffmpeg — only needed to host a watch party");
+        if (ffmpeg is not null)
+            Ui.Tip(ffmpeg);
+        this.DrawGet(ToolInstaller.Tool.Ffmpeg, ffmpeg);
+
         if (this.installStatus.Length > 0)
             ImGui.TextColored(this.installFailed ? Theme.Warn : Theme.TextDim, this.installStatus);
 
@@ -180,6 +189,7 @@ internal sealed class SetupTab(UiContext ui)
         Ui.Hint(
             "Press Get on each line and they land in the plugin's own folder; no restart. Press it again later to update. " +
             "Deno is what yt-dlp uses to handle YouTube; without it YouTube half-works at best. " +
+            "ffmpeg is only for hosting a watch party; joining one needs nothing. " +
             "A copy installed with winget is found too, also without a restart.");
 
         this.DrawSignIn();
@@ -325,7 +335,7 @@ internal sealed class SetupTab(UiContext ui)
     /// </summary>
     private void DrawGet(ToolInstaller.Tool tool, string? found)
     {
-        var name = tool == ToolInstaller.Tool.YtDlp ? "yt-dlp" : "Deno";
+        var name = tool switch { ToolInstaller.Tool.YtDlp => "yt-dlp", ToolInstaller.Tool.Deno => "Deno", _ => "ffmpeg" };
         var ours = found is not null && Path.GetDirectoryName(found) is { } folder
             && Path.GetFullPath(folder).TrimEnd('\\').Equals(Path.GetFullPath(ui.ToolFolder).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
         if (found is not null && !ours)
@@ -344,8 +354,9 @@ internal sealed class SetupTab(UiContext ui)
                 this.Install(tool, name);
         }
 
+        var from = tool == ToolInstaller.Tool.Ffmpeg ? "gyan.dev, the Windows build ffmpeg.org points to," : "its project's own GitHub releases";
         Ui.Tip(found is null
-            ? $"Downloads {name} ({ToolInstaller.SizeOf(tool)}) from its project's own GitHub releases into the plugin's folder."
+            ? $"Downloads {name} ({ToolInstaller.SizeOf(tool)}) from {from} into the plugin's folder."
             : $"Downloads the newest {name} over this copy.");
     }
 
