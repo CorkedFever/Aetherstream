@@ -151,7 +151,7 @@ public sealed class AdultSwimResolver(HttpClient http) : IStreamResolver
         var playlist = await swim.PlaylistAsync(stream.VideoId, ct)
             ?? throw new InvalidOperationException($"Adult Swim has nothing on '{stream.Title}' right now.");
         // A television master, about -28 dBFS RMS against YouTube's -18: lifted all the player can.
-        return new ResolvedStream(playlist, "Adult Swim · " + stream.Title, new Dictionary<string, string> { ["User-Agent"] = AdultSwim.UserAgent }, GainDb: 8);
+        return new ResolvedStream(playlist, "Adult Swim · " + stream.Title, new Dictionary<string, string> { ["User-Agent"] = AdultSwim.UserAgent }, GainDb: 8, SourceHeight: 480);
     }
 
     /// <summary>The stream's id from its page address, in either form the site uses.</summary>

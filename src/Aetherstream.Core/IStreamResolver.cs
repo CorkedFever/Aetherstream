@@ -73,4 +73,10 @@ public sealed record ResolvedStream(
     /// play at: television masters sit five to ten decibels below YouTube. Zero for almost
     /// everything; the player can give at most eight.
     /// </summary>
-    float GainDb = 0);
+    float GainDb = 0,
+
+    /// <summary>
+    /// The picture's own height when the resolver knows it, else 0. A stream of 720 lines or
+    /// fewer is drawn at 720 even with 1080 chosen, since the larger size would only cost.
+    /// </summary>
+    int SourceHeight = 0);

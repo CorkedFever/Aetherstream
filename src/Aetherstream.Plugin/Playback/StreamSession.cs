@@ -68,7 +68,9 @@ internal sealed class StreamSession(
     /// </summary>
     private void EnsureOutputSize()
     {
-        var wantHeight = config.PictureHeight >= 1080 ? 1080 : 720;
+        // 1080 only when it can show something 720 cannot: a stream that says it is 720 or less
+        // is drawn at 720 whatever the setting, since every pass after the decode costs per pixel.
+        var wantHeight = config.PictureHeight >= 1080 && !(this.playingHeight is > 0 and <= 720) ? 1080 : 720;
         var wantWidth = wantHeight * 16 / 9;
         if (wantWidth == this.Width && wantHeight == this.Height)
             return;
@@ -365,12 +367,9 @@ internal sealed class StreamSession(
         if (config.RetroMode)
             this.Retro(this.frame);
 
-        if (config.PaintOnSurface)
-            this.MakeOpaque(this.frame);
-
         try
         {
-            this.uploader.Upload(config.HasFit ? this.Fit(this.frame) : this.frame);
+            this.uploader.Upload(this.Finish(this.frame));
         }
         catch (Exception ex)
         {
@@ -448,6 +447,9 @@ internal sealed class StreamSession(
     private long resumeTargetMs;
     private long lastPresented = -1;
     private uint[]? fitted;
+
+    /// <summary>The playing stream's own height when its resolver knew it, else 0; kept for the life of the play.</summary>
+    private int playingHeight;
     private readonly System.Diagnostics.Stopwatch sinceStart = new();
     private long lastReportMs;
 
@@ -539,8 +541,14 @@ internal sealed class StreamSession(
 
         if (gain <= 1.001f)
         {
-            for (var i = 0; i < pixels.Length; i++)
-                pixels[i] |= 0xFF000000;
+            // Eight pixels at a time; this walks the whole frame, so it is worth it.
+            var span = pixels.AsSpan();
+            var alpha = new System.Numerics.Vector<uint>(0xFF000000u);
+            var vectors = System.Runtime.InteropServices.MemoryMarshal.Cast<uint, System.Numerics.Vector<uint>>(span);
+            for (var i = 0; i < vectors.Length; i++)
+                vectors[i] |= alpha;
+            for (var i = vectors.Length * System.Numerics.Vector<uint>.Count; i < span.Length; i++)
+                span[i] |= 0xFF000000u;
 
             return;
         }
@@ -548,13 +556,7 @@ internal sealed class StreamSession(
         // An effect that blends additively shows dark pixels as transparent, so brightening is the
         // only lever that makes such a surface read as solid.
         for (var i = 0; i < pixels.Length; i++)
-        {
-            var pixel = pixels[i];
-            var r = Math.Min(255, (int)((pixel & 0xFF) * gain));
-            var g = Math.Min(255, (int)(((pixel >> 8) & 0xFF) * gain));
-            var b = Math.Min(255, (int)(((pixel >> 16) & 0xFF) * gain));
-            pixels[i] = 0xFF000000u | ((uint)b << 16) | ((uint)g << 8) | (uint)r;
-        }
+            pixels[i] = Brighten(pixels[i], gain);
     }
 
     /// <summary>
@@ -583,63 +585,138 @@ internal sealed class StreamSession(
     }
 
     /// <summary>
-    /// Places the picture inside the texture at the configured scale and offset, leaving the rest
-    /// black. Nearest-neighbour, on the render thread, once per decoded frame — a 720p resample is
-    /// cheap next to the decode that produced it.
+    /// The last steps before the upload: the picture placed by the fit, and made opaque for a
+    /// surface. With a fit the opaque step rides along in the fit's own copy, over the drawn
+    /// region only, rather than walking the whole frame first and throwing half of it away.
     /// </summary>
-    private uint[] Fit(uint[] source)
+    private uint[] Finish(uint[] pixels)
     {
-        this.fitted ??= new uint[Width * Height];
-        Array.Clear(this.fitted);
+        if (config.HasFit)
+            return this.Fit(pixels, config.PaintOnSurface);
+        if (config.PaintOnSurface)
+            this.MakeOpaque(pixels);
+        return pixels;
+    }
 
-        var drawWidth = Math.Clamp((int)(Width * config.FitScaleX), 1, Width);
-        var drawHeight = Math.Clamp((int)(Height * config.FitScaleY), 1, Height);
-        var left = (int)(((Width - drawWidth) * 0.5f) + (config.FitOffsetX * Width));
-        var top = (int)(((Height - drawHeight) * 0.5f) + (config.FitOffsetY * Height));
+    /// <summary>Where each column and row of the drawn region reads from, worked out once per fit and size.</summary>
+    private sealed record FitPlan(int Key, int X0, int X1, int Y0, int Y1, int[] PerX, int[] PerY);
+
+    private FitPlan? fitPlan;
+
+    /// <summary>
+    /// Places the picture inside the texture at the configured scale and offset, leaving the rest
+    /// black. Nearest-neighbour, on the render thread, once per decoded frame. The source index of
+    /// every pixel is the sum of a per-column and a per-row term, both tabled when the fit changes,
+    /// so the copy itself is two loads and an add; it once did two divisions and a switch per
+    /// pixel, 7 ms a frame at 1080p, which cost the game a quarter of its frame rate. The border
+    /// is cleared only when the fit changes, since the drawn region is rewritten every frame.
+    /// </summary>
+    private uint[] Fit(uint[] source, bool opaque)
+    {
+        var width = this.Width;
+        var height = this.Height;
+        if (this.fitted is null || this.fitted.Length != width * height)
+        {
+            this.fitted = new uint[width * height];
+            this.fitPlan = null;
+        }
+
+        var key = HashCode.Combine(width, height, config.FitStamp);
+        if (this.fitPlan is not { } plan || plan.Key != key)
+        {
+            plan = PlanFit(key, width, height, config.FitScaleX, config.FitScaleY, config.FitOffsetX, config.FitOffsetY, config.FitRotation);
+            this.fitPlan = plan;
+            Array.Clear(this.fitted);
+        }
+
+        var target = this.fitted;
+        var gain = config.SurfaceBrightness;
+        var rows = plan.Y1 - plan.Y0;
+        if (rows <= 0 || plan.X1 <= plan.X0)
+            return target;
+
+        Parallel.For(0, (rows + 31) / 32, strip =>
+        {
+            var y1 = Math.Min(plan.Y1, plan.Y0 + ((strip + 1) * 32));
+            var perX = plan.PerX;
+            var x0 = plan.X0;
+            var count = plan.X1 - x0;
+            for (var y = plan.Y0 + (strip * 32); y < y1; y++)
+            {
+                var row = (y * width) + x0;
+                var perY = plan.PerY[y - plan.Y0];
+                if (!opaque)
+                {
+                    for (var i = 0; i < count; i++)
+                        target[row + i] = source[perY + perX[i]];
+                }
+                else if (gain <= 1.001f)
+                {
+                    for (var i = 0; i < count; i++)
+                        target[row + i] = source[perY + perX[i]] | 0xFF000000u;
+                }
+                else
+                {
+                    for (var i = 0; i < count; i++)
+                        target[row + i] = Brighten(source[perY + perX[i]], gain);
+                }
+            }
+        });
+
+        return target;
+    }
+
+    private static FitPlan PlanFit(int key, int width, int height, float scaleX, float scaleY, float offsetX, float offsetY, int rotation)
+    {
+        var drawWidth = Math.Clamp((int)(width * scaleX), 1, width);
+        var drawHeight = Math.Clamp((int)(height * scaleY), 1, height);
+        var left = (int)(((width - drawWidth) * 0.5f) + (offsetX * width));
+        var top = (int)(((height - drawHeight) * 0.5f) + (offsetY * height));
+        var x0 = Math.Max(0, left);
+        var x1 = Math.Min(width, left + drawWidth);
+        var y0 = Math.Max(0, top);
+        var y1 = Math.Min(height, top + drawHeight);
+        var perX = new int[Math.Max(0, x1 - x0)];
+        var perY = new int[Math.Max(0, y1 - y0)];
 
         // The turn is applied in the sampling: for a quarter turn the picture's columns run
         // down the drawn region and its rows across it, so a surface that wraps the texture on
-        // its side shows the picture upright.
-        var turn = ((config.FitRotation % 4) + 4) % 4;
-        for (var y = 0; y < drawHeight; y++)
+        // its side shows the picture upright. Either way the index splits into a term from the
+        // column and a term from the row.
+        var turn = ((rotation % 4) + 4) % 4;
+        for (var i = 0; i < perX.Length; i++)
         {
-            var destinationY = top + y;
-            if (destinationY < 0 || destinationY >= Height)
-                continue;
-
-            var destinationRow = destinationY * Width;
-            for (var x = 0; x < drawWidth; x++)
+            var x = x0 + i - left;
+            perX[i] = turn switch
             {
-                var destinationX = left + x;
-                if (destinationX < 0 || destinationX >= Width)
-                    continue;
-
-                int sourceX, sourceY;
-                switch (turn)
-                {
-                    case 1:
-                        sourceX = y * Width / drawHeight;
-                        sourceY = Height - 1 - (x * Height / drawWidth);
-                        break;
-                    case 2:
-                        sourceX = Width - 1 - (x * Width / drawWidth);
-                        sourceY = Height - 1 - (y * Height / drawHeight);
-                        break;
-                    case 3:
-                        sourceX = Width - 1 - (y * Width / drawHeight);
-                        sourceY = x * Height / drawWidth;
-                        break;
-                    default:
-                        sourceX = x * Width / drawWidth;
-                        sourceY = y * Height / drawHeight;
-                        break;
-                }
-
-                this.fitted[destinationRow + destinationX] = source[(sourceY * Width) + sourceX];
-            }
+                1 => Math.Clamp(height - 1 - (x * height / drawWidth), 0, height - 1) * width,
+                2 => Math.Clamp(width - 1 - (x * width / drawWidth), 0, width - 1),
+                3 => Math.Clamp(x * height / drawWidth, 0, height - 1) * width,
+                _ => Math.Clamp(x * width / drawWidth, 0, width - 1),
+            };
         }
 
-        return this.fitted;
+        for (var i = 0; i < perY.Length; i++)
+        {
+            var y = y0 + i - top;
+            perY[i] = turn switch
+            {
+                1 => Math.Clamp(y * width / drawHeight, 0, width - 1),
+                2 => Math.Clamp(height - 1 - (y * height / drawHeight), 0, height - 1) * width,
+                3 => Math.Clamp(width - 1 - (y * width / drawHeight), 0, width - 1),
+                _ => Math.Clamp(y * height / drawHeight, 0, height - 1) * width,
+            };
+        }
+
+        return new FitPlan(key, x0, x1, y0, y1, perX, perY);
+    }
+
+    private static uint Brighten(uint pixel, float gain)
+    {
+        var r = Math.Min(255, (int)((pixel & 0xFF) * gain));
+        var g = Math.Min(255, (int)(((pixel >> 8) & 0xFF) * gain));
+        var b = Math.Min(255, (int)(((pixel >> 16) & 0xFF) * gain));
+        return 0xFF000000u | ((uint)b << 16) | ((uint)g << 8) | (uint)r;
     }
 
     /// <summary>
@@ -831,12 +908,9 @@ internal sealed class StreamSession(
         if (config.RetroMode)
             this.Retro(output);
 
-        if (config.PaintOnSurface)
-            this.MakeOpaque(output);
-
         try
         {
-            this.uploader.Upload(config.HasFit ? this.Fit(output) : output);
+            this.uploader.Upload(this.Finish(output));
         }
         catch (Exception ex)
         {
@@ -986,12 +1060,9 @@ internal sealed class StreamSession(
         if (config.RetroMode)
             this.Retro(output);
 
-        if (config.PaintOnSurface)
-            this.MakeOpaque(output);
-
         try
         {
-            this.uploader.Upload(config.HasFit ? this.Fit(output) : output);
+            this.uploader.Upload(this.Finish(output));
         }
         catch (Exception ex)
         {
@@ -1141,6 +1212,7 @@ internal sealed class StreamSession(
     {
         this.TearDown();
         this.Error = null;
+        this.playingHeight = stream.SourceHeight;
         this.EnsureOutputSize();
 
         try
