@@ -10,7 +10,7 @@ srtAddress: :8890
 
 # --- Delivery -------------------------------------------------------------------------------
 hls: yes
-hlsAddress: :8888   # container-internal; Caddy proxies to it over the compose network
+hlsAddress: :8888   # container-internal; corkedfever's Caddy proxies to it over the corkedfever network
 
 # mpegts, not lowLatency: LL-HLS uses fragmented MP4 and partial segments, which libvlc
 # handles poorly — and the plugin is libvlc. Latency costs nothing for a movie night.

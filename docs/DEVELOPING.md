@@ -89,7 +89,7 @@ Lives in `deploy\`; nothing here runs on a viewer's machine.
 | Dependency | Version | Licence | Role |
 | --- | --- | --- | --- |
 | [MediaMTX](https://github.com/bluenviron/mediamtx) | `bluenviron/mediamtx` (Docker) | MIT | Takes the host's SRT push and serves it as HLS. Publish authorisation is delegated to the party service. |
-| [Caddy](https://caddyserver.com/) | on the host | Apache 2.0 | TLS and routing. Serves HLS on an **HTTP/1.1-only** listener — libvlc 3 cannot fetch HLS over HTTP/2. |
+| [Caddy](https://caddyserver.com/) | not in this repo: corkedfever-website's `deploy/meteor` | Apache 2.0 | TLS and routing for every site on meteor, this one included; reaches `aether-api` and `aether-stream` by name over the `corkedfever` network, which `deploy/meteor` here joins. Serves HLS on an **HTTP/1.1-only** listener on 8443 — libvlc 3 cannot fetch HLS over HTTP/2. |
 | Party service | `python:3.12-alpine` (Docker), standard library only | — | Groups, codes, membership, and the MediaMTX auth callback. No third-party Python packages. |
 
 ## Layout

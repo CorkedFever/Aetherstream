@@ -1,28 +1,16 @@
-# The whole Aetherstream server: TLS, the party service, and the stream relay, in one project.
+# Aetherstream's server: the party service and the stream relay. Lives at /opt/aetherstream.
 #
 #   ./setup.sh aetherstream.example.com     # once — generates secrets and the real config files
 #   docker compose up -d
 #
-# Unlike the original luna deployment, nothing here joins anyone else's network: Caddy is part of
-# this stack, so the box can hold exactly one thing and owe nothing to any other.
+# TLS and routing are not part of this stack. Caddy lives in corkedfever-website's
+# deploy/meteor (/opt/corkedfever), which owns the box's front door for every site on it and
+# creates the `corkedfever` network. The two services here join that network so Caddy reaches
+# them by container name (aether-api:8099, aether-stream:8888), and keep this stack's own
+# default network too, which MediaMTX uses to call party-api's /auth. Start corkedfever's
+# stack first: this one expects its network to exist.
 
 services:
-  caddy:
-    image: caddy:2
-    container_name: aether-caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-      # HLS, served HTTP/1.1-only: libvlc 3 aborts HLS segment fetches over HTTP/2 with
-      # RST_STREAM, so the player gets its own listener with h2 switched off.
-      - "8443:8443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-
   mediamtx:
     image: bluenviron/mediamtx:latest
     container_name: aether-stream
@@ -32,8 +20,9 @@ services:
     ports:
       # SRT ingest — the only port MediaMTX itself opens to the internet. Encrypted with a
       # passphrase, UDP, and it recovers from packet loss instead of stalling like RTMP-over-TCP.
-      # HLS (8888) stays internal; Caddy proxies to it across the compose network.
+      # HLS (8888) stays internal; corkedfever's Caddy proxies to it across the shared network.
       - "8890:8890/udp"
+    networks: [default, corkedfever]
 
   party-api:
     image: python:3.12-alpine
@@ -46,9 +35,12 @@ services:
       - party-api-data:/data
     env_file:
       - api.env
+    networks: [default, corkedfever]
+
+networks:
+  corkedfever:
+    external: true
 
 volumes:
-  caddy-data:
-  caddy-config:
   # Parties are permanent identities; this holds state.json and must survive restarts.
   party-api-data:
